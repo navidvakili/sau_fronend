@@ -1,5 +1,5 @@
 import { API } from '@/src/shared-utils/functions';
-import type { AnnouncementItem, AnnouncementPayload } from '@/src/shared-types';
+import type { AnnouncementCategory, AnnouncementItem, AnnouncementPayload } from '@/src/shared-types';
 
 export interface AnnouncementsQuery {
   page?: number;
@@ -8,6 +8,7 @@ export interface AnnouncementsQuery {
   status?: string;
   type?: string;
   group?: string;
+  category_id?: number;
 }
 
 interface PaginatedResponse<T> {
@@ -26,6 +27,7 @@ export const fetchAnnouncements = async (params: AnnouncementsQuery = {}) => {
   if (params.status) qs.set('status', params.status);
   if (params.type) qs.set('type', params.type);
   if (params.group) qs.set('group', params.group);
+  if (params.category_id) qs.set('category_id', String(params.category_id));
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   return API<PaginatedResponse<AnnouncementItem>>(`announcements${suffix}`);
 };
@@ -54,4 +56,24 @@ export const toggleAnnouncementPin = async (id: number) => {
 export const fetchAnnouncementGroups = async () => {
   const res = await API<{ data: string[] }>('announcement-groups');
   return res.data || [];
+};
+
+export const fetchAnnouncementCategories = async () => {
+  const res = await API<{ data: AnnouncementCategory[] }>('announcement-categories');
+  return res.data || [];
+};
+
+export const createAnnouncementCategory = async (data: { name: string; slug?: string; color?: string; description?: string }) => {
+  return API<{ data: AnnouncementCategory; message?: string }>('announcement-categories', data, 'POST');
+};
+
+export const updateAnnouncementCategory = async (
+  id: number,
+  data: { name?: string; slug?: string; color?: string; description?: string; is_active?: boolean }
+) => {
+  return API<{ data: AnnouncementCategory; message?: string }>(`announcement-categories/${id}`, data, 'PUT');
+};
+
+export const deleteAnnouncementCategory = async (id: number) => {
+  return API<{ message: string }>(`announcement-categories/${id}`, {}, 'DELETE');
 };

@@ -94,6 +94,16 @@ export interface NewsCategory {
   count?: number;
 }
 
+export interface AnnouncementCategory {
+  id: number;
+  name: string;
+  slug: string;
+  color: string;
+  description: string | null;
+  is_active: boolean;
+  count?: number;
+}
+
 export interface NewsAnalytics {
   total_news: number;
   published_news: number;
@@ -142,6 +152,10 @@ export interface AnnouncementItem {
   summary: string | null;
   content: string | null;
   group: string | null;
+  category_id: number | null;
+  category_name: string | null;
+  category_color: string | null;
+  category_slug: string | null;
   type: 'important' | 'normal';
   image: string | null;
   image_url: string | null;
@@ -162,6 +176,7 @@ export interface AnnouncementPayload {
   summary?: string | null;
   content?: string | null;
   group?: string | null;
+  category_id?: number | null;
   type: 'important' | 'normal';
   image_url?: string | null;
   files?: AnnouncementAttachment[];

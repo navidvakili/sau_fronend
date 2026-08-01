@@ -43,6 +43,31 @@ function normalizeMediaFile(file: MediaFile): MediaFile {
   return { ...file, url: resolveMediaUrl(file.url) };
 }
 
+// ============================================================
+// پسوندهای اجرایی/خطرناک که هرگز اجازه آپلود ندارند (bat، exe و ...)
+// ============================================================
+const BLOCKED_EXTENSIONS = [
+  'bat', 'cmd', 'com', 'exe', 'scr', 'msi', 'msp', 'ps1', 'vbs', 'js',
+  'jse', 'jar', 'sh', 'php', 'html', 'htm', 'dll', 'sys', 'apk', 'reg',
+  'wsf', 'cpl', 'lnk', 'msc', 'hta', 'inf', 'drv', 'ocx', 'pif', 'scf',
+  'msh', 'app', 'gadget', 'iso',
+];
+
+// فرمت‌های مجاز برای آپلود (هماهنگ با اعتبارسنجی سمت سرور MediaController)
+const ALLOWED_ACCEPT =
+  '.jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.zip,.rar,.7z,.tar,.gz,image/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.flv';
+
+/** پسوند فایل را (بدون نقطه، حروف کوچک) برمی‌گرداند */
+function getFileExtension(name: string): string {
+  const idx = name.lastIndexOf('.');
+  return idx === -1 ? '' : name.slice(idx + 1).toLowerCase();
+}
+
+/** آیا این فایل از نوع اجرایی/خطرناک است؟ */
+function isBlockedFile(file: File): boolean {
+  return BLOCKED_EXTENSIONS.includes(getFileExtension(file.name));
+}
+
 interface MediaManagerProps {
   open: boolean;
   onClose: () => void;
@@ -153,6 +178,11 @@ export default function MediaManager({
 
   // Upload file
   const handleUpload = async (file: File) => {
+    // جلوگیری از آپلود فایل‌های غیرمجاز (bat، exe و ...)
+    if (isBlockedFile(file)) {
+      setError(`آپلود فایل «${file.name}» مجاز نیست. نوع فایل‌های اجرایی و خطرناک (مانند bat، exe و ...) قابل آپلود نیستند.`);
+      return;
+    }
     setUploading(true);
     setUploadProgress(0);
     setError(null);
@@ -313,7 +343,13 @@ export default function MediaManager({
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept={filter === 'image' ? 'image/*' : filter === 'video' ? 'video/*' : undefined}
+              accept={
+                filter === 'image'
+                  ? 'image/*'
+                  : filter === 'video'
+                    ? 'video/*'
+                    : ALLOWED_ACCEPT
+              }
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleUpload(file);
@@ -427,7 +463,7 @@ export default function MediaManager({
                       ) : (
                         <div className="flex flex-col items-center gap-2 p-4">
                           <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-                          <span className="text-[10px] text-gray-400 font-mono">{file.type.split('/').pop()}</span>
+                          <span className="text-[10px] text-gray-400 font-mono uppercase">{getFileExtension(file.name) || file.type.split('/').pop()}</span>
                         </div>
                       )}
                       {(isImage(file.type) || isVideo(file.type)) && (

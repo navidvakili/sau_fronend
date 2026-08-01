@@ -10,9 +10,9 @@ import {
   Megaphone, Plus, Search, Filter, Pin, Edit3, Trash2, Calendar,
   User as UserIcon, Clock, Send, Loader2, Upload, X, Info,
   ChevronRight, ChevronLeft, LayoutGrid, List, FileText, Download,
-  Eye, CheckCircle2, AlertCircle, Paperclip,
+  Eye, CheckCircle2, AlertCircle, Paperclip, Layers,
 } from 'lucide-react';
-import type { AnnouncementItem, User, AnnouncementAttachment } from '@/src/shared-types';
+import type { AnnouncementItem, AnnouncementCategory, User, AnnouncementAttachment } from '@/src/shared-types';
 import { decodeHtmlEntities } from '@/src/shared-utils';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
@@ -20,6 +20,8 @@ import MediaManager from '@/src/shared-components/MediaManager';
 import {
   fetchAnnouncements, fetchAnnouncementById, createAnnouncement, updateAnnouncement,
   deleteAnnouncement, toggleAnnouncementPin, fetchAnnouncementGroups,
+  fetchAnnouncementCategories, createAnnouncementCategory, updateAnnouncementCategory,
+  deleteAnnouncementCategory,
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
@@ -30,7 +32,7 @@ interface AnnouncementManagementProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
 }
 
-type SubTab = 'list' | 'editor';
+type SubTab = 'list' | 'editor' | 'categories';
 
 export default function AnnouncementManagement({ user, moduleId }: AnnouncementManagementProps) {
   const { can } = useAppPermissions();
@@ -62,6 +64,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [groups, setGroups] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // ===== Reader Modal State =====
@@ -71,6 +74,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formTitle, setFormTitle] = useState('');
   const [formGroup, setFormGroup] = useState('');
+  const [formCategoryId, setFormCategoryId] = useState<number | ''>('');
   const [formType, setFormType] = useState<'important' | 'normal'>('normal');
   const [formSummary, setFormSummary] = useState('');
   const [formContent, setFormContent] = useState('');
@@ -93,10 +97,33 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
   // ===== Delete Confirmation state =====
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // ===== Categories state =====
+  const [categories, setCategories] = useState<AnnouncementCategory[]>([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [newCatColor, setNewCatColor] = useState('bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30');
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+  const [editCatColor, setEditCatColor] = useState('');
+  const [editCatLoading, setEditCatLoading] = useState(false);
+  const [deleteCatId, setDeleteCatId] = useState<number | null>(null);
+
   // ===== Metrics =====
   const publishedCount = announcements.filter(a => a.status === 'published').length;
   const pinnedCount = announcements.filter(a => a.is_pinned).length;
   const importantCount = announcements.filter(a => a.type === 'important').length;
+
+  // ===== Category color map for display =====
+  const CATEGORY_COLORS: Record<string, string> = {
+    'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30': 'teal',
+    'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30': 'indigo',
+    'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30': 'amber',
+    'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30': 'rose',
+    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30': 'emerald',
+    'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30': 'purple',
+  };
 
   // ===== Smart pagination helper =====
   const getPageNumbers = (current: number, total: number): (number | 'ellipsis')[] => {
@@ -123,6 +150,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       if (statusFilter !== 'all') params.status = statusFilter;
       if (typeFilter !== 'all') params.type = typeFilter;
       if (groupFilter !== 'all') params.group = groupFilter;
+      if (categoryFilter !== 'all') params.category_id = categoryFilter;
 
       const data = await fetchAnnouncements(params);
       setAnnouncements(data.data);
@@ -133,7 +161,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, typeFilter, groupFilter]);
+  }, [currentPage, searchQuery, statusFilter, typeFilter, groupFilter, categoryFilter]);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -141,6 +169,15 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       setGroups(data);
     } catch (err: any) {
       console.error('Error loading groups:', err);
+    }
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await fetchAnnouncementCategories();
+      setCategories(data);
+    } catch (err: any) {
+      console.error('Error loading categories:', err);
     }
   }, []);
 
@@ -152,6 +189,10 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     loadGroups();
   }, [loadGroups]);
 
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -159,7 +200,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       loadAnnouncements();
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, typeFilter, groupFilter]);
+  }, [searchQuery, statusFilter, typeFilter, groupFilter, categoryFilter]);
 
   // ===== Handlers =====
   const handleOpenReader = async (item: AnnouncementItem) => {
@@ -201,6 +242,82 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     }
   };
 
+  // ===== Category handlers =====
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    setCatLoading(true);
+    try {
+      await createAnnouncementCategory({
+        name: newCatName,
+        color: newCatColor,
+        description: newCatDesc || undefined,
+      });
+      await loadCategories();
+      setNewCatName('');
+      setNewCatDesc('');
+      showToast('دسته‌بندی با موفقیت ایجاد شد.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در ایجاد دسته‌بندی', 'error');
+    } finally {
+      setCatLoading(false);
+    }
+  };
+
+  const handleStartEditCategory = (cat: AnnouncementCategory) => {
+    setEditingCategoryId(cat.id);
+    setEditCatName(cat.name);
+    setEditCatDesc(cat.description || '');
+    setEditCatColor(cat.color || 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30');
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCatName('');
+    setEditCatDesc('');
+    setEditCatColor('');
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategoryId || !editCatName.trim()) return;
+    setEditCatLoading(true);
+    try {
+      await updateAnnouncementCategory(editingCategoryId, {
+        name: editCatName.trim(),
+        description: editCatDesc || undefined,
+        color: editCatColor || undefined,
+      });
+      await loadCategories();
+      handleCancelEditCategory();
+      showToast('عنوان دسته‌بندی با موفقیت به‌روزرسانی شد.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در ویرایش دسته‌بندی', 'error');
+    } finally {
+      setEditCatLoading(false);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deleteCatId) return;
+    try {
+      await deleteAnnouncementCategory(deleteCatId);
+      await loadCategories();
+      if (categoryFilter === deleteCatId) setCategoryFilter('all');
+      showToast('دسته‌بندی با موفقیت حذف شد.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در حذف دسته‌بندی', 'error');
+    } finally {
+      setDeleteCatId(null);
+    }
+  };
+
+  // ===== Helper to get category name by id =====
+  const getCategoryName = (id: number | null): string => {
+    if (!id) return 'عمومی';
+    return categories.find(c => c.id === id)?.name || 'نامشخص';
+  };
+
   const handleStartEdit = async (item: AnnouncementItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setFormMessage(null);
@@ -211,6 +328,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       setEditingId(detail.id);
       setFormTitle(detail.title);
       setFormGroup(detail.group || '');
+      setFormCategoryId(detail.category_id ?? '');
       setFormType(detail.type);
       setFormSummary(detail.summary || '');
       setFormContent(decodeHtmlEntities(detail.content || ''));
@@ -223,6 +341,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       setEditingId(item.id);
       setFormTitle(item.title);
       setFormGroup(item.group || '');
+      setFormCategoryId(item.category_id ?? '');
       setFormType(item.type);
       setFormSummary(item.summary || '');
       setFormContent(decodeHtmlEntities(item.content || ''));
@@ -240,6 +359,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     setEditingId(null);
     setFormTitle('');
     setFormGroup('');
+    setFormCategoryId('');
     setFormType('normal');
     setFormSummary('');
     setFormContent('');
@@ -265,6 +385,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       const payload = {
         title: formTitle,
         group: formGroup || undefined,
+        category_id: formCategoryId === '' ? null : formCategoryId,
         type: formType,
         summary: formSummary || undefined,
         content: formContent || undefined,
@@ -299,9 +420,16 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     }
   };
 
-  const handleAddFile = (url: string) => {
-    const fileName = url.split('/').pop()?.split('?')[0] || 'فایل';
-    setFormFiles(prev => [...prev, { name: fileName, size: '', url }]);
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleAddFile = (url: string, file?: { name?: string; size?: number }) => {
+    const fileName = file?.name || url.split('/').pop()?.split('?')[0] || 'فایل';
+    const size = file?.size ? formatFileSize(file.size) : '';
+    setFormFiles(prev => [...prev, { name: fileName, size, url }]);
   };
 
   const handleRemoveFile = (index: number) => {
@@ -406,6 +534,16 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
               <span>{editingId ? 'ویرایش اطلاعیه' : 'ثبت اطلاعیه جدید'}</span>
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'categories' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>دسته‌بندی‌ها</span>
+          </button>
         </div>
 
         {activeTab === 'list' && (
@@ -438,7 +576,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
           {/* Search & Filters */}
           <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xs space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-              <div className="md:col-span-5 relative">
+              <div className="md:col-span-4 relative">
                 <Search className="w-4 h-4 absolute right-3.5 top-3.5 text-gray-400" />
                 <input
                   type="text"
@@ -475,7 +613,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                   <option value="normal">عادی</option>
                 </select>
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
                 <select
                   value={groupFilter}
                   onChange={e => setGroupFilter(e.target.value)}
@@ -484,6 +622,18 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                   <option value="all">همه گروه‌ها</option>
                   {groups.map(g => (
                     <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select
+                  value={categoryFilter === 'all' ? 'all' : String(categoryFilter)}
+                  onChange={e => setCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  <option value="all">همه دسته‌بندی‌ها</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -496,9 +646,9 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                 فیلتر سریع:
               </span>
               <button
-                onClick={() => { setTypeFilter('all'); setStatusFilter('all'); setGroupFilter('all'); }}
+                onClick={() => { setTypeFilter('all'); setStatusFilter('all'); setGroupFilter('all'); setCategoryFilter('all'); }}
                 className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  typeFilter === 'all' && statusFilter === 'all' && groupFilter === 'all' ? 'bg-teal-500 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  typeFilter === 'all' && statusFilter === 'all' && groupFilter === 'all' && categoryFilter === 'all' ? 'bg-teal-500 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 همه ({total})
@@ -527,6 +677,17 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
               >
                 پیش‌نویس
               </button>
+              {categories.slice(0, 5).map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setCategoryFilter(categoryFilter === c.id ? 'all' : c.id)}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    categoryFilter === c.id ? 'bg-teal-500 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -576,8 +737,8 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                       </div>
                     )}
 
-                    <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-teal-600/90 text-white font-bold text-[11px] backdrop-blur-md shadow-xs">
-                      {item.group || 'عمومی'}
+                    <div className={`absolute bottom-3 right-3 px-3 py-1 rounded-xl font-bold text-[11px] backdrop-blur-md shadow-xs ${item.category_color ? item.category_color : 'bg-teal-600/90 text-white'}`}>
+                      {item.category_name || item.group || 'عمومی'}
                     </div>
 
                     {item.status !== 'published' && (
@@ -663,7 +824,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
                     <th className="py-3.5 px-4 font-bold">عنوان اطلاعیه</th>
-                    <th className="py-3.5 px-4 font-bold">گروه</th>
+                    <th className="py-3.5 px-4 font-bold">دسته‌بندی</th>
                     <th className="py-3.5 px-4 font-bold">نوع</th>
                     <th className="py-3.5 px-4 font-bold">تاریخ</th>
                     <th className="py-3.5 px-4 font-bold">نویسنده</th>
@@ -681,8 +842,8 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px]">
-                          {item.group || 'عمومی'}
+                        <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${item.category_color ? item.category_color : 'bg-teal-500/10 text-teal-700 dark:text-teal-300'}`}>
+                          {item.category_name || item.group || 'عمومی'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -843,17 +1004,18 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                 <h3 className="text-xs font-black text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-2">تنظیمات انتشار</h3>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">گروه اطلاعیه</label>
-                  <input
-                    type="text" value={formGroup} onChange={e => setFormGroup(e.target.value)}
-                    placeholder="مثال: آموزشی، اداری، فرهنگی"
-                    list="announcement-group-options"
-                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                  <datalist id="announcement-group-options">
-                    {groups.map(g => <option key={g} value={g} />)}
-                  </datalist>
-                  <p className="text-[10px] text-gray-400 mt-1">گروه‌های قبلی به‌عنوان پیشنهاد نمایش داده می‌شوند.</p>
+                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">دسته‌بندی</label>
+                  <select
+                    value={formCategoryId === '' ? '' : String(formCategoryId)}
+                    onChange={e => setFormCategoryId(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="">بدون دسته‌بندی</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-400 mt-1">اطلاعیه‌ها را می‌توان در دسته‌بندی‌های دلخواه گروه‌بندی کرد.</p>
                 </div>
 
                 <div>
@@ -949,6 +1111,9 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                       افزودن فایل
                     </button>
                   </div>
+                  <p className="text-[10px] text-gray-400 mb-1.5">
+                    فایل‌های PDF، Word، Excel و ... را از گالری رسانه انتخاب کنید
+                  </p>
                   {formFiles.length === 0 && (
                     <p className="text-[10px] text-gray-400 text-center py-3 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                       هنوز فایلی اضافه نشده است
@@ -1016,6 +1181,178 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         </motion.div>
       )}
 
+      {/* ===== Categories Tab ===== */}
+      {activeTab === 'categories' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+        >
+          {/* Categories list */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xs p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-teal-500" />
+                  دسته‌بندی‌های اطلاعیه
+                </h3>
+                <span className="text-[11px] font-bold text-gray-400">{categories.length} دسته‌بندی</span>
+              </div>
+
+              {categories.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  هنوز دسته‌بندی‌ای ایجاد نشده است.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {categories.map(cat => (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 hover:border-teal-500/40 transition-colors"
+                    >
+                      {editingCategoryId === cat.id ? (
+                        <form onSubmit={handleUpdateCategory} className="flex-1 flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            value={editCatName}
+                            onChange={e => setEditCatName(e.target.value)}
+                            className="flex-1 min-w-32 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                            placeholder="نام دسته‌بندی"
+                            required
+                          />
+                          <select
+                            value={editCatColor}
+                            onChange={e => setEditCatColor(e.target.value)}
+                            className="px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11px] font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">سبز فیروزه‌ای</option>
+                            <option value="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30">نیلی</option>
+                            <option value="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">طلایی</option>
+                            <option value="bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30">رز</option>
+                            <option value="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">سبز</option>
+                            <option value="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">بنفش</option>
+                          </select>
+                          <button
+                            type="submit"
+                            disabled={editCatLoading}
+                            className="px-3 py-2 rounded-xl bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {editCatLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            ذخیره
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEditCategory}
+                            className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 text-[11px] font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          >
+                            انصراف
+                          </button>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className={`w-3 h-3 rounded-full shrink-0 ${cat.color?.split(' ')[0] || 'bg-teal-500'}`} />
+                            <div className="min-w-0">
+                              <div className="text-xs font-extrabold text-gray-900 dark:text-white truncate">{cat.name}</div>
+                              {cat.description && (
+                                <div className="text-[10px] text-gray-400 truncate mt-0.5">{cat.description}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 text-[10px] font-bold">
+                              {cat.count ?? 0} اطلاعیه
+                            </span>
+                            <button
+                              onClick={() => { setCategoryFilter(cat.id); setActiveTab('list'); }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-bold hover:bg-teal-500/20 transition-colors cursor-pointer"
+                            >
+                              مشاهده اطلاعیه‌ها
+                            </button>
+                            <button
+                              onClick={() => handleStartEditCategory(cat)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-500/10 transition-colors cursor-pointer"
+                              title="ویرایش"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteCatId(cat.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Create category form */}
+          {canEdit && (
+            <div className="lg:col-span-4">
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xs p-5 sticky top-24">
+                <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                  <Plus className="w-4 h-4 text-teal-500" />
+                  دسته‌بندی جدید
+                </h3>
+                <form onSubmit={handleAddCategory} className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">نام دسته‌بندی *</label>
+                    <input
+                      type="text"
+                      value={newCatName}
+                      onChange={e => setNewCatName(e.target.value)}
+                      placeholder="مثال: آموزشی، اداری..."
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">توضیحات</label>
+                    <textarea
+                      value={newCatDesc}
+                      onChange={e => setNewCatDesc(e.target.value)}
+                      placeholder="توضیح کوتاه برای این دسته‌بندی (اختیاری)"
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">رنگ</label>
+                    <select
+                      value={newCatColor}
+                      onChange={e => setNewCatColor(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">سبز فیروزه‌ای</option>
+                      <option value="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30">نیلی</option>
+                      <option value="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">طلایی</option>
+                      <option value="bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30">رز</option>
+                      <option value="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">سبز</option>
+                      <option value="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">بنفش</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={catLoading || !newCatName.trim()}
+                    className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-black hover:bg-teal-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {catLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    ایجاد دسته‌بندی
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Media Manager for form image */}
       <MediaManager
         open={showMediaSelector}
@@ -1030,6 +1367,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         open={showFileSelector}
         onClose={() => setShowFileSelector(false)}
         onSelect={handleAddFile}
+        filter="all"
         title="انتخاب فایل پیوست"
       />
 
@@ -1083,6 +1421,53 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         )}
       </AnimatePresence>
 
+      {/* ===== Delete Category Confirmation Modal ===== */}
+      <AnimatePresence>
+        {deleteCatId !== null && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => setDeleteCatId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-md pointer-events-auto text-center">
+                <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-4">
+                  <Trash2 className="w-6 h-6 text-rose-500" />
+                </div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">حذف دسته‌بندی</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  آیا از حذف این دسته‌بندی اطمینان دارید؟
+                  <br />
+                  <span className="text-amber-500 text-xs">اطلاعیه‌های این دسته‌بندی بدون دسته‌بندی (عمومی) خواهند شد.</span>
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setDeleteCatId(null)}
+                    className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    انصراف
+                  </button>
+                  <button
+                    onClick={confirmDeleteCategory}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
+                  >
+                    حذف دسته‌بندی
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ===== READER MODAL ===== */}
       <AnimatePresence>
         {activeReaderItem && (
@@ -1111,8 +1496,8 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
                 </button>
                 <div className="absolute bottom-6 right-6 left-6 space-y-2 text-white">
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-xl bg-teal-600 font-bold text-xs shadow-xs">
-                      {activeReaderItem.group || 'عمومی'}
+                    <span className={`px-3 py-1 rounded-xl font-bold text-xs shadow-xs ${activeReaderItem.category_color ? activeReaderItem.category_color : 'bg-teal-600 text-white'}`}>
+                      {activeReaderItem.category_name || activeReaderItem.group || 'عمومی'}
                     </span>
                     {activeReaderItem.type === 'important' && (
                       <span className="px-3 py-1 rounded-xl bg-rose-600 font-black text-xs flex items-center gap-1 shadow-xs">
