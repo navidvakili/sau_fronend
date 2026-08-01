@@ -1,0 +1,528 @@
+// ============================================================
+// App — کامپوننت اصلی برنامه
+// ============================================================
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { AnimatePresence } from 'motion/react';
+import { type LucideIcon } from 'lucide-react';
+import type { User as UserType } from '@/src/shared-types';
+import type { Tab, PortalNotification, NavItem } from '@/src/layouts/types';
+import type { RoleInfo } from '@/src/login/types';
+import {
+  layoutsApi, Header, Sidebar, TabsBar, Footer,
+  FloatingPanels, AuxiliaryTools, useTheme, useStandby,
+  defaultNotifications, urlToTargetId, resolveIcon, faToLucideName,
+} from '@/src/layouts';
+import { NetworkStatus } from '@/src/shared-components';
+import type { MenuCategory } from '@/src/layouts';
+import { USER_STRING, TOKEN_STRING, MAX_TABS } from '@/src/shared-constants';
+import { ModuleRenderer } from '@/src/apps';
+import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
+import { dashboardApi } from '@/src/dashboard';
+import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
+import { PermissionsProvider } from '@/src/shared-utils/PermissionsContext';
+
+export default function App() {
+  // ========== Core State ==========
+  const [viewState, setViewState] = useState<'login' | 'authenticated'>('login');
+  const { theme, setTheme, handleToggleTheme } = useTheme(viewState);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<PortalNotification[]>(defaultNotifications);
+
+  // UI State
+  const [selectedMainCat, setSelectedMainCat] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [showLimitAlert, setShowLimitAlert] = useState(false);
+  const [confirmClearActive, setConfirmClearActive] = useState(false);
+  const [tabRefreshKeys, setTabRefreshKeys] = useState<Record<string, number>>({});
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const { isStandby, setIsStandby, handleUnlock } = useStandby(viewState);
+
+  // Navigation state — fetched dynamically from API
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [userRoles, setUserRoles] = useState<RoleInfo[]>([]);
+  const [navLoading, setNavLoading] = useState(false);
+
+  // Pinned menus for dashboard quick access
+  const [pinnedMenus, setPinnedMenus] = useState<string[]>([]);
+
+  // Mobile sidebar state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Session warning (concurrent login) state
+  const {
+    pendingWarning,
+    setPendingWarning,
+    isLoading: warningRespondLoading,
+    respondToWarning: handleWarningRespond,
+  } = useSessionWarning(viewState === 'authenticated');
+
+  // ========== Effects ==========
+
+  // Restore session on cold start — default to dashboard (no tab)
+  useEffect(() => {
+    const storedUser = loginApi.getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+      setViewState('authenticated');
+      // Fetch fresh user data from backend (silent) to sync permissions,
+      // roles, and profile data — localStorage may be stale after admin
+      // changes role permissions via PermissionPanel.
+      loginApi.getUser().then(profile => {
+        // 🔴 CRITICAL: Update React state AND localStorage with fresh
+        // permissions/roles from backend. Without this, a page refresh
+        // restores old localStorage data and the user keeps stale permissions
+        // until they log out and log back in.
+        setUser(profile);
+        localStorage.setItem(USER_STRING, JSON.stringify(profile));
+        // Also refetch navigation since sidebar filtering depends on permissions
+        fetchNavigation();
+        if ((profile as any).theme) {
+          setTheme((profile as any).theme as 'light' | 'dark');
+        }
+      }).catch(() => { /* ignore */ });
+      // Fetch pinned menus
+      fetchPinnedMenus();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch navigation and roles when user is authenticated
+  const fetchNavigation = useCallback(async () => {
+    if (!loginApi.isAuthenticated()) return;
+    setNavLoading(true);
+    try {
+      const [navData, rolesData] = await Promise.all([
+        layoutsApi.getNavigation(),
+        layoutsApi.getUserRoles(),
+      ]);
+      setNavItems(navData);
+      setUserRoles(rolesData.all_roles);
+    } catch (err) {
+      console.warn('Failed to load navigation from API:', err);
+    } finally {
+      setNavLoading(false);
+    }
+  }, []);
+
+  // Fetch pinned menus from backend
+  const fetchPinnedMenus = useCallback(async () => {
+    try {
+      const menus = await dashboardApi.getPinnedMenus();
+      setPinnedMenus(Array.isArray(menus) ? menus : []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Pin/unpin handlers
+  const handlePinMenu = useCallback(async (menuId: string) => {
+    setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
+    try {
+      await dashboardApi.pinMenu(menuId);
+    } catch {
+      // Rollback on error
+      setPinnedMenus(prev => prev.filter(id => id !== menuId));
+    }
+  }, []);
+
+  const handleUnpinMenu = useCallback(async (menuId: string) => {
+    setPinnedMenus(prev => prev.filter(id => id !== menuId));
+    try {
+      await dashboardApi.unpinMenu(menuId);
+    } catch {
+      // Rollback — re-add
+      setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewState === 'authenticated') {
+      fetchNavigation();
+      fetchPinnedMenus();
+    }
+  }, [viewState, fetchNavigation, fetchPinnedMenus]);
+
+  // Derive MenuCategory[] from NavItem[] (dynamic API data)
+  const menuCategories = useMemo<MenuCategory[]>(() => {
+    return navItems.map(item => ({
+      key: String(item.id),
+      title: item.title,
+      icon: resolveIcon(faToLucideName[item.icon] || 'Folder'),
+      submenus: item.children.map(child => ({
+        label: child.title,
+        targetId: urlToTargetId(child.url, child.title),
+        title: child.title,
+        iconName: faToLucideName[child.icon] || 'Folder',
+      })),
+      // Categories without children → direct tab opening
+      targetId: item.children.length === 0 ? urlToTargetId(item.url, item.title) : undefined,
+      iconName: item.children.length === 0 ? faToLucideName[item.icon] || 'Folder' : undefined,
+    }));
+  }, [navItems]);
+
+  // Flat list of all menu items for dashboard quick access (derived from API categories)
+  const allMenuItems = useMemo(() => {
+    const items: Array<{
+      id: string;
+      title: string;
+      icon: LucideIcon;
+      desc: string;
+      roles: readonly ('admin' | 'editor' | 'user')[];
+    }> = [];
+
+    menuCategories.forEach(cat => {
+      // Include submenu items (children)
+      cat.submenus.forEach(sub => {
+        items.push({
+          id: sub.targetId,
+          title: sub.title,
+          icon: resolveIcon(sub.iconName),
+          desc: cat.title,
+          roles: ['admin', 'editor', 'user'] as const,
+        });
+      });
+
+      // Include direct/top-level items (categories without children)
+      if (cat.targetId && cat.submenus.length === 0) {
+        items.push({
+          id: cat.targetId,
+          title: cat.title,
+          icon: cat.icon,
+          desc: cat.title,
+          roles: ['admin', 'editor', 'user'] as const,
+        });
+      }
+    });
+
+    return items;
+  }, [menuCategories]);
+
+  // ========== Handlers ==========
+  const handleLoginSuccess = (userProfile: UserType) => {
+    setUser(userProfile);
+    // Convert roles from login response (string[]) to RoleInfo[] format
+    // fetchNavigation() will later replace with proper labeled data from API
+    if (userProfile.roles && userProfile.roles.length > 0) {
+      setUserRoles(userProfile.roles.map((r, i) => ({
+        id: i,
+        role: r,
+        label: r,
+        active: r === userProfile.role ? 1 : 0,
+      })));
+    }
+    setViewState('authenticated');
+  };
+
+  // ========== Support Impersonation ==========
+  const [isImpersonating, setIsImpersonating] = useState(() => loginApi.isImpersonating());
+
+  const handleEndImpersonation = async () => {
+    try {
+      await loginApi.endImpersonation();
+      window.location.reload();
+    } catch (err) {
+      console.warn('Failed to end impersonation:', err);
+      // Fallback: clear everything and go to login
+      localStorage.removeItem(TOKEN_STRING);
+      localStorage.removeItem(USER_STRING);
+      localStorage.removeItem('support_original_token');
+      window.location.reload();
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await loginApi.logout();
+    } catch { /* ignore */ }
+    setUser(null);
+    setTabs([]);
+    setActiveTabId(null);
+    setViewState('login');
+    setActivePanel(null);
+    setSelectedMainCat(null);
+    setShowLogoutModal(false);
+    setPinnedMenus([]);
+  };
+
+  const handleChangeRole = async (newRole: string) => {
+    if (!user) return;
+    try {
+      const updatedUser = await loginApi.switchRole(newRole);
+      setUser(updatedUser);
+      // Clear all tabs so the new role's navigation is shown without stale tabs
+      setTabs([]);
+      setActiveTabId(null);
+      setSelectedMainCat(null);
+      // Re-fetch navigation and pinned menus for the new role context
+      fetchNavigation();
+      fetchPinnedMenus();
+    } catch (err) {
+      console.warn('Failed to switch role:', err);
+    }
+  };
+
+  // Refresh only the currently focused tab
+  const handleRefreshTab = useCallback(() => {
+    if (activeTabId) {
+      setTabRefreshKeys(prev => ({
+        ...prev,
+        [activeTabId]: (prev[activeTabId] || 0) + 1,
+      }));
+    }
+  }, [activeTabId]);
+
+  // Sync sidebar category selection when active tab changes
+  useEffect(() => {
+    if (!activeTabId) {
+      setSelectedMainCat(null);
+      return;
+    }
+    const tab = tabs.find(t => t.id === activeTabId);
+    const moduleType = tab?.moduleType || activeTabId;
+    for (const cat of menuCategories) {
+      const match = cat.submenus.some(sub => sub.targetId === moduleType) || cat.targetId === moduleType;
+      if (match) {
+        setSelectedMainCat(cat.key);
+        return;
+      }
+    }
+    // Tab not in any menu category (e.g., profile, change-password) → close drawer
+    setSelectedMainCat(null);
+  }, [activeTabId, tabs, menuCategories]);
+
+  // Tab management
+  const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false) => {
+    if (!forceNewInstance && tabs.some(t => t.id === id)) {
+      setActiveTabId(id);
+      return;
+    }
+    if (tabs.length >= MAX_TABS) {
+      setShowLimitAlert(true);
+      return;
+    }
+    const uniqueId = forceNewInstance ? `${id}_${Date.now()}` : id;
+    const baseTabsCount = tabs.filter(t => t.id === id || t.moduleType === id).length;
+    const finalTitle = forceNewInstance ? `${title} (نمونه ${baseTabsCount + 1})` : title;
+    setTabs(prev => [...prev, { id: uniqueId, title: finalTitle, iconName, moduleType: id }]);
+    setActiveTabId(uniqueId);
+  }, [tabs]);
+
+  const handleCloseTab = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = tabs.filter(t => t.id !== id);
+    setTabs(updated);
+    if (activeTabId === id && updated.length > 0) {
+      setActiveTabId(updated[updated.length - 1].id);
+    } else if (updated.length === 0) {
+      setActiveTabId(null);
+    }
+  };
+
+  const handleClearAllTabs = () => {
+    if (!confirmClearActive) {
+      setConfirmClearActive(true);
+    } else {
+      setTabs([]);
+      setActiveTabId(null);
+      setConfirmClearActive(false);
+      setShowLimitAlert(false);
+    }
+  };
+
+  // Notifications
+  const handleMarkNotifRead = (id: string) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+  const handleClearNotifications = () => setNotifications([]);
+  const unreadNotifCount = notifications.filter(n => !n.read).length;
+
+  // ========== View Routing ==========
+  if (viewState === 'login') {
+    return (
+      <div className={theme}>
+        <LoginForm onLoginSuccess={handleLoginSuccess} />
+      </div>
+    );
+  }
+
+  // ========== Authenticated Layout ==========
+
+  return (
+    <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
+    <PermissionsProvider user={user}>
+
+      {/* ===== Impersonation Banner ===== */}
+      {isImpersonating && (
+        <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between text-sm font-bold z-50 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span>شما در حال مشاهده حساب <strong>{user?.name}</strong> ({user?.username}) هستید — حالت پشتیبان</span>
+          </div>
+          <button
+            onClick={handleEndImpersonation}
+            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+          >
+            بازگشت به حساب پشتیبان
+          </button>
+        </div>
+      )}
+
+      {/* ===== 1. Header Bar ===== */}
+      <Header
+        user={user}
+        userRoles={userRoles}
+        menuCategories={menuCategories}
+        tabs={tabs}
+        theme={theme}
+        handleOpenTab={handleOpenTab}
+        setSelectedMainCat={setSelectedMainCat}
+        handleToggleTheme={handleToggleTheme}
+        handleChangeRole={handleChangeRole}
+        setShowLogoutModal={setShowLogoutModal}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+
+      {/* ===== 2. Three-Column Layout ===== */}
+      <div className="flex-1 flex overflow-hidden relative">
+
+        {/* ===== Column A: Sidebar Menu ===== */}
+        <Sidebar
+          menuCategories={menuCategories}
+          selectedMainCat={selectedMainCat}
+          setSelectedMainCat={setSelectedMainCat}
+          navLoading={navLoading}
+          handleOpenTab={handleOpenTab}
+          tabs={tabs}
+          activeTabId={activeTabId}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+
+        {/* ===== Column B: Main Workspace ===== */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tabs bar */}
+          <TabsBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            setActiveTabId={setActiveTabId}
+            handleRefreshTab={handleRefreshTab}
+            handleCloseTab={handleCloseTab}
+            pinnedMenus={pinnedMenus}
+            handlePinMenu={handlePinMenu}
+            handleUnpinMenu={handleUnpinMenu}
+          />
+
+          {/* Canvas — all tabs kept alive, only active one visible */}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
+            <div>
+              {/* Dashboard — only when no active tab */}
+              {activeTabId === null && (
+                <ModuleRenderer
+                  tabId={null}
+                  tabs={tabs}
+                  user={user}
+                  userRoles={userRoles}
+                  menuCategories={menuCategories}
+                  pinnedMenus={pinnedMenus}
+                  allMenuItems={allMenuItems}
+                  onOpenTab={handleOpenTab}
+                  openTabsCount={tabs.length}
+                  onUpdateUser={(updated: UserType) => {
+                    setUser(updated);
+                    localStorage.setItem(USER_STRING, JSON.stringify(updated));
+                  }}
+                />
+              )}
+
+              {/* All opened tabs kept alive to preserve state on switch */}
+              {tabs.map(tab => (
+                <div
+                  key={`${tab.id}_${tabRefreshKeys[tab.id] || 0}`}
+                  className={activeTabId === tab.id ? '' : 'hidden'}
+                >
+                  <ModuleRenderer
+                    tabId={tab.id}
+                    tabs={tabs}
+                    user={user}
+                    userRoles={userRoles}
+                    menuCategories={menuCategories}
+                    pinnedMenus={pinnedMenus}
+                    allMenuItems={allMenuItems}
+                    onOpenTab={handleOpenTab}
+                    openTabsCount={tabs.length}
+                    onUpdateUser={(updated: UserType) => {
+                      setUser(updated);
+                      localStorage.setItem(USER_STRING, JSON.stringify(updated));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+
+        {/* ===== Column C: Auxiliary Tools ===== */}
+        <AuxiliaryTools
+          activePanel={activePanel}
+          onTogglePanel={(panel) => setActivePanel(activePanel === panel ? null : panel)}
+          unreadNotifCount={unreadNotifCount}
+          onLogoutClick={() => setShowLogoutModal(true)}
+        />
+
+        {/* ===== Floating Panels ===== */}
+        <AnimatePresence>
+          {activePanel && (
+            <FloatingPanels
+              activePanel={activePanel}
+              onClose={() => setActivePanel(null)}
+              notifications={notifications}
+              onMarkNotificationRead={handleMarkNotifRead}
+              onClearNotifications={handleClearNotifications}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ===== Footer ===== */}
+      <Footer user={user} />
+
+      {/* Network status bar — fixed at bottom */}
+      <NetworkStatus />
+
+      {/* Logout confirmation modal */}
+      <LogoutModal
+        showLogoutModal={showLogoutModal}
+        setShowLogoutModal={setShowLogoutModal}
+        handleLogout={handleLogout}
+      />
+
+      {/* Tab limit alert — modal */}
+      <TabLimitAlert
+        showLimitAlert={showLimitAlert}
+        setShowLimitAlert={setShowLimitAlert}
+        handleClearAllTabs={handleClearAllTabs}
+        confirmClearActive={confirmClearActive}
+        setConfirmClearActive={setConfirmClearActive}
+      />
+
+      {/* Standby (auto-lock) overlay */}
+      <StandbyModal
+        isStandby={isStandby}
+        user={user}
+        onUnlock={handleUnlock}
+        onExit={handleLogout}
+      />
+
+      {/* Session Warning Modal (concurrent login detection) */}
+      <SessionWarningModal
+        warning={pendingWarning}
+        onRespond={handleWarningRespond}
+        isLoading={warningRespondLoading}
+      />
+    </PermissionsProvider>
+    </div>
+  );
+}
