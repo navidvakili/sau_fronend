@@ -14,7 +14,6 @@ import type { MenuCategory, SubmenuItem } from './menuConfig';
 import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import LanguageManagerModal from '@/src/shared-components/LanguageManagerModal';
-import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
 interface HeaderProps {
   user: UserType | null;
@@ -40,8 +39,10 @@ export default function Header({
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showLangManager, setShowLangManager] = useState(false);
   const { languages, currentLang, setCurrentLang, getLanguage } = useLanguage();
-  const { hasRole } = useAppPermissions();
-  const canManageLanguages = hasRole('admin') || hasRole('support');
+  // Only the user with username "support" can manage languages.
+  // NOTE: hasRole() is NOT used here because admin/support bypass all role
+  // checks (super-user), and the requirement is ONLY the support username.
+  const canManageLanguages = user?.username === 'support';
   const currentLanguage = getLanguage(currentLang);
 
   return (

@@ -37,3 +37,13 @@ export const updateLanguage = async (id: number, data: Partial<LanguagePayload>)
 export const deleteLanguage = async (id: number) => {
   return API<{ message: string }>(`languages/${id}`, {}, 'DELETE');
 };
+
+/** Get the raw content of a language's locale file (public site .ts) */
+export const fetchLocale = async (code: string) => {
+  return API<{ data: { code: string; content: string } }>(`languages/${code}/locale`);
+};
+
+/** Save the raw content of a language's locale file (public site .ts) */
+export const saveLocale = async (code: string, content: string) => {
+  return API<{ message: string }>(`languages/${code}/locale`, { content }, 'PUT');
+};

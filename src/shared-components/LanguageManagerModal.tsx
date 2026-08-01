@@ -4,10 +4,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Loader2, Trash2, Edit3, Check, Star, Save, Globe } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Edit3, Check, Star, Save, Globe, FileCode2 } from 'lucide-react';
 import type { Language, LanguagePayload } from '@/src/shared-types';
 import {
-  fetchLanguages, createLanguage, updateLanguage, deleteLanguage,
+  fetchLanguages, createLanguage, updateLanguage, deleteLanguage, fetchLocale, saveLocale,
 } from '@/src/shared-api/languages';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import ToastNotification from '@/src/shared-components/ToastNotification';
@@ -39,11 +39,56 @@ export default function LanguageManagerModal({ open, onClose }: LanguageManagerM
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Locale editor (translations file of the public site)
+  const [localeEditLang, setLocaleEditLang] = useState<Language | null>(null);
+  const [localeContent, setLocaleContent] = useState('');
+  const [localeLoading, setLocaleLoading] = useState(false);
+  const [localeSaving, setLocaleSaving] = useState(false);
+  const [localeMessage, setLocaleMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   // Toast
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const openLocaleEditor = async (lang: Language) => {
+    setLocaleEditLang(lang);
+    setLocaleContent('');
+    setLocaleMessage(null);
+    setLocaleLoading(true);
+    try {
+      const data = await fetchLocale(lang.code);
+      setLocaleContent(data.data?.content || '');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'خطا در دریافت فایل ترجمه.';
+      setLocaleMessage({ text: msg, type: 'error' });
+    } finally {
+      setLocaleLoading(false);
+    }
+  };
+
+  const closeLocaleEditor = () => {
+    setLocaleEditLang(null);
+    setLocaleContent('');
+    setLocaleMessage(null);
+  };
+
+  const handleSaveLocale = async () => {
+    if (!localeEditLang) return;
+    setLocaleSaving(true);
+    setLocaleMessage(null);
+    try {
+      await saveLocale(localeEditLang.code, localeContent);
+      showToast(`ترجمه‌های زبان ${localeEditLang.name} ذخیره شد.`);
+      closeLocaleEditor();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'خطا در ذخیره فایل ترجمه.';
+      setLocaleMessage({ text: msg, type: 'error' });
+    } finally {
+      setLocaleSaving(false);
+    }
   };
 
   const loadLanguages = useCallback(async () => {
@@ -342,6 +387,13 @@ export default function LanguageManagerModal({ open, onClose }: LanguageManagerM
                           </div>
                           <div className="flex items-center gap-1.5">
                             <button
+                              onClick={() => openLocaleEditor(lang)}
+                              className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 cursor-pointer transition-colors"
+                              title="ویرایش ترجمه‌ها (فایل سایت عمومی)"
+                            >
+                              <FileCode2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => handleEdit(lang)}
                               className="p-2 rounded-lg text-gray-400 hover:text-teal-500 hover:bg-teal-500/10 cursor-pointer transition-colors"
                               title="ویرایش"
@@ -365,6 +417,94 @@ export default function LanguageManagerModal({ open, onClose }: LanguageManagerM
               </div>
             </div>
           </motion.div>
+
+          {/* Locale editor (translations file) */}
+          <AnimatePresence>
+            {localeEditLang && (
+              <>
+                <div className="fixed inset-0 bg-black/40 z-[100]" onClick={closeLocaleEditor} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="fixed inset-0 z-[105] flex items-center justify-center p-4 pointer-events-none"
+                >
+                  <div className="bg-white dark:bg-[#161618] border border-gray-150 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col pointer-events-auto overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10 shrink-0">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                          <FileCode2 className="w-4.5 h-4.5 text-indigo-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                            ویرایش ترجمه‌ها — {localeEditLang.name}
+                            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 font-sans uppercase align-middle">
+                              {localeEditLang.code}
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            فایل ترجمه سایت عمومی (src/locales/{localeEditLang.code}.ts) — پس از ذخیره، با رفرش سایت عمومی اعمال می‌شود.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={closeLocaleEditor}
+                        className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                      >
+                        <X className="w-4.5 h-4.5" />
+                      </button>
+                    </div>
+
+                    {/* Editor */}
+                    <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
+                      {localeLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                        </div>
+                      ) : (
+                        <>
+                          <textarea
+                            value={localeContent}
+                            onChange={(e) => setLocaleContent(e.target.value)}
+                            spellCheck={false}
+                            dir="ltr"
+                            className="flex-1 min-h-[45vh] bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-xl p-4 text-[11px] leading-6 font-mono text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none text-left"
+                          />
+                          {localeMessage && (
+                            <span className={`text-[11px] font-bold ${localeMessage.type === 'error' ? 'text-rose-500' : 'text-teal-600 dark:text-teal-400'}`}>
+                              {localeMessage.text}
+                            </span>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-gray-400">
+                              هر کلید باید معادل فارسی داشته باشد؛ زبان فارسی به عنوان مرجع استفاده می‌شود.
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={closeLocaleEditor}
+                                className="px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                              >
+                                انصراف
+                              </button>
+                              <button
+                                onClick={handleSaveLocale}
+                                disabled={localeSaving}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                              >
+                                {localeSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                <Save className="w-3.5 h-3.5" /> ذخیره ترجمه‌ها
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Delete confirmation */}
           <AnimatePresence>
@@ -404,7 +544,7 @@ export default function LanguageManagerModal({ open, onClose }: LanguageManagerM
             )}
           </AnimatePresence>
 
-          {toast && <ToastNotification message={toast.text} type={toast.type} />}
+          {toast && <ToastNotification toast={toast} />}
         </>
       )}
     </AnimatePresence>
