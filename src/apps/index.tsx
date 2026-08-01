@@ -13,6 +13,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   auth: lazy(() => import('./auth')),
   users: lazy(() => import('./users')),
   news: lazy(() => import('./news')),
+  announcements: lazy(() => import('./announcements')),
   'slider-studio': lazy(() => import('./slider-studio')),
 };
 
@@ -38,6 +39,10 @@ export const moduleToAppMap: Record<string, string> = {
   'news-create': 'news',
   'news-categories': 'news',
   'news-analytics': 'news',
+
+  // Announcements App
+  'announcements': 'announcements',
+  'announcements-create': 'announcements',
 
   // Slider Studio App
   'slider-studio': 'slider-studio',

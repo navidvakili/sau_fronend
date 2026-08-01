@@ -52,8 +52,7 @@ export interface NewsComment {
   is_approved: boolean;
   approved_at?: string | null;
   approved_by_name?: string | null;
-  created_at: string;
-  updated_at?: string;
+  created_at: string;  updated_at?: string;
 }
 
 export interface NewsItem {
@@ -125,6 +124,49 @@ export interface NewsAnalytics {
     percentage: number;
   }>;
   uncategorized_count: number;
+}
+
+// ============================================================
+// Announcement Types — انواع مربوط به ماژول اطلاعیه‌ها
+// ============================================================
+
+export interface AnnouncementAttachment {
+  name: string;
+  size: string;
+  url: string;
+}
+
+export interface AnnouncementItem {
+  id: number;
+  title: string;
+  summary: string | null;
+  content: string | null;
+  group: string | null;
+  type: 'important' | 'normal';
+  image: string | null;
+  image_url: string | null;
+  files: AnnouncementAttachment[];
+  status: 'published' | 'draft';
+  is_pinned: boolean;
+  author_username: string;
+  author_name: string | null;
+  author_role?: string | null;
+  date: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnnouncementPayload {
+  title: string;
+  summary?: string | null;
+  content?: string | null;
+  group?: string | null;
+  type: 'important' | 'normal';
+  image_url?: string | null;
+  files?: AnnouncementAttachment[];
+  status: 'published' | 'draft';
+  is_pinned?: boolean;
 }
 
 // ============================================================
