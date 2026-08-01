@@ -50,6 +50,8 @@ import AddonParticleCanvas from './AddonParticleCanvas';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import CodeExportModal from './CodeExportModal';
 import InteractivePreviewModal from './InteractivePreviewModal';
+import AutoPlayVideo from './AutoPlayVideo';
+import { resolveStorageUrl } from '@/src/shared-utils';
 import { MediaManager } from '@/src/shared-components';
 import { regenerateSlideIds, localizeSlideImages } from '../utils/templateUtils';
 
@@ -1332,8 +1334,16 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             {/* Background Image - full when type is 'image', overlay otherwise */}
             {activeSlide.background.imageUrl && activeSlide.background.type === 'image' && (
               <img
-                src={activeSlide.background.imageUrl}
+                src={resolveStorageUrl(activeSlide.background.imageUrl)}
                 alt="slide bg"
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              />
+            )}
+
+            {/* Background Video — full when type is 'video' */}
+            {activeSlide.background.type === 'video' && activeSlide.background.videoUrl && (
+              <AutoPlayVideo
+                src={activeSlide.background.videoUrl}
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
             )}
@@ -1431,16 +1441,13 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     <div className="w-full h-full flex items-center justify-center relative z-[1]">
                       {layer.type === 'image' ? (
                         <img
-                          src={layer.content}
+                          src={resolveStorageUrl(layer.content)}
                           alt={layer.name}
                           className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
                         />
                       ) : layer.type === 'video' ? (
-                        <video
+                        <AutoPlayVideo
                           src={layer.content}
-                          autoPlay
-                          loop
-                          muted
                           className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
                         />
                       ) : layer.type === 'rectangle' ? (
@@ -1711,7 +1718,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           setMediaPickerTarget(null);
           setPendingMediaLayerId(null);
         }}
-        filter={mediaPickerTarget === 'image' ? 'image' : 'all'}
+        filter={mediaPickerTarget === 'image' ? 'image' : 'video'}
         title={mediaPickerTarget === 'image' ? 'انتخاب تصویر لایه' : 'انتخاب ویدئوی لایه'}
       />
     </div>
