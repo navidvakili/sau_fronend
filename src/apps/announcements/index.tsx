@@ -10,7 +10,7 @@ import {
   Megaphone, Plus, Search, Filter, Pin, Edit3, Trash2, Calendar,
   User as UserIcon, Clock, Send, Loader2, Upload, X, Info,
   ChevronRight, ChevronLeft, LayoutGrid, List, FileText, Download,
-  Eye, CheckCircle2, AlertCircle, Paperclip, Layers,
+  Eye, CheckCircle2, AlertCircle, Paperclip, Layers, Globe,
 } from 'lucide-react';
 import type { AnnouncementItem, AnnouncementCategory, User, AnnouncementAttachment } from '@/src/shared-types';
 import { decodeHtmlEntities } from '@/src/shared-utils';
@@ -24,6 +24,7 @@ import {
   deleteAnnouncementCategory,
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface AnnouncementManagementProps {
   user?: User | null;
@@ -36,6 +37,8 @@ type SubTab = 'list' | 'editor' | 'categories';
 
 export default function AnnouncementManagement({ user, moduleId }: AnnouncementManagementProps) {
   const { can } = useAppPermissions();
+  const { currentLang, getLanguage } = useLanguage();
+  const activeLanguage = getLanguage(currentLang);
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('support');
   const isEditor = user?.roles?.includes('editor');
   const roleCanEdit = isAdmin || isEditor;
@@ -145,6 +148,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
       const params: Record<string, any> = {
         page: currentPage,
         per_page: 12,
+        lang: currentLang,
       };
       if (searchQuery) params.search = searchQuery;
       if (statusFilter !== 'all') params.status = statusFilter;
@@ -161,7 +165,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, statusFilter, typeFilter, groupFilter, categoryFilter]);
+  }, [currentPage, searchQuery, statusFilter, typeFilter, groupFilter, categoryFilter, currentLang]);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -174,12 +178,12 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
 
   const loadCategories = useCallback(async () => {
     try {
-      const data = await fetchAnnouncementCategories();
+      const data = await fetchAnnouncementCategories(currentLang);
       setCategories(data);
     } catch (err: any) {
       console.error('Error loading categories:', err);
     }
-  }, []);
+  }, [currentLang]);
 
   useEffect(() => {
     loadAnnouncements();
@@ -252,6 +256,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         name: newCatName,
         color: newCatColor,
         description: newCatDesc || undefined,
+        lang: currentLang,
       });
       await loadCategories();
       setNewCatName('');
@@ -287,6 +292,7 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         name: editCatName.trim(),
         description: editCatDesc || undefined,
         color: editCatColor || undefined,
+        lang: currentLang,
       });
       await loadCategories();
       handleCancelEditCategory();
@@ -393,13 +399,14 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
         files: formFiles.length > 0 ? formFiles : undefined,
         status: finalStatus,
         is_pinned: formIsPinned,
+        lang: currentLang,
       };
 
       if (editingId) {
         await updateAnnouncement(editingId, payload);
         setFormMessage({ text: 'تغییرات اطلاعیه با موفقیت ذخیره گردید.', type: 'success' });
       } else {
-        await createAnnouncement(payload as any);
+        await createAnnouncement(payload);
         setFormMessage({ text: 'اطلاعیه جدید با موفقیت ثبت شد.', type: 'success' });
       }
 
@@ -447,8 +454,14 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
               <Megaphone className="w-4 h-4" />
               <span>سامانه اطلاعیه‌های رسمی</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
               مدیریت اطلاعیه‌ها
+              {activeLanguage && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 border border-white/20 text-[11px] font-black font-sans uppercase">
+                  <Globe className="w-3.5 h-3.5 text-teal-300" />
+                  {activeLanguage.code} • {activeLanguage.name}
+                </span>
+              )}
             </h1>
             <p className="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed">
               ثبت، ویرایش و انتشار اطلاعیه‌های آموزشی، اداری و رویدادهای دانشگاه — اطلاعیه‌های منتشرشده در صفحه اصلی سایت عمومی نمایش داده می‌شوند

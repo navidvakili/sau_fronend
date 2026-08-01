@@ -9,6 +9,7 @@ export interface AnnouncementsQuery {
   type?: string;
   group?: string;
   category_id?: number;
+  lang?: string;
 }
 
 interface PaginatedResponse<T> {
@@ -28,6 +29,7 @@ export const fetchAnnouncements = async (params: AnnouncementsQuery = {}) => {
   if (params.type) qs.set('type', params.type);
   if (params.group) qs.set('group', params.group);
   if (params.category_id) qs.set('category_id', String(params.category_id));
+  if (params.lang) qs.set('lang', params.lang);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   return API<PaginatedResponse<AnnouncementItem>>(`announcements${suffix}`);
 };
@@ -58,18 +60,19 @@ export const fetchAnnouncementGroups = async () => {
   return res.data || [];
 };
 
-export const fetchAnnouncementCategories = async () => {
-  const res = await API<{ data: AnnouncementCategory[] }>('announcement-categories');
+export const fetchAnnouncementCategories = async (lang?: string) => {
+  const suffix = lang ? `?lang=${lang}` : '';
+  const res = await API<{ data: AnnouncementCategory[] }>(`announcement-categories${suffix}`);
   return res.data || [];
 };
 
-export const createAnnouncementCategory = async (data: { name: string; slug?: string; color?: string; description?: string }) => {
+export const createAnnouncementCategory = async (data: { name: string; slug?: string; color?: string; description?: string; lang?: string }) => {
   return API<{ data: AnnouncementCategory; message?: string }>('announcement-categories', data, 'POST');
 };
 
 export const updateAnnouncementCategory = async (
   id: number,
-  data: { name?: string; slug?: string; color?: string; description?: string; is_active?: boolean }
+  data: { name?: string; slug?: string; color?: string; description?: string; is_active?: boolean; lang?: string }
 ) => {
   return API<{ data: AnnouncementCategory; message?: string }>(`announcement-categories/${id}`, data, 'PUT');
 };
