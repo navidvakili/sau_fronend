@@ -73,6 +73,8 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   achievements:     { view: 'achievements.view', create: 'achievements.create', edit: 'achievements.edit', delete: 'achievements.delete', approve: 'achievements.approve' },
   'achievements-create': { view: 'achievements.view', create: 'achievements.create' },
   people:           { view: 'people.view',           create: 'people.create',           edit: 'people.edit',           delete: 'people.delete',           approve: 'people.approve' },
+  departments:      { view: 'departments.view',      create: 'departments.create',      edit: 'departments.edit',      delete: 'departments.delete',      approve: 'departments.approve' },
+  fields:           { view: 'fields.view',           create: 'fields.create',           edit: 'fields.edit',           delete: 'fields.delete',           approve: 'fields.approve' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
 };

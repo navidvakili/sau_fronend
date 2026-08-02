@@ -360,3 +360,137 @@ export interface PersonPayload {
   status: 'published' | 'draft';
   sort_order?: number;
 }
+
+// ============================================================
+// Academic Departments Types — انواع مربوط به ماژول گروه‌های آموزشی
+// ============================================================
+
+export interface InfoFileItem {
+  title: string;
+  url: string;
+}
+
+/** Lightweight instructor entry embedded in a department detail */
+export interface DepartmentInstructor {
+  id: number;
+  type: PersonType;
+  types: PersonType[];
+  slug: string;
+  title: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  rank: string | null;
+  specialization: string | null;
+  email: string | null;
+  phone: string | null;
+  image: string | null;
+}
+
+/** Lightweight field entry embedded in a department detail */
+export interface DepartmentField {
+  id: number;
+  slug: string;
+  name: string;
+  degreeLevel: string | null;
+  code: string | null;
+  status: 'published' | 'draft';
+}
+
+export interface AcademicDepartmentItem {
+  id: number;
+  language: string;
+  slug: string;
+  name: string;
+  faculty: string | null;
+  description: string | null;
+  headName: string | null;
+  headTitle: string | null;
+  headPhone: string | null;
+  headInternal: string | null;
+  headEmail: string | null;
+  expertName: string | null;
+  expertPhone: string | null;
+  expertInternal: string | null;
+  expertEmail: string | null;
+  office: string | null;
+  email: string | null;
+  phone: string | null;
+  image: string | null;
+  image_url: string | null;
+  infoFiles: InfoFileItem[];
+  fieldsCount: number;
+  status: 'published' | 'draft';
+  sortOrder: number;
+  author_username: string;
+  author_name: string | null;
+  author_role?: string | null;
+  instructors?: DepartmentInstructor[];
+  fields?: DepartmentField[];
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademicDepartmentPayload {
+  name: string;
+  lang?: string;
+  slug?: string | null;
+  faculty?: string | null;
+  description?: string | null;
+  head_name?: string | null;
+  head_title?: string | null;
+  head_phone?: string | null;
+  head_internal?: string | null;
+  head_email?: string | null;
+  expert_name?: string | null;
+  expert_phone?: string | null;
+  expert_internal?: string | null;
+  expert_email?: string | null;
+  office?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  image_url?: string | null;
+  info_files?: InfoFileItem[] | null;
+  instructor_ids?: number[] | null;
+  status: 'published' | 'draft';
+  sort_order?: number;
+}
+
+// ============================================================
+// Academic Fields Types — انواع مربوط به ماژول رشته‌های تحصیلی
+// ============================================================
+
+export interface AcademicFieldItem {
+  id: number;
+  language: string;
+  slug: string;
+  name: string;
+  departmentId: number | null;
+  department: { id: number; name: string; slug: string } | null;
+  degreeLevel: string | null;
+  code: string | null;
+  description: string | null;
+  image: string | null;
+  image_url: string | null;
+  status: 'published' | 'draft';
+  sortOrder: number;
+  author_username: string;
+  author_name: string | null;
+  author_role?: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademicFieldPayload {
+  name: string;
+  lang?: string;
+  slug?: string | null;
+  department_id?: number | null;
+  degree_level?: string | null;
+  code?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  status: 'published' | 'draft';
+  sort_order?: number;
+}
