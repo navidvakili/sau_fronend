@@ -19,6 +19,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   people: lazy(() => import('./people')),
   departments: lazy(() => import('./departments')),
   fields: lazy(() => import('./fields')),
+  'page-builder': lazy(() => import('./page-builder')),
 };
 
 /**
@@ -63,6 +64,10 @@ export const moduleToAppMap: Record<string, string> = {
 
   // Academic Fields App (رشته‌های تحصیلی)
   'fields': 'fields',
+
+  // Smart Page Builder App (سازنده صفحه هوشمند)
+  'page-builder': 'page-builder',
+  'smart-page-builder': 'page-builder',
 
 };
 

@@ -8,7 +8,7 @@ import {
   Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
   Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
   Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe, Map,
-  Megaphone,
+  Megaphone, Code, FileCode,
   type LucideIcon,
 } from 'lucide-react';
 import type { PortalNotification } from '@/src/layouts/types';
@@ -79,6 +79,8 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-bullhorn': 'Megaphone',
   'fa fa-road': 'Briefcase',
   'fa fa-map': 'Map',
+  'fa fa-code': 'Code',
+  'fa fa-file-code': 'FileCode',
 };
 
 // ========== Utility Functions ==========
@@ -107,7 +109,7 @@ export function resolveIcon(name: string): LucideIcon {
     Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
     Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
     Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
-    Megaphone,
+    Megaphone, Code, FileCode,
   };
   return iconMap[name] || Folder;
 }

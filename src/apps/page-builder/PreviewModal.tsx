@@ -1,0 +1,181 @@
+import React, { useState } from 'react';
+import { SmartPageSchema, Breakpoint, UserRoleCondition } from './builderTypes';
+import { WidgetRenderer } from './WidgetRenderer';
+import {
+  X,
+  Monitor,
+  Tablet,
+  Smartphone,
+  UserCheck,
+  Eye,
+  Sparkles,
+  ShieldCheck,
+  User,
+  GraduationCap,
+  ShieldAlert
+} from 'lucide-react';
+
+interface PreviewModalProps {
+  pageSchema: SmartPageSchema;
+  onClose: () => void;
+}
+
+export const PreviewModal: React.FC<PreviewModalProps> = ({
+  pageSchema,
+  onClose
+}) => {
+  const [deviceSize, setDeviceSize] = useState<Breakpoint>('desktop');
+  const [simulatedRole, setSimulatedRole] = useState<UserRoleCondition>('all');
+
+  const getContainerWidth = () => {
+    switch (deviceSize) {
+      case 'tablet':
+        return 'max-w-[768px] shadow-2xl rounded-3xl my-8 border border-gray-300 dark:border-slate-800';
+      case 'mobile':
+        return 'max-w-[390px] shadow-2xl rounded-3xl my-8 border border-gray-300 dark:border-slate-800';
+      default:
+        return 'w-full min-h-full';
+    }
+  };
+
+  const globalStyles = pageSchema.globalStyles;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 dark:bg-slate-950/95 backdrop-blur-xl text-slate-900 dark:text-white font-sans rtl text-right transition-colors">
+      {/* Top Preview Controls Bar */}
+      <div className="flex items-center justify-between p-4 px-6 border-b border-gray-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 z-20 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 dark:text-white">{pageSchema.title} - پیش‌نمایش زنده</h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              صفحه با شناسه /{pageSchema.slug} (وضعیت: {pageSchema.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'})
+            </p>
+          </div>
+        </div>
+
+        {/* Device Breakpoint Switcher */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs">
+          <button
+            onClick={() => setDeviceSize('desktop')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer ${
+              deviceSize === 'desktop' ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-md' : 'text-slate-500'
+            }`}
+          >
+            <Monitor className="w-3.5 h-3.5" />
+            <span>دسکتاپ</span>
+          </button>
+          <button
+            onClick={() => setDeviceSize('tablet')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer ${
+              deviceSize === 'tablet' ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-md' : 'text-slate-500'
+            }`}
+          >
+            <Tablet className="w-3.5 h-3.5" />
+            <span>تبلت</span>
+          </button>
+          <button
+            onClick={() => setDeviceSize('mobile')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer ${
+              deviceSize === 'mobile' ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-md' : 'text-slate-500'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>موبایل</span>
+          </button>
+        </div>
+
+        {/* User Role Simulation Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+            <UserCheck className="w-3.5 h-3.5 text-teal-500" />
+            <span>شبیه‌سازی نقش کاربر:</span>
+          </span>
+          <select
+            value={simulatedRole}
+            onChange={(e) => setSimulatedRole(e.target.value as UserRoleCondition)}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white cursor-pointer focus:outline-none"
+          >
+            <option value="all">همه کاربران (عمومی)</option>
+            <option value="student">دانشجو (Student)</option>
+            <option value="professor">استاد (Professor)</option>
+            <option value="admin">مدیر (Admin)</option>
+            <option value="guest">کاربر مهمان (Guest)</option>
+          </select>
+
+          <button
+            onClick={onClose}
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Preview Content Canvas */}
+      <div className="flex-1 overflow-y-auto flex justify-center p-4 bg-slate-200 dark:bg-slate-950/80">
+        <div
+          className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden ${getContainerWidth()}`}
+          style={{
+            fontFamily: globalStyles.fontFamily,
+            color: globalStyles.textColor
+          }}
+        >
+          {pageSchema.sections.map((sec) => {
+            // Check responsiveness visibility
+            if (!sec.visibility[deviceSize]) return null;
+
+            // Check conditional role visibility
+            const secCond = sec.conditionalDisplay;
+            if (secCond && secCond.enabled && secCond.userRole && secCond.userRole !== 'all') {
+              if (simulatedRole !== 'all' && simulatedRole !== secCond.userRole) {
+                return null;
+              }
+            }
+
+            return (
+              <div
+                key={sec.id}
+                style={{
+                  backgroundColor: sec.backgroundColor || undefined,
+                  backgroundImage: sec.backgroundGradient || undefined,
+                  paddingTop: `${sec.paddingTop}px`,
+                  paddingBottom: `${sec.paddingBottom}px`
+                }}
+              >
+                <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
+                  <div className="grid grid-cols-12 gap-4 md:gap-6">
+                    {sec.columns.map((col) => (
+                      <div
+                        key={col.id}
+                        style={{
+                          gridColumn: `span ${col.width} / span ${col.width}`
+                        }}
+                        className="space-y-4"
+                      >
+                        {col.widgets.map((widget) => {
+                          if (!widget.settings.visibility[deviceSize]) return null;
+
+                          return (
+                            <WidgetRenderer
+                              key={widget.id}
+                              widget={widget}
+                              currentUserRole={simulatedRole}
+                              isEditorPreview={false}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};

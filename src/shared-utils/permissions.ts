@@ -77,4 +77,5 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   fields:           { view: 'fields.view',           create: 'fields.create',           edit: 'fields.edit',           delete: 'fields.delete',           approve: 'fields.approve' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
+  'page-builder': { view: 'page-builder.view', edit: 'page-builder.edit' },
 };
