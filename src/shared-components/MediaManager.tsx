@@ -99,6 +99,8 @@ export default function MediaManager({
   const [lastPage, setLastPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
+  // File waiting for delete confirmation dialog
+  const [deleteFile, setDeleteFile] = useState<MediaFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Drops stale async responses (rapid page clicks, reopen while a previous
@@ -227,18 +229,24 @@ export default function MediaManager({
     }
   };
 
-  // Delete file
+  // Delete file (called from the confirmation dialog)
   const handleDelete = async (file: MediaFile) => {
-    if (!confirm(`آیا از حذف فایل «${file.name}» اطمینان دارید؟`)) return;
     try {
       await API(`media/${file.id}`, { url: file.url }, 'DELETE');
       setFiles(prev => prev.filter(f => f.id !== file.id));
       if (selectedFile?.id === file.id) setSelectedFile(null);
+      setDeleteFile(null);
       setSuccessMsg('فایل با موفقیت حذف شد.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message || 'خطا در حذف فایل');
+      setDeleteFile(null);
     }
+  };
+
+  // Confirm delete — opens the confirmation dialog instead of native confirm()
+  const askDelete = (file: MediaFile) => {
+    setDeleteFile(file);
   };
 
   // Handle drop
@@ -495,7 +503,7 @@ export default function MediaManager({
 
                     {/* Delete button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(file); }}
+                      onClick={(e) => { e.stopPropagation(); askDelete(file); }}
                       className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
                       title="حذف فایل"
                     >
@@ -613,6 +621,49 @@ export default function MediaManager({
           )}
         </motion.div>
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteFile && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setDeleteFile(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white dark:bg-[#161618] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-white/10"
+            >
+              <div className="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-4">
+                <Trash2 className="w-5 h-5 text-rose-500" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 dark:text-white mb-2">حذف فایل</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                آیا از حذف فایل «{deleteFile.name}» اطمینان دارید؟ این عمل قابل بازگشت نیست.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setDeleteFile(null)}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteFile)}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500 text-white text-xs font-black hover:bg-rose-400 transition-colors cursor-pointer"
+                >
+                  حذف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

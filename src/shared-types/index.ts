@@ -233,3 +233,35 @@ export interface HeroSlide {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Achievement Types — انواع مربوط به ماژول افتخارات
+// ============================================================
+
+export interface AchievementItem {
+  id: number;
+  language: string;
+  title: string;
+  subtitle: string | null;
+  desc: string | null;
+  description: string | null;
+  image: string | null;
+  image_url: string | null;
+  icon: string;
+  status: 'published' | 'draft';
+  author_username: string;
+  author_name: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AchievementPayload {
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  icon?: string;
+  status: 'published' | 'draft';
+  lang?: string;
+}

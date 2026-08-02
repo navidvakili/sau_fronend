@@ -70,6 +70,8 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   'news-analytics': { view: 'news.view' },
   announcements:    { view: 'announcements.view', create: 'announcements.create', edit: 'announcements.edit', delete: 'announcements.delete', approve: 'announcements.approve' },
   'announcements-create': { view: 'announcements.view', create: 'announcements.create' },
+  achievements:     { view: 'achievements.view', create: 'achievements.create', edit: 'achievements.edit', delete: 'achievements.delete', approve: 'achievements.approve' },
+  'achievements-create': { view: 'achievements.view', create: 'achievements.create' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
 };

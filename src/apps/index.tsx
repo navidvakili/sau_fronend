@@ -15,6 +15,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   news: lazy(() => import('./news')),
   announcements: lazy(() => import('./announcements')),
   'slider-studio': lazy(() => import('./slider-studio')),
+  achievements: lazy(() => import('./achievements')),
 };
 
 /**
@@ -46,6 +47,10 @@ export const moduleToAppMap: Record<string, string> = {
 
   // Slider Studio App
   'slider-studio': 'slider-studio',
+
+  // Achievements App
+  'achievements': 'achievements',
+  'achievements-create': 'achievements',
 
 };
 
