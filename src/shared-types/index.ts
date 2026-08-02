@@ -265,3 +265,98 @@ export interface AchievementPayload {
   status: 'published' | 'draft';
   lang?: string;
 }
+
+// ============================================================
+// People Types — انواع مربوط به ماژول اعضای دانشگاه
+// (هیات علمی / اساتید مدعو / کارکنان / دانشجویان)
+// ============================================================
+
+export type PersonType = 'faculty_member' | 'visiting_professor' | 'staff' | 'student';
+
+export interface EducationItem {
+  degree: string;
+  field?: string;
+  institution: string;
+  year?: string;
+}
+
+export interface PublicationItem {
+  title: string;
+  journal?: string;
+  year?: string;
+  citations?: number;
+}
+
+export interface AwardItem {
+  title: string;
+  year?: string;
+}
+
+export interface PersonItem {
+  id: number;
+  type: PersonType;
+  types: PersonType[];
+  language: string;
+  slug: string;
+  title: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  rank: string | null;
+  specialization: string | null;
+  department: string | null;
+  position: string | null;
+  email: string | null;
+  phone: string | null;
+  office: string | null;
+  image: string | null;
+  image_url: string | null;
+  bio: string | null;
+  education: EducationItem[];
+  researchInterests: string[];
+  publications: PublicationItem[];
+  courses: string[];
+  awards: AwardItem[];
+  lectureNotes: Array<{ title: string }>;
+  studentNumber: string | null;
+  degreeLevel: string | null;
+  fieldOfStudy: string | null;
+  entryYear: string | null;
+  status: 'published' | 'draft';
+  sortOrder: number;
+  author_username: string;
+  author_name: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PersonPayload {
+  type: PersonType;
+  types?: PersonType[] | null;
+  lang?: string;
+  slug?: string | null;
+  title?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  rank?: string | null;
+  specialization?: string | null;
+  department?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  office?: string | null;
+  image_url?: string | null;
+  bio?: string | null;
+  education?: EducationItem[] | null;
+  research_interests?: string[] | null;
+  publications?: PublicationItem[] | null;
+  courses?: string[] | null;
+  awards?: AwardItem[] | null;
+  lecture_notes?: Array<{ title: string }> | null;
+  student_number?: string | null;
+  degree_level?: string | null;
+  field_of_study?: string | null;
+  entry_year?: string | null;
+  status: 'published' | 'draft';
+  sort_order?: number;
+}
