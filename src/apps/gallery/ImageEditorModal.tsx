@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -23,6 +23,16 @@ interface ImageEditorModalProps {
 
 type EditorTab = 'transform' | 'adjust' | 'watermark' | 'export';
 
+interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+type CropDragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
+type EditorCropRatio = 'free' | '16:9' | '4:3' | '1:1' | '9:16';
+
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   asset,
   folderId = null,
@@ -34,7 +44,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   // Transform states
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
-  const [cropPreset, setCropPreset] = useState<'free' | '16:9' | '4:3' | '1:1' | '9:16'>('free');
+  const [cropPreset, setCropPreset] = useState<EditorCropRatio>('free');
 
   // Adjustments states
   const [brightness, setBrightness] = useState(100);
@@ -45,8 +55,21 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   // Watermark states
   const [watermarkText, setWatermarkText] = useState('© دانشگاه علوم و فناوری');
-  const [watermarkPos, setWatermarkPos] = useState<'bottom-right' | 'bottom-left' | 'center' | 'top-right'>('bottom-right');
+  const [watermarkPos, setWatermarkPos] = useState<'bottom-right' | 'bottom-left' | 'center' | 'top-right' | 'custom'>('bottom-right');
   const [watermarkOpacity, setWatermarkOpacity] = useState(75);
+  const [watermarkX, setWatermarkX] = useState(100);
+  const [watermarkY, setWatermarkY] = useState(100);
+
+  // Crop states (percentages relative to the image box)
+  const [cropRect, setCropRect] = useState<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
+  const [naturalDims, setNaturalDims] = useState<{ w: number; h: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    mode: CropDragMode | null;
+    start: CropRect | null;
+    last: { x: number; y: number } | null;
+  }>({ mode: null, start: null, last: null });
+  const wmDraggingRef = useRef(false);
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -58,6 +81,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setRotation(0);
     setFlipH(false);
     setCropPreset('free');
+    setCropRect({ x: 0, y: 0, w: 100, h: 100 });
+    setNaturalDims(null);
+    setWatermarkPos('bottom-right');
+    setWatermarkX(100);
+    setWatermarkY(100);
     setBrightness(100);
     setContrast(100);
     setSaturate(100);
@@ -77,6 +105,172 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setHue(0);
   };
 
+  const RATIO_VALUES: Record<string, number> = {
+    '16:9': 16 / 9,
+    '4:3': 4 / 3,
+    '1:1': 1,
+    '9:16': 9 / 16
+  };
+
+  const cropActive =
+    cropRect.x > 0 || cropRect.y > 0 || cropRect.w < 100 || cropRect.h < 100;
+  const ratioValue = cropPreset === 'free' ? null : RATIO_VALUES[cropPreset];
+  const imgAspect =
+    naturalDims && naturalDims.h ? naturalDims.w / naturalDims.h : null;
+  const ratioPct = ratioValue && imgAspect ? ratioValue / imgAspect : null;
+
+  // Convert a screen point to image-local percentages (inverse of the CSS rotate/flip transform)
+  const imagePointToPercent = (clientX: number, clientY: number) => {
+    const el = wrapperRef.current;
+    if (!el) return { x: 50, y: 50 };
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    let ix = dx * cos + dy * sin;
+    let iy = -dx * sin + dy * cos;
+    if (flipH) ix = -ix;
+    return {
+      x: Math.max(0, Math.min(100, ((ix / (rect.width / 2 || 1)) + 1) * 50)),
+      y: Math.max(0, Math.min(100, ((iy / (rect.height / 2 || 1)) + 1) * 50))
+    };
+  };
+
+  const clampRect = (r: CropRect): CropRect => {
+    const w = Math.max(5, Math.min(100, r.w));
+    const h = Math.max(5, Math.min(100, r.h));
+    return {
+      x: Math.max(0, Math.min(100 - w, r.x)),
+      y: Math.max(0, Math.min(100 - h, r.y)),
+      w,
+      h
+    };
+  };
+
+  const handleCropPreset = (ratio: EditorCropRatio) => {
+    setCropPreset(ratio);
+    if (ratio === 'free' || !imgAspect) {
+      setCropRect({ x: 0, y: 0, w: 100, h: 100 });
+      return;
+    }
+    const r = RATIO_VALUES[ratio] / imgAspect; // fw / fh
+    let fw: number;
+    let fh: number;
+    if (r >= 1) {
+      fw = 1;
+      fh = 1 / r;
+    } else {
+      fh = 1;
+      fw = r;
+    }
+    const w = fw * 100;
+    const h = fh * 100;
+    setCropRect({ x: (100 - w) / 2, y: (100 - h) / 2, w, h });
+  };
+
+  const startCropDrag = (e: React.PointerEvent, mode: CropDragMode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // pointer capture unavailable — fall back to element-level move handlers
+    }
+    dragRef.current = {
+      mode,
+      start: { ...cropRect },
+      last: imagePointToPercent(e.clientX, e.clientY)
+    };
+  };
+
+  const moveCropDrag = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d || !d.mode || !d.start) return;
+    const p = imagePointToPercent(e.clientX, e.clientY);
+    const s = d.start;
+    if (d.mode === 'move') {
+      const dx = p.x - (d.last?.x ?? p.x);
+      const dy = p.y - (d.last?.y ?? p.y);
+      setCropRect(clampRect({ x: s.x + dx, y: s.y + dy, w: s.w, h: s.h }));
+      return;
+    }
+    // The fixed opposite corner (the corner NOT being dragged)
+    const fixedX = d.mode.includes('w') ? s.x + s.w : s.x;
+    const fixedY = d.mode.includes('n') ? s.y + s.h : s.y;
+    let w = d.mode.includes('w') ? fixedX - p.x : p.x - fixedX;
+    let h = d.mode.includes('n') ? fixedY - p.y : p.y - fixedY;
+    const maxW = d.mode.includes('w') ? fixedX : 100 - fixedX;
+    const maxH = d.mode.includes('n') ? fixedY : 100 - fixedY;
+    w = Math.max(5, Math.min(w, maxW));
+    h = Math.max(5, Math.min(h, maxH));
+    if (ratioPct) {
+      if (w / Math.max(h, 0.001) > ratioPct) w = h * ratioPct;
+      else h = w / ratioPct;
+      if (w > maxW) {
+        w = maxW;
+        h = w / ratioPct;
+      }
+      if (h > maxH) {
+        h = maxH;
+        w = h * ratioPct;
+      }
+      // keep the box above the 5% floor while preserving the ratio
+      if (w < 5) {
+        const k = 5 / w;
+        w = 5;
+        h *= k;
+      }
+      if (h < 5) {
+        const k = 5 / h;
+        h = 5;
+        w *= k;
+      }
+    }
+    setCropRect(
+      clampRect({
+        x: d.mode.includes('w') ? fixedX - w : fixedX,
+        y: d.mode.includes('n') ? fixedY - h : fixedY,
+        w,
+        h
+      })
+    );
+  };
+
+  const endCropDrag = () => {
+    dragRef.current = { mode: null, start: null, last: null };
+  };
+
+  // Watermark drag & drop (درگ و دراپ)
+  const startWmDrag = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // pointer capture unavailable — fall back to element-level move handlers
+    }
+    wmDraggingRef.current = true;
+    const p = imagePointToPercent(e.clientX, e.clientY);
+    setWatermarkPos('custom');
+    setWatermarkX(p.x);
+    setWatermarkY(p.y);
+  };
+
+  const moveWmDrag = (e: React.PointerEvent) => {
+    if (!wmDraggingRef.current) return;
+    const p = imagePointToPercent(e.clientX, e.clientY);
+    setWatermarkX(p.x);
+    setWatermarkY(p.y);
+  };
+
+  const endWmDrag = () => {
+    wmDraggingRef.current = false;
+  };
+
   // Render the edited image onto a canvas and upload it to the server as a NEW file.
   const handleExportSave = () => {
     if (!asset) return;
@@ -86,10 +280,15 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
+        // Crop region in the source image's pixel space (percentages of the original)
+        const sx = img.naturalWidth * (cropRect.x / 100);
+        const sy = img.naturalHeight * (cropRect.y / 100);
+        const sw = img.naturalWidth * (cropRect.w / 100);
+        const sh = img.naturalHeight * (cropRect.h / 100);
         const rotated = rotation % 180 !== 0;
         const canvas = document.createElement('canvas');
-        canvas.width = rotated ? img.naturalHeight : img.naturalWidth;
-        canvas.height = rotated ? img.naturalWidth : img.naturalHeight;
+        canvas.width = rotated ? sh : sw;
+        canvas.height = rotated ? sw : sh;
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('canvas-unsupported');
 
@@ -97,29 +296,40 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         ctx.rotate((rotation * Math.PI) / 180);
         ctx.scale(flipH ? -1 : 1, 1);
         ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) hue-rotate(${hue}deg)`;
-        ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+        ctx.drawImage(img, sx, sy, sw, sh, -sw / 2, -sh / 2, sw, sh);
 
         if (watermarkText) {
+          ctx.filter = 'none';
           ctx.globalAlpha = watermarkOpacity / 100;
           ctx.font = 'bold 28px Vazirmatn, Tahoma, sans-serif';
           ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'right';
-          ctx.textBaseline = 'bottom';
           const pad = 24;
-          const textWidth = ctx.measureText(watermarkText).width;
-          let x = canvas.width - pad;
-          let y = canvas.height - pad;
-          if (watermarkPos === 'bottom-left') {
-            x = pad + textWidth;
-            y = canvas.height - pad;
-          } else if (watermarkPos === 'top-right') {
-            x = canvas.width - pad;
-            y = pad + 30;
-          } else if (watermarkPos === 'center') {
-            x = canvas.width / 2 + textWidth / 2;
-            y = canvas.height / 2 + 10;
+          if (watermarkPos === 'custom') {
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+              watermarkText,
+              sw * (watermarkX / 100) - sw / 2,
+              sh * (watermarkY / 100) - sh / 2
+            );
+          } else {
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            const textWidth = ctx.measureText(watermarkText).width;
+            let x = sw / 2 - pad;
+            let y = sh / 2 - pad;
+            if (watermarkPos === 'bottom-left') {
+              x = -sw / 2 + pad + textWidth;
+              y = sh / 2 - pad;
+            } else if (watermarkPos === 'top-right') {
+              x = sw / 2 - pad;
+              y = -sh / 2 + pad + 30;
+            } else if (watermarkPos === 'center') {
+              x = textWidth / 2;
+              y = 10;
+            }
+            ctx.fillText(watermarkText, x, y);
           }
-          ctx.fillText(watermarkText, x, y);
         }
 
         canvas.toBlob(async (blob) => {
@@ -166,7 +376,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden"
+            className="w-full max-w-[96vw] lg:max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden"
           >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
@@ -206,33 +416,118 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           {/* Main Interactive Canvas Preview */}
           <div className="lg:col-span-8 bg-slate-950/90 relative flex items-center justify-center p-6 overflow-hidden min-h-[380px]">
             <div className="relative max-w-full max-h-[520px] flex items-center justify-center overflow-hidden transition-all duration-300">
-              <img
-                src={asset.url}
-                alt={asset.name}
-                className="max-w-full max-h-[480px] object-contain rounded-xl shadow-2xl transition-all duration-200"
-                style={{
-                  transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})`,
-                  filter: filterStyle
-                }}
-              />
+              <div ref={wrapperRef} className="relative min-w-0 max-w-full">
+                <img
+                  src={asset.url}
+                  alt={asset.name}
+                  onLoad={(e) => {
+                    const el = e.currentTarget;
+                    if (el.naturalWidth) {
+                      setNaturalDims({ w: el.naturalWidth, h: el.naturalHeight });
+                    }
+                  }}
+                  className="block max-w-full max-h-[480px] w-auto h-auto object-contain rounded-xl shadow-2xl transition-all duration-200"
+                  style={{
+                    transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})`,
+                    filter: filterStyle
+                  }}
+                />
 
-              {/* Watermark overlay preview */}
-              {watermarkText && activeTab === 'watermark' && (
-                <div
-                  className={`absolute p-3 rounded-lg bg-black/60 backdrop-blur-xs text-white font-black text-xs pointer-events-none select-none transition-all ${
-                    watermarkPos === 'top-right'
-                      ? 'top-4 right-4'
-                      : watermarkPos === 'bottom-left'
-                      ? 'bottom-4 left-4'
-                      : watermarkPos === 'center'
-                      ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-                      : 'bottom-4 right-4'
-                  }`}
-                  style={{ opacity: watermarkOpacity / 100 }}
-                >
-                  {watermarkText}
-                </div>
-              )}
+                {/* Crop overlay — rotates/flips together with the image */}
+                {(activeTab === 'transform' || cropActive) && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})` }}
+                  >
+                    <div
+                      className="absolute border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
+                      style={{
+                        left: `${cropRect.x}%`,
+                        top: `${cropRect.y}%`,
+                        width: `${cropRect.w}%`,
+                        height: `${cropRect.h}%`
+                      }}
+                    >
+                      {activeTab === 'transform' && (
+                        <div
+                          className="absolute inset-0 cursor-move touch-none select-none pointer-events-auto"
+                          onPointerDown={(e) => startCropDrag(e, 'move')}
+                          onPointerMove={moveCropDrag}
+                          onPointerUp={endCropDrag}
+                          onPointerCancel={endCropDrag}
+                        >
+                          {/* Rule-of-thirds grid */}
+                          <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/40" />
+                            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/40" />
+                            <div className="absolute top-1/3 left-0 right-0 h-px bg-white/40" />
+                            <div className="absolute top-2/3 left-0 right-0 h-px bg-white/40" />
+                          </div>
+                          {/* Corner handles */}
+                          {(
+                            [
+                              { mode: 'nw', cls: '-left-1.5 -top-1.5', cur: 'nwse-resize' },
+                              { mode: 'ne', cls: '-right-1.5 -top-1.5', cur: 'nesw-resize' },
+                              { mode: 'sw', cls: '-left-1.5 -bottom-1.5', cur: 'nesw-resize' },
+                              { mode: 'se', cls: '-right-1.5 -bottom-1.5', cur: 'nwse-resize' }
+                            ] as { mode: CropDragMode; cls: string; cur: string }[]
+                          ).map((h) => (
+                            <div
+                              key={h.mode}
+                              className={`absolute w-3 h-3 rounded-sm bg-white border-2 border-teal-500 shadow-md touch-none ${h.cur} ${h.cls}`}
+                              onPointerDown={(e) => {
+                                e.stopPropagation();
+                                startCropDrag(e, h.mode);
+                              }}
+                              onPointerMove={moveCropDrag}
+                              onPointerUp={endCropDrag}
+                              onPointerCancel={endCropDrag}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Watermark overlay preview — draggable (درگ و دراپ) */}
+                {watermarkText && activeTab === 'watermark' && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})` }}
+                  >
+                    <div
+                      className={`absolute p-3 rounded-lg bg-black/60 backdrop-blur-xs text-white font-black text-xs select-none cursor-grab active:cursor-grabbing touch-none pointer-events-auto ${
+                        watermarkPos === 'top-right'
+                          ? 'top-4 right-4'
+                          : watermarkPos === 'bottom-left'
+                          ? 'bottom-4 left-4'
+                          : watermarkPos === 'center'
+                          ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
+                          : watermarkPos === 'custom'
+                          ? ''
+                          : 'bottom-4 right-4'
+                      }`}
+                      style={{
+                        opacity: watermarkOpacity / 100,
+                        ...(watermarkPos === 'custom'
+                          ? {
+                              left: `${watermarkX}%`,
+                              top: `${watermarkY}%`,
+                              transform: 'translate(-50%, -50%)'
+                            }
+                          : {})
+                      }}
+                      onPointerDown={startWmDrag}
+                      onPointerMove={moveWmDrag}
+                      onPointerUp={endWmDrag}
+                      onPointerCancel={endWmDrag}
+                    >
+                      {watermarkText}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Canvas Badge */}
@@ -338,7 +633,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       {(['free', '16:9', '4:3', '1:1', '9:16'] as const).map((ratio) => (
                         <button
                           key={ratio}
-                          onClick={() => setCropPreset(ratio)}
+                          onClick={() => handleCropPreset(ratio)}
                           className={`p-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             cropPreset === ratio
                               ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400 font-black'
@@ -350,7 +645,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       ))}
                     </div>
                     <p className="text-[10px] text-slate-400">
-                      برش تعاملی (درگ روی تصویر) در نسخه فعلی پشتیبانی نمی‌شود؛ این نسبت برای خروجی نهایی اعمال می‌گردد.
+                      برای برش، گوشه‌های کادر را بکشید؛ برای جابجایی کادر، داخل آن را بکشید. انتخاب نسبت ابعاد، کادر برش را محدود می‌کند.
                     </p>
                   </div>
                 </div>
@@ -370,6 +665,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       </div>
                       <input
                         type="range"
+                        dir="ltr"
                         min="50"
                         max="150"
                         value={brightness}
@@ -385,6 +681,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       </div>
                       <input
                         type="range"
+                        dir="ltr"
                         min="50"
                         max="150"
                         value={contrast}
@@ -400,6 +697,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       </div>
                       <input
                         type="range"
+                        dir="ltr"
                         min="0"
                         max="200"
                         value={saturate}
@@ -415,6 +713,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       </div>
                       <input
                         type="range"
+                        dir="ltr"
                         min="0"
                         max="10"
                         value={blur}
@@ -430,6 +729,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       </div>
                       <input
                         type="range"
+                        dir="ltr"
                         min="0"
                         max="360"
                         value={hue}
@@ -484,6 +784,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                         </button>
                       ))}
                     </div>
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      برای جابجایی دقیق‌تر، واترمارک را می‌توانید مستقیماً روی تصویر بکشید.
+                    </p>
                   </div>
 
                   <div>
@@ -493,6 +796,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     </div>
                     <input
                       type="range"
+                      dir="ltr"
                       min="10"
                       max="100"
                       value={watermarkOpacity}
