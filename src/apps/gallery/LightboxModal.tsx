@@ -94,7 +94,14 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             )}
 
             {currentAsset?.fileType === 'video' && (
-              <div className="w-[min(95vw,1700px)] aspect-video max-w-full max-h-[85vh]">
+              <div
+                className="aspect-video max-w-full"
+                style={{
+                  // متناسب با ارتفاع در دسترس (هدر + بندانگشتیها) تا کنترلبار
+                  // هرگز بیرون ویدئو و داخل فوتر نیفتد؛ نسبت ۱۶:۹ حفظ میشود.
+                  width: 'min(95vw, 1700px, calc((100dvh - 230px) * 1.7778))',
+                }}
+              >
                 <VideoPlayer
                   key={currentAsset.id}
                   src={getMediaStreamUrl(currentAsset)}

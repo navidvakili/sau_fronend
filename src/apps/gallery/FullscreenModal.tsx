@@ -70,7 +70,14 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({ asset, onClose
         {/* Fullscreen Media Area */}
         <div className="relative flex-1 flex items-center justify-center p-4 sm:p-8 overflow-hidden">
           {isVideo ? (
-            <div className="w-[min(92vw,1400px)] aspect-video max-h-full">
+            <div
+              className="aspect-video max-w-full"
+              style={{
+                // متناسب با ارتفاع در دسترس (هدر بالا + پدینگ) تا ویدئو و
+                // کنترلبار آن همیشه داخل ناحیه اصلی بمانند و نسبت ۱۶:۹ حفظ شود.
+                width: 'min(92vw, 1400px, calc((100dvh - 150px) * 1.7778))',
+              }}
+            >
               <VideoPlayer
                 key={asset.id}
                 src={getMediaStreamUrl(asset)}
