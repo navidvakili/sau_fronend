@@ -67,6 +67,18 @@ const formatTime = (sec: number) => {
   return `${m}:${String(s).padStart(2, '0')}`;
 };
 
+/* زمان‌بندی قاب‌به‌قاب: ساعت:دقیقه:ثانیه:فریم (برای مکانیابی دقیق فریم‌ها) */
+const formatTimeFrame = (sec: number, fps: number) => {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const f = Math.max(1, Math.round(fps) || 25);
+  const totalSec = Math.floor(sec);
+  const frame = Math.floor((sec - totalSec) * f);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(frame).padStart(2, '0')}`;
+};
+
 /* ---------- Container-level audio detection ----------
    Some Chromium builds never decode audio from <video> elements in embedded
    webviews (webkitAudioDecodedByteCount stays 0 even for videos with sound),
@@ -211,6 +223,7 @@ const SliderRow: React.FC<{
     </div>
     <input
       type="range"
+      dir="ltr"
       min={min}
       max={max}
       value={value}
@@ -238,6 +251,9 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasAudio, setHasAudio] = useState(true);
+  /* نرخ فریم ویدئو — برای نمایش قاب‌به‌قاب روی تایم‌لاین */
+  const [fps, setFps] = useState(25);
+  const fpsRef = useRef(25);
 
   /* trim */
   const [trimStart, setTrimStart] = useState(0);
@@ -283,6 +299,8 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
     setCurrentTime(0);
     setDuration(0);
     setHasAudio(true);
+    setFps(25);
+    fpsRef.current = 25;
     setTrimStart(0);
     setTrimEnd(0);
     setMuted(false);
@@ -312,6 +330,39 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
     };
   }, [asset?.id]);
 
+  /* ---------- Frame-rate detection (for frame-precise timeline) ---------- */
+  const probeFps = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const v = video as HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number }) => void) => number;
+    };
+    if (typeof v.requestVideoFrameCallback !== 'function') return;
+    let lastMediaTime: number | null = null;
+    let done = false;
+    const step = (_now: number, meta: { mediaTime: number }) => {
+      if (done) return;
+      if (lastMediaTime === null) {
+        lastMediaTime = meta.mediaTime;
+        v.requestVideoFrameCallback!(step);
+        return;
+      }
+      const dt = meta.mediaTime - lastMediaTime;
+      lastMediaTime = meta.mediaTime;
+      if (dt > 0.0005 && dt < 2) {
+        const f = Math.round(1 / dt);
+        if (f >= 12 && f <= 120) {
+          done = true;
+          fpsRef.current = f;
+          setFps(f);
+          return;
+        }
+      }
+      v.requestVideoFrameCallback!(step);
+    };
+    v.requestVideoFrameCallback(step);
+  }, []);
+
   /* ---------- Metadata load ---------- */
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
@@ -340,7 +391,13 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
       setHasAudio(true); // Chrome default until the container scan resolves
     }
     applyNativeVolume();
+    probeFps(); // اولین تلاش برای تشخیص نرخ فریم (قاب‌ها هنگام پخش/سیک رندر می‌شوند)
   };
+
+  /* when playback starts, keep trying to pin down the real fps */
+  useEffect(() => {
+    if (playing) probeFps();
+  }, [playing, probeFps]);
 
   const applyNativeVolume = useCallback(() => {
     const video = videoRef.current;
@@ -684,6 +741,21 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
   const trimEndPct = duration > 0 ? (trimEnd / duration) * 100 : 100;
   const playheadPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  /* ---------- Timeline time scale (تایم‌بندی) ---------- */
+  // فاصلهٔ مناسب بین خطوط را انتخاب می‌کنیم تا حدود ۸ تا ۱۲ خط روی تایم‌لاین باشد.
+  const tickInterval = (() => {
+    const candidates = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
+    if (!duration) return 60;
+    for (const c of candidates) {
+      if (duration / c <= 12) return c;
+    }
+    return 3600;
+  })();
+  const ticks: number[] = [];
+  if (duration > 0) {
+    for (let t = tickInterval; t < duration; t += tickInterval) ticks.push(t);
+  }
+
   const handleSlider = (key: keyof FilterValues, value: number) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -785,8 +857,8 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                       <SkipForward className="w-4 h-4" />
                     </button>
 
-                    <div className="mx-2 px-3 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-bold font-mono tabular-nums">
-                      {faDigits(formatTime(currentTime))} / {faDigits(formatTime(duration))}
+                    <div className="mx-2 px-3 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-bold tabular-nums" dir="ltr">
+                      {faDigits(formatTimeFrame(currentTime, fps))} / {faDigits(formatTimeFrame(duration, fps))}
                     </div>
 
                     <button
@@ -817,6 +889,15 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                     >
                       {/* base strip */}
                       <div className="absolute inset-0 opacity-40" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 10%)' }} />
+                      {/* time ticks */}
+                      {duration > 0 &&
+                        ticks.map((t) => (
+                          <div
+                            key={t}
+                            className="absolute top-0 bottom-0 w-px bg-white/10"
+                            style={{ left: `${(t / duration) * 100}%` }}
+                          />
+                        ))}
                       {/* trimmed segment */}
                       {duration > 0 && (
                         <div
@@ -848,13 +929,27 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                         />
                       )}
                     </div>
+                    {/* time scale labels */}
+                    {duration > 0 && (
+                      <div className="relative h-4 mt-1.5 select-none">
+                        {ticks.map((t) => (
+                          <span
+                            key={t}
+                            className="absolute -translate-x-1/2 text-[8px] font-bold text-slate-500 dark:text-slate-400 leading-none"
+                            style={{ left: `${(t / duration) * 100}%` }}
+                          >
+                            {faDigits(formatTimeFrame(t, fps))}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {/* trim labels */}
-                    <div className="flex items-center justify-between mt-1.5 text-[10px] font-bold text-slate-400">
-                      <span>شروع: {faDigits(formatTime(trimStart))}</span>
+                    <div className="flex items-center justify-between mt-1.5 text-[10px] font-bold text-slate-400" dir="ltr">
+                      <span>شروع: {faDigits(formatTimeFrame(trimStart, fps))}</span>
                       <span className="text-teal-400">
-                        بازه: {faDigits(formatTime(seg))}
+                        بازه: {faDigits(formatTimeFrame(seg, fps))}
                       </span>
-                      <span>پایان: {faDigits(formatTime(trimEnd))}</span>
+                      <span>پایان: {faDigits(formatTimeFrame(trimEnd, fps))}</span>
                     </div>
                   </div>
                 </div>
@@ -935,8 +1030,8 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                         <span className="font-bold text-teal-600 dark:text-teal-400">
                           بازه برش
                         </span>
-                        <span className="font-mono font-black">
-                          {faDigits(formatTime(trimStart))} ← {faDigits(formatTime(seg))} → {faDigits(formatTime(trimEnd))}
+                        <span className="font-black" dir="ltr">
+                          {faDigits(formatTimeFrame(trimStart, fps))} ← {faDigits(formatTimeFrame(seg, fps))} → {faDigits(formatTimeFrame(trimEnd, fps))}
                         </span>
                       </div>
 
@@ -947,8 +1042,8 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                           className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-all disabled:opacity-40 cursor-pointer"
                         >
                           <span className="block">شروع برش از اینجا</span>
-                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5">
-                            ({faDigits(formatTime(currentTime))})
+                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5" dir="ltr">
+                            ({faDigits(formatTimeFrame(currentTime, fps))})
                           </span>
                         </button>
                         <button
@@ -957,8 +1052,8 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                           className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-all disabled:opacity-40 cursor-pointer"
                         >
                           <span className="block">پایان برش تا اینجا</span>
-                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5">
-                            ({faDigits(formatTime(currentTime))})
+                          <span className="block text-[10px] text-slate-400 font-normal mt-0.5" dir="ltr">
+                            ({faDigits(formatTimeFrame(currentTime, fps))})
                           </span>
                         </button>
                       </div>
@@ -1016,6 +1111,7 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                         </div>
                         <input
                           type="range"
+                          dir="ltr"
                           min={0}
                           max={200}
                           value={volume}
@@ -1135,7 +1231,7 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
 
                       <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
                         <span className="font-bold">مشخصات خروجی</span>
-                        <span className="font-mono text-[10px]">
+                        <span className="text-[10px]">
                           {faDigits(formatTime(seg))} • {faDigits(videoRef.current?.videoWidth ?? 0)}×{faDigits(videoRef.current?.videoHeight ?? 0)}
                         </span>
                       </div>
