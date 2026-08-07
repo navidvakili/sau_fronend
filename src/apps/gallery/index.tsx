@@ -52,6 +52,7 @@ import {
 import { AssetDetailsDrawer } from './AssetDetailsDrawer';
 import { ImageEditorModal } from './ImageEditorModal';
 import { VideoEditorModal } from './VideoEditorModal';
+import { AudioEditorModal } from './audio/AudioEditorModal';
 import { UploadModal } from './UploadModal';
 import { LightboxModal } from './LightboxModal';
 import { DamDashboard } from './DamDashboard';
@@ -100,6 +101,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   const [selectedAssetForDrawer, setSelectedAssetForDrawer] = useState<GalleryAsset | null>(null);
   const [assetToEdit, setAssetToEdit] = useState<GalleryAsset | null>(null);
   const [videoToEdit, setVideoToEdit] = useState<GalleryAsset | null>(null);
+  const [audioToEdit, setAudioToEdit] = useState<GalleryAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [lightboxInitialId, setLightboxInitialId] = useState<string | null>(null);
 
@@ -268,12 +270,15 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     });
     setAssetToEdit(null);
     setVideoToEdit(null);
+    setAudioToEdit(null);
   };
 
   // Open the correct editor based on file type
   const handleOpenEditor = (asset: GalleryAsset) => {
     if (asset.fileType === 'video') {
       setVideoToEdit(asset);
+    } else if (asset.fileType === 'audio') {
+      setAudioToEdit(asset);
     } else {
       setAssetToEdit(asset);
     }
@@ -282,6 +287,10 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   const handleCloseVideoEditor = () => {
     setVideoToEdit(null);
     setAssetToEdit(null);
+  };
+
+  const handleCloseAudioEditor = () => {
+    setAudioToEdit(null);
   };
 
   const handleAssetsUploaded = (files: MediaFile[]) => {
@@ -816,6 +825,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         asset={videoToEdit}
         folderId={filters.folderId}
         onClose={handleCloseVideoEditor}
+        onSave={handleUpdateAssetFromEditor}
+      />
+
+      {/* Built-in Audio Editor Modal (always mounted — owns its own AnimatePresence) */}
+      <AudioEditorModal
+        asset={audioToEdit}
+        folderId={filters.folderId}
+        onClose={handleCloseAudioEditor}
         onSave={handleUpdateAssetFromEditor}
       />
 
