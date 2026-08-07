@@ -10,10 +10,25 @@ import {
   Save,
   Undo,
   ImageOff,
-  Trash2
+  Trash2,
+  ImagePlus,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Move,
+  Lock,
+  Unlock,
+  AlignRight,
+  AlignCenter,
+  AlignLeft,
+  AlignVerticalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd
 } from 'lucide-react';
 import { GalleryAsset, toGalleryAsset } from './types';
 import { getMediaStreamUrl, uploadMediaFile } from './api';
+import { MediaManager } from '@/src/shared-components';
 
 interface ImageEditorModalProps {
   asset: GalleryAsset | null;
@@ -33,6 +48,49 @@ interface CropRect {
 
 type CropDragMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
 type EditorCropRatio = 'free' | '16:9' | '4:3' | '1:1' | '9:16';
+type WmResizeMode = 'move' | 'nw' | 'ne' | 'sw' | 'se';
+type WmShadowKey = 'none' | 'soft' | 'medium' | 'strong';
+type WmImagePosition = 'top' | 'bottom' | 'left' | 'right';
+
+/** Single watermark: text + optional image positioned relative to the text. */
+interface Watermark {
+  id: string;
+  text: string; // text content
+  imageContent: string; // image URL ('' = no image)
+  mediaId?: string;
+  imagePosition: WmImagePosition; // image position relative to the text
+  x: number; // % of image box (top-left)
+  y: number; // % of image box (top-left)
+  width: number; // % of image box
+  height: number; // % of image box
+  rotation: number; // degrees
+  opacity: number; // 0-100
+  // Typography
+  fontFamily: string;
+  fontSize: number; // px (display space, scaled on export)
+  fontWeight: string | number;
+  fontStyle: 'normal' | 'italic';
+  textAlign: 'right' | 'center' | 'left';
+  alignVertical: 'top' | 'center' | 'bottom';
+  color: string;
+  backgroundColor: string;
+  padding: number; // px (display space, scaled on export)
+  // Shared styling
+  borderRadius: number; // px (display space, scaled on export)
+  borderWidth: number; // px (display space, scaled on export)
+  borderColor: string;
+  shadow: WmShadowKey;
+}
+
+const WM_SHADOW_PRESETS: Record<
+  WmShadowKey,
+  { label: string; css: string; blur: number; offsetY: number; color: string }
+> = {
+  none: { label: 'بدون سایه', css: 'none', blur: 0, offsetY: 0, color: 'rgba(0,0,0,0)' },
+  soft: { label: 'نرم', css: '0 2px 10px rgba(0,0,0,0.25)', blur: 10, offsetY: 2, color: 'rgba(0,0,0,0.25)' },
+  medium: { label: 'متوسط', css: '0 4px 18px rgba(0,0,0,0.35)', blur: 18, offsetY: 4, color: 'rgba(0,0,0,0.35)' },
+  strong: { label: 'قوی', css: '0 8px 28px rgba(0,0,0,0.5)', blur: 28, offsetY: 8, color: 'rgba(0,0,0,0.5)' }
+};
 
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   asset,
@@ -54,12 +112,16 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [blur, setBlur] = useState(0);
   const [hue, setHue] = useState(0);
 
-  // Watermark states
-  const [watermarkText, setWatermarkText] = useState('© متن واترمارک');
-  const [watermarkPos, setWatermarkPos] = useState<'bottom-right' | 'bottom-left' | 'center' | 'top-right' | 'custom'>('bottom-right');
-  const [watermarkOpacity, setWatermarkOpacity] = useState(75);
-  const [watermarkX, setWatermarkX] = useState(100);
-  const [watermarkY, setWatermarkY] = useState(100);
+  // Watermark (یک لایه واحد: متن + تصویر اختیاری)
+  const [watermark, setWatermark] = useState<Watermark | null>(null);
+  const [wmPickerOpen, setWmPickerOpen] = useState(false);
+  const [wmAspectLock, setWmAspectLock] = useState(true);
+  const wmDragRef = useRef<{
+    mode: WmResizeMode | 'rotate';
+    start: Watermark;
+    startP: { x: number; y: number };
+    center?: { x: number; y: number };
+  } | null>(null);
 
   // Crop states (percentages relative to the image box)
   const [cropRect, setCropRect] = useState<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
@@ -72,8 +134,6 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     start: CropRect | null;
     last: { x: number; y: number } | null;
   }>({ mode: null, start: null, last: null });
-  const wmDraggingRef = useRef(false);
-
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -86,9 +146,10 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setCropPreset('free');
     setCropRect({ x: 0, y: 0, w: 100, h: 100 });
     setNaturalDims(null);
-    setWatermarkPos('bottom-right');
-    setWatermarkX(100);
-    setWatermarkY(100);
+    setWatermark(null);
+    setWmPickerOpen(false);
+    setWmAspectLock(true);
+    wmDragRef.current = null;
     setBrightness(100);
     setContrast(100);
     setSaturate(100);
@@ -98,7 +159,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setExportError(null);
   }, [asset?.id]);
 
-  // Track the preview area width so rotated images can be fitted without clipping
+  // Track the preview area width so rotated images can be fitted without clipping.
+  // The modal is always mounted (asset starts null), so the observer must (re)attach
+  // whenever an asset opens — otherwise previewW stays 0 and wide images get clipped.
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -109,7 +172,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [asset?.id]);
 
   const handleResetAll = () => {
     setRotation(0);
@@ -285,32 +348,172 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     dragRef.current = { mode: null, start: null, last: null };
   };
 
-  // Watermark drag & drop (درگ و دراپ)
-  const startWmDrag = (e: React.PointerEvent) => {
+  // ---------- Watermark (یک لایه واحد: متن + تصویر اختیاری نسبت به متن) ----------
+  const clampNum = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, Number.isFinite(v) ? v : min));
+
+  const updateWatermark = (patch: Partial<Watermark>) => {
+    setWatermark((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const removeWatermark = () => setWatermark(null);
+
+  const addWatermark = () => {
+    setWatermark({
+      id: `wm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: 'متن واترمارک',
+      imageContent: '',
+      imagePosition: 'top',
+      x: 35,
+      y: 35,
+      width: 42,
+      height: 18,
+      rotation: 0,
+      opacity: 85,
+      fontFamily: 'Vazirmatn, Tahoma, sans-serif',
+      fontSize: 28,
+      fontWeight: 800,
+      fontStyle: 'normal',
+      textAlign: 'center',
+      alignVertical: 'center',
+      color: '#ffffff',
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      padding: 8,
+      borderRadius: 12,
+      borderWidth: 0,
+      borderColor: '#ffffff',
+      shadow: 'none'
+    });
+  };
+
+  // Screen center of the watermark box (forward rotate/flip transform, inverse of imagePointToPercent)
+  const wmScreenCenter = (wm: Watermark) => {
+    const el = wrapperRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const fitted = computeFitted();
+    const dw = fitted ? fitted.dispW : rect.width;
+    const dh = fitted ? fitted.dispH : rect.height;
+    const lx = ((wm.x + wm.width / 2) / 100 - 0.5) * dw;
+    const ly = ((wm.y + wm.height / 2) / 100 - 0.5) * dh;
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    let ix = lx * (flipH ? -1 : 1);
+    const rx = ix * cos - ly * sin;
+    const ry = ix * sin + ly * cos;
+    return { x: cx + rx, y: cy + ry };
+  };
+
+  const startWmLayerDrag = (e: React.PointerEvent, wm: Watermark, mode: WmResizeMode) => {
     e.preventDefault();
     e.stopPropagation();
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
-      // pointer capture unavailable — fall back to element-level move handlers
+      // pointer capture unavailable
     }
-    wmDraggingRef.current = true;
-    const p = imagePointToPercent(e.clientX, e.clientY);
-    setWatermarkPos('custom');
-    setWatermarkX(p.x);
-    setWatermarkY(p.y);
+    wmDragRef.current = {
+      mode,
+      start: { ...wm },
+      startP: imagePointToPercent(e.clientX, e.clientY)
+    };
   };
 
-  const moveWmDrag = (e: React.PointerEvent) => {
-    if (!wmDraggingRef.current) return;
+  const moveWmLayerDrag = (e: React.PointerEvent) => {
+    const d = wmDragRef.current;
+    if (!d) return;
     const p = imagePointToPercent(e.clientX, e.clientY);
-    setWatermarkX(p.x);
-    setWatermarkY(p.y);
+    const s = d.start;
+    let { x, y, width, height } = s;
+    if (d.mode === 'move') {
+      x = s.x + (p.x - d.startP.x);
+      y = s.y + (p.y - d.startP.y);
+    } else {
+      // Corner resize with the opposite corner fixed
+      const fixedX = d.mode.includes('w') ? s.x + s.width : s.x;
+      const fixedY = d.mode.includes('n') ? s.y + s.height : s.y;
+      let w = d.mode.includes('w') ? fixedX - p.x : p.x - fixedX;
+      let h = d.mode.includes('n') ? fixedY - p.y : p.y - fixedY;
+      const maxW = d.mode.includes('w') ? fixedX : 100 - fixedX;
+      const maxH = d.mode.includes('n') ? fixedY : 100 - fixedY;
+      w = Math.max(2, Math.min(w, maxW));
+      h = Math.max(2, Math.min(h, maxH));
+      if (wmAspectLock) {
+        const ratio = s.width / s.height;
+        if (w / h > ratio) {
+          w = h * ratio;
+          if (w > maxW) {
+            w = maxW;
+            h = w / ratio;
+          }
+        } else {
+          h = w / ratio;
+          if (h > maxH) {
+            h = maxH;
+            w = h * ratio;
+          }
+        }
+        if (w < 2) {
+          const k = 2 / w;
+          w = 2;
+          h *= k;
+        }
+        if (h < 2) {
+          const k = 2 / h;
+          h = 2;
+          w *= k;
+        }
+      }
+      x = d.mode.includes('w') ? fixedX - w : fixedX;
+      y = d.mode.includes('n') ? fixedY - h : fixedY;
+      width = w;
+      height = h;
+    }
+    x = Math.max(0, Math.min(100 - width, x));
+    y = Math.max(0, Math.min(100 - height, y));
+    updateWatermark({ x, y, width, height });
   };
 
-  const endWmDrag = () => {
-    wmDraggingRef.current = false;
+  const endWmLayerDrag = () => {
+    wmDragRef.current = null;
   };
+
+  const startWmRotate = (e: React.PointerEvent, wm: Watermark) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // pointer capture unavailable
+    }
+    wmDragRef.current = {
+      mode: 'rotate',
+      start: { ...wm },
+      startP: { x: e.clientX, y: e.clientY },
+      center: wmScreenCenter(wm)
+    };
+  };
+
+  const moveWmRotate = (e: React.PointerEvent) => {
+    const d = wmDragRef.current;
+    if (!d || d.mode !== 'rotate' || !d.center) return;
+    const a0 = (Math.atan2(d.startP.y - d.center.y, d.startP.x - d.center.x) * 180) / Math.PI;
+    const a1 = (Math.atan2(e.clientY - d.center.y, e.clientX - d.center.x) * 180) / Math.PI;
+    updateWatermark({ rotation: Math.round(d.start.rotation + (a1 - a0)) });
+  };
+
+  // Load an image with CORS enabled (needed for canvas export)
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('image-load-failed'));
+      im.src = src;
+    });
 
   // Render the edited image onto a canvas and upload it to the server as a NEW file.
   const handleExportSave = () => {
@@ -319,7 +522,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setExportError(null);
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
       try {
         // Crop region in the source image's pixel space (percentages of the original)
         const sx = img.naturalWidth * (cropRect.x / 100);
@@ -339,37 +542,146 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) hue-rotate(${hue}deg)`;
         ctx.drawImage(img, sx, sy, sw, sh, -sw / 2, -sh / 2, sw, sh);
 
-        if (watermarkText) {
+        // Watermark (متن + تصویر اختیاری — یک لایه واحد)
+        if (watermark) {
+          // واترمارک نباید فیلترهای تصویر اصلی (روشنایی/بلور) را بگیرد
           ctx.filter = 'none';
-          ctx.globalAlpha = watermarkOpacity / 100;
-          ctx.font = 'bold 28px Vazirmatn, Tahoma, sans-serif';
-          ctx.fillStyle = '#ffffff';
-          const pad = 24;
-          if (watermarkPos === 'custom') {
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(
-              watermarkText,
-              sw * (watermarkX / 100) - sw / 2,
-              sh * (watermarkY / 100) - sh / 2
-            );
-          } else {
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
-            const textWidth = ctx.measureText(watermarkText).width;
-            let x = sw / 2 - pad;
-            let y = sh / 2 - pad;
-            if (watermarkPos === 'bottom-left') {
-              x = -sw / 2 + pad + textWidth;
-              y = sh / 2 - pad;
-            } else if (watermarkPos === 'top-right') {
-              x = sw / 2 - pad;
-              y = -sh / 2 + pad + 30;
-            } else if (watermarkPos === 'center') {
-              x = textWidth / 2;
-              y = 10;
+          const pxScale =
+            naturalDims?.w && fitted?.dispW ? naturalDims.w / fitted.dispW : 1;
+          const wm = watermark;
+          const w = img.naturalWidth * (wm.width / 100);
+          const h = img.naturalHeight * (wm.height / 100);
+          const cx = img.naturalWidth * ((wm.x + wm.width / 2) / 100) - sx - sw / 2;
+          const cy = img.naturalHeight * ((wm.y + wm.height / 2) / 100) - sy - sh / 2;
+          const shadow = WM_SHADOW_PRESETS[wm.shadow] ?? WM_SHADOW_PRESETS.none;
+          const rad = Math.min((wm.borderRadius || 0) * pxScale, w / 2, h / 2);
+          ctx.save();
+          ctx.globalAlpha = wm.opacity / 100;
+          ctx.translate(cx, cy);
+          ctx.rotate((wm.rotation * Math.PI) / 180);
+
+          // پس‌زمینه (پشت محتوا)
+          if (wm.backgroundColor && wm.backgroundColor !== 'transparent') {
+            ctx.fillStyle = wm.backgroundColor;
+            ctx.beginPath();
+            ctx.roundRect(-w / 2, -h / 2, w, h, rad);
+            ctx.fill();
+          }
+
+          const pad = (wm.padding || 0) * pxScale;
+          const gap = 6 * pxScale;
+          const wmImg = wm.imageContent
+            ? await loadImage(
+                wm.mediaId ? getMediaStreamUrl({ id: wm.mediaId }) : wm.imageContent
+              ).catch(() => null)
+            : null;
+
+          const fontSize = Math.max(6, (wm.fontSize || 28) * pxScale);
+          ctx.font = `${wm.fontStyle === 'italic' ? 'italic ' : ''}${wm.fontWeight || 700} ${fontSize}px ${wm.fontFamily || 'Vazirmatn, Tahoma, sans-serif'}`;
+          ctx.fillStyle = wm.color || '#ffffff';
+          ctx.textAlign = wm.textAlign === 'right' ? 'right' : wm.textAlign === 'left' ? 'left' : 'center';
+
+          // کشیدن متن داخل یک اسلات (با شکستن خودکار خطوط مانند پیش‌نمایش)
+          const drawTextInSlot = (x0: number, y0: number, tw: number, th: number) => {
+            if (tw <= 0 || th <= 0) return;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x0, y0, tw, th);
+            ctx.clip();
+            const lines: string[] = [];
+            for (const raw of String(wm.text || '').split('\n')) {
+              const words = raw.split(/\s+/).filter(Boolean);
+              let line = '';
+              for (const word of words) {
+                const test = line ? `${line} ${word}` : word;
+                if (ctx.measureText(test).width <= tw || !line) line = test;
+                else {
+                  lines.push(line);
+                  line = word;
+                }
+              }
+              if (line || raw === '') lines.push(line);
             }
-            ctx.fillText(watermarkText, x, y);
+            const lineH = fontSize * 1.4;
+            const totalH = lines.length * lineH;
+            let startY: number;
+            if (wm.alignVertical === 'top') startY = y0;
+            else if (wm.alignVertical === 'bottom') startY = y0 + th - totalH;
+            else startY = y0 + (th - totalH) / 2;
+            const anchorX =
+              wm.textAlign === 'right' ? x0 + tw : wm.textAlign === 'left' ? x0 : x0 + tw / 2;
+            if (shadow.blur > 0) {
+              ctx.shadowColor = shadow.color;
+              ctx.shadowBlur = shadow.blur * pxScale;
+              ctx.shadowOffsetY = shadow.offsetY * pxScale;
+            }
+            ctx.textBaseline = 'top';
+            lines.forEach((line, i) => ctx.fillText(line, anchorX, startY + i * lineH));
+            ctx.restore();
+          };
+
+          if (wmImg) {
+            const vertical = wm.imagePosition === 'top' || wm.imagePosition === 'bottom';
+            const innerW = w - pad * 2;
+            const innerH = h - pad * 2;
+            const slotW = vertical ? innerW : innerW * 0.35;
+            const slotH = vertical ? innerH * 0.35 : innerH;
+            const iw = wmImg.naturalWidth || wmImg.width || 1;
+            const ih = wmImg.naturalHeight || wmImg.height || 1;
+            const s = Math.min(slotW / iw, slotH / ih);
+            const dw = iw * s;
+            const dh = ih * s;
+            let imgCX: number;
+            let imgCY: number;
+            let tx0: number;
+            let ty0: number;
+            let tw: number;
+            let th: number;
+            if (vertical) {
+              const slotTop = wm.imagePosition === 'top' ? -h / 2 + pad : h / 2 - pad - slotH;
+              imgCX = 0;
+              imgCY = slotTop + slotH / 2;
+              tx0 = -w / 2 + pad;
+              ty0 = wm.imagePosition === 'top' ? slotTop + slotH + gap : -h / 2 + pad;
+              tw = innerW;
+              th = Math.max(0, innerH - slotH - gap);
+            } else {
+              const slotLeft = wm.imagePosition === 'left' ? -w / 2 + pad : w / 2 - pad - slotW;
+              imgCX = slotLeft + slotW / 2;
+              imgCY = 0;
+              tx0 = wm.imagePosition === 'left' ? slotLeft + slotW + gap : -w / 2 + pad;
+              ty0 = -h / 2 + pad;
+              tw = Math.max(0, innerW - slotW - gap);
+              th = innerH;
+            }
+            // سایه تصویر (پشت تصویر)
+            if (shadow.blur > 0) {
+              ctx.save();
+              ctx.shadowColor = shadow.color;
+              ctx.shadowBlur = shadow.blur * pxScale;
+              ctx.shadowOffsetY = shadow.offsetY * pxScale;
+              ctx.drawImage(wmImg, imgCX - dw / 2, imgCY - dh / 2, dw, dh);
+              ctx.restore();
+            }
+            ctx.drawImage(wmImg, imgCX - dw / 2, imgCY - dh / 2, dw, dh);
+            drawTextInSlot(tx0, ty0, tw, th);
+          } else {
+            drawTextInSlot(-w / 2 + pad, -h / 2 + pad, w - pad * 2, h - pad * 2);
+          }
+
+          ctx.restore();
+          // حاشیه خارج از کلیپ (کل کادر)
+          if (wm.borderWidth > 0) {
+            ctx.save();
+            ctx.globalAlpha = wm.opacity / 100;
+            ctx.translate(cx, cy);
+            ctx.rotate((wm.rotation * Math.PI) / 180);
+            ctx.beginPath();
+            ctx.roundRect(-w / 2, -h / 2, w, h, rad);
+            ctx.lineWidth = wm.borderWidth * pxScale;
+            ctx.strokeStyle = wm.borderColor;
+            ctx.stroke();
+            ctx.restore();
           }
         }
 
@@ -473,6 +785,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 <img
                   src={asset.url}
                   alt={asset.name}
+                  onPointerDown={() => {
+                    /* no-op: single watermark keeps selection */
+                  }}
                   onLoad={(e) => {
                     const el = e.currentTarget;
                     if (el.naturalWidth) {
@@ -546,50 +861,152 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   </div>
                 )}
 
-                {/* Watermark overlay preview — always visible while text is set (درگ و دراپ) */}
-                {watermarkText && (
+                {/* Watermark — یک لایه واحد (متن + تصویر اختیاری) */}
+                {watermark && (
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})` }}
                   >
-                    <div
-                      className={`absolute p-3 rounded-lg bg-black/60 backdrop-blur-xs text-white font-black text-xs select-none cursor-grab active:cursor-grabbing touch-none pointer-events-auto flex items-center gap-2 ${
-                        watermarkPos === 'top-right'
-                          ? 'top-4 right-4'
-                          : watermarkPos === 'bottom-left'
-                          ? 'bottom-4 left-4'
-                          : watermarkPos === 'center'
-                          ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-                          : watermarkPos === 'custom'
-                          ? ''
-                          : 'bottom-4 right-4'
-                      }`}
-                      style={{
-                        opacity: watermarkOpacity / 100,
-                        ...(watermarkPos === 'custom'
-                          ? {
-                              left: `${watermarkX}%`,
-                              top: `${watermarkY}%`,
-                              transform: 'translate(-50%, -50%)'
-                            }
-                          : {})
-                      }}
-                      onPointerDown={startWmDrag}
-                      onPointerMove={moveWmDrag}
-                      onPointerUp={endWmDrag}
-                      onPointerCancel={endWmDrag}
-                    >
-                      <span>{watermarkText}</span>
-                      <button
-                        type="button"
-                        title="حذف واترمارک"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => setWatermarkText('')}
-                        className="shrink-0 p-0.5 rounded-md bg-white/25 hover:bg-red-500/90 text-white transition-colors cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+                    {(() => {
+                      const wm = watermark;
+                      const shadow = WM_SHADOW_PRESETS[wm.shadow] ?? WM_SHADOW_PRESETS.none;
+                      const vertical = wm.imagePosition === 'top' || wm.imagePosition === 'bottom';
+                      return (
+                        <div
+                          className="absolute pointer-events-auto select-none touch-none"
+                          style={{
+                            left: `${wm.x}%`,
+                            top: `${wm.y}%`,
+                            width: `${wm.width}%`,
+                            height: `${wm.height}%`,
+                            transform: `rotate(${wm.rotation}deg)`,
+                            opacity: wm.opacity / 100,
+                            cursor: 'move'
+                          }}
+                          onPointerDown={(e) => startWmLayerDrag(e, wm, 'move')}
+                          onPointerMove={moveWmLayerDrag}
+                          onPointerUp={endWmLayerDrag}
+                          onPointerCancel={endWmLayerDrag}
+                        >
+                          <div
+                            className="w-full h-full flex overflow-hidden"
+                            style={{
+                              flexDirection:
+                                wm.imagePosition === 'top'
+                                  ? 'column'
+                                  : wm.imagePosition === 'bottom'
+                                  ? 'column-reverse'
+                                  : wm.imagePosition === 'left'
+                                  ? 'row-reverse'
+                                  : 'row',
+                              alignItems: vertical ? 'center' : undefined,
+                              justifyContent: vertical ? undefined : 'center',
+                              gap: 6,
+                              padding: wm.padding,
+                              background:
+                                wm.backgroundColor && wm.backgroundColor !== 'transparent'
+                                  ? wm.backgroundColor
+                                  : undefined,
+                              borderRadius: wm.borderRadius,
+                              border:
+                                wm.borderWidth > 0
+                                  ? `${wm.borderWidth}px solid ${wm.borderColor}`
+                                  : undefined,
+                              boxShadow: shadow.css === 'none' ? undefined : shadow.css
+                            }}
+                          >
+                            {wm.imageContent && (
+                              <div
+                                className="flex items-center justify-center overflow-hidden shrink-0"
+                                style={{
+                                  width: vertical ? '100%' : '35%',
+                                  height: vertical ? '35%' : '100%'
+                                }}
+                              >
+                                <img
+                                  src={wm.imageContent}
+                                  alt=""
+                                  draggable={false}
+                                  className="pointer-events-none"
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '100%',
+                                    width: 'auto',
+                                    height: 'auto',
+                                    objectFit: 'contain',
+                                    borderRadius: 4
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <div
+                              className="flex-1 min-w-0 min-h-0 flex overflow-hidden"
+                              style={{
+                                alignItems:
+                                  wm.alignVertical === 'top'
+                                    ? 'flex-start'
+                                    : wm.alignVertical === 'bottom'
+                                    ? 'flex-end'
+                                    : 'center',
+                                justifyContent:
+                                  wm.textAlign === 'right'
+                                    ? 'flex-end'
+                                    : wm.textAlign === 'left'
+                                    ? 'flex-start'
+                                    : 'center',
+                                textAlign: wm.textAlign,
+                                fontFamily: wm.fontFamily,
+                                fontSize: wm.fontSize,
+                                fontWeight: wm.fontWeight,
+                                fontStyle: wm.fontStyle,
+                                color: wm.color,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              <span className="w-full">{wm.text}</span>
+                            </div>
+                          </div>
+                          {/* Selection outline */}
+                          <div className="absolute inset-0 pointer-events-none border-2 border-teal-400/90" />
+                          {/* Rotate handle */}
+                          <div
+                            className="absolute -top-7 left-1/2 w-6 h-6 rounded-full bg-white border-2 border-teal-500 shadow-md cursor-grab active:cursor-grabbing touch-none"
+                            style={{ transform: 'translateX(-50%)' }}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              startWmRotate(e, wm);
+                            }}
+                            onPointerMove={moveWmRotate}
+                            onPointerUp={endWmLayerDrag}
+                            onPointerCancel={endWmLayerDrag}
+                          >
+                            <RotateCw className="w-3 h-3 text-teal-600 absolute inset-0 m-auto" />
+                          </div>
+                          {/* Corner resize handles */}
+                          {(
+                            [
+                              { mode: 'nw', cls: '-left-1.5 -top-1.5', cur: 'nwse-resize' },
+                              { mode: 'ne', cls: '-right-1.5 -top-1.5', cur: 'nesw-resize' },
+                              { mode: 'sw', cls: '-left-1.5 -bottom-1.5', cur: 'nesw-resize' },
+                              { mode: 'se', cls: '-right-1.5 -bottom-1.5', cur: 'nwse-resize' }
+                            ] as { mode: 'nw' | 'ne' | 'sw' | 'se'; cls: string; cur: string }[]
+                          ).map((h) => (
+                            <div
+                              key={h.mode}
+                              className={`absolute w-3.5 h-3.5 rounded-sm bg-white border-2 border-teal-500 shadow-md touch-none ${h.cur} ${h.cls}`}
+                              onPointerDown={(e) => {
+                                e.stopPropagation();
+                                startWmLayerDrag(e, wm, h.mode);
+                              }}
+                              onPointerMove={moveWmLayerDrag}
+                              onPointerUp={endWmLayerDrag}
+                              onPointerCancel={endWmLayerDrag}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -809,76 +1226,478 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               {activeTab === 'watermark' && (
                 <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">
-                    درج واترمارک اختصاصی سازمان
+                    واترمارک
                   </h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    یک لایه واترمارک شامل متن و در صورت تمایل یک تصویر (بالا، پایین، چپ یا راست متن).
+                  </p>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                      متن واترمارک:
-                    </label>
-                    <input
-                      type="text"
-                      value={watermarkText}
-                      onChange={(e) => setWatermarkText(e.target.value)}
-                      placeholder="متن حقوق کپی‌رایت..."
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                      موقعیت درج روی تصویر:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'bottom-right', label: 'پایین راست' },
-                        { id: 'bottom-left', label: 'پایین چپ' },
-                        { id: 'top-right', label: 'بالا راست' },
-                        { id: 'center', label: 'مرکز تصویر' }
-                      ].map((pos) => (
-                        <button
-                          key={pos.id}
-                          onClick={() => setWatermarkPos(pos.id as any)}
-                          className={`p-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            watermarkPos === pos.id
-                              ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400 font-black'
-                              : 'border-gray-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}
-                        >
-                          {pos.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-2">
-                      برای جابجایی دقیق‌تر، واترمارک را می‌توانید مستقیماً روی تصویر بکشید.
-                    </p>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      <span>شفافیت (Opacity)</span>
-                      <span className="text-teal-600">{watermarkOpacity}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      dir="ltr"
-                      min="10"
-                      max="100"
-                      value={watermarkOpacity}
-                      onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
-                      className="w-full accent-teal-500 cursor-pointer"
-                    />
-                  </div>
-
-                  {watermarkText && (
+                  {!watermark ? (
                     <button
                       type="button"
-                      onClick={() => setWatermarkText('')}
-                      className="w-full py-2 px-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all cursor-pointer"
+                      onClick={addWatermark}
+                      className="w-full py-2.5 px-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-teal-500/20 transition-all cursor-pointer"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      حذف واترمارک
+                      <Type className="w-4 h-4" />
+                      افزودن واترمارک
                     </button>
+                  ) : (
+                    <>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-gray-200 dark:border-slate-800 space-y-3">
+                        {/* متن */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 block">متن واترمارک</label>
+                          <textarea
+                            rows={2}
+                            value={watermark.text}
+                            onChange={(e) => updateWatermark({ text: e.target.value })}
+                            className="w-full px-2.5 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none"
+                          />
+                        </div>
+
+                        {/* تصویر همراه متن */}
+                        <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-purple-600 dark:text-purple-400">
+                            <ImagePlus className="w-3.5 h-3.5" />
+                            <span>تصویر همراه متن</span>
+                          </div>
+                          {watermark.imageContent ? (
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={watermark.imageContent}
+                                alt=""
+                                className="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-700"
+                              />
+                              <div className="flex-1 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setWmPickerOpen(true)}
+                                  className="text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:underline text-right cursor-pointer"
+                                >
+                                  تغییر تصویر
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateWatermark({ imageContent: '', mediaId: undefined })}
+                                  className="text-[10px] font-bold text-red-500 hover:underline text-right cursor-pointer"
+                                >
+                                  حذف تصویر
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setWmPickerOpen(true)}
+                              className="w-full py-2 px-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-purple-500/20 transition-all cursor-pointer"
+                            >
+                              <ImagePlus className="w-4 h-4" />
+                              افزودن تصویر به متن
+                            </button>
+                          )}
+                          {watermark.imageContent && (
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">
+                                موقعیت تصویر نسبت به متن
+                              </span>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {(
+                                  [
+                                    { id: 'top', label: 'بالا', icon: <ArrowUp className="w-3.5 h-3.5" /> },
+                                    { id: 'bottom', label: 'پایین', icon: <ArrowDown className="w-3.5 h-3.5" /> },
+                                    { id: 'left', label: 'چپ', icon: <ArrowLeft className="w-3.5 h-3.5" /> },
+                                    { id: 'right', label: 'راست', icon: <ArrowRight className="w-3.5 h-3.5" /> }
+                                  ] as const
+                                ).map((p) => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => updateWatermark({ imagePosition: p.id })}
+                                    className={`flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer ${
+                                      watermark.imagePosition === p.id
+                                        ? 'bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-400'
+                                        : 'border-gray-200 dark:border-slate-800 text-slate-500'
+                                    }`}
+                                  >
+                                    {p.icon}
+                                    <span>{p.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Typography */}
+                        <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
+                          <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-teal-600 dark:text-teal-400">
+                            <Type className="w-3.5 h-3.5" />
+                            <span>تایپوگرافی و فونت</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">نام فونت</span>
+                              <select
+                                value={watermark.fontFamily}
+                                onChange={(e) => updateWatermark({ fontFamily: e.target.value })}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                              >
+                                <option value="Vazirmatn, Tahoma, sans-serif">وزیرمتن (فارسی)</option>
+                                <option value="Poppins, sans-serif">Poppins</option>
+                                <option value="Inter, sans-serif">Inter</option>
+                                <option value="Impact, sans-serif">Impact (برجسته)</option>
+                                <option value="Allemand, serif">Allemand</option>
+                              </select>
+                            </label>
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">اندازه فونت (px)</span>
+                              <input
+                                type="number"
+                                dir="ltr"
+                                min={6}
+                                max={300}
+                                value={Math.round(watermark.fontSize)}
+                                onChange={(e) =>
+                                  updateWatermark({
+                                    fontSize: clampNum(Number(e.target.value), 6, 300)
+                                  })
+                                }
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                              />
+                            </label>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">رنگ متن</span>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="color"
+                                  value={watermark.color}
+                                  onChange={(e) => updateWatermark({ color: e.target.value })}
+                                  className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                                />
+                                <input
+                                  type="text"
+                                  dir="ltr"
+                                  value={watermark.color}
+                                  onChange={(e) => updateWatermark({ color: e.target.value })}
+                                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                                />
+                              </div>
+                            </label>
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">وزن فونت</span>
+                              <select
+                                value={String(watermark.fontWeight)}
+                                onChange={(e) => updateWatermark({ fontWeight: e.target.value })}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                              >
+                                <option value="400">عادی (400)</option>
+                                <option value="600">نیمه‌برجسته (600)</option>
+                                <option value="800">برجسته (800)</option>
+                                <option value="900">فوق‌برجسته (900)</option>
+                              </select>
+                            </label>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">سبک</span>
+                              <select
+                                value={watermark.fontStyle}
+                                onChange={(e) =>
+                                  updateWatermark({ fontStyle: e.target.value as 'normal' | 'italic' })
+                                }
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                              >
+                                <option value="normal">عادی</option>
+                                <option value="italic">ایتالیک</option>
+                              </select>
+                            </label>
+                            <label className="block">
+                              <span className="text-[10px] font-bold text-slate-500 block mb-1">پدینگ (px)</span>
+                              <input
+                                type="number"
+                                dir="ltr"
+                                min={0}
+                                max={60}
+                                value={Math.round(watermark.padding)}
+                                onChange={(e) =>
+                                  updateWatermark({
+                                    padding: clampNum(Number(e.target.value), 0, 60)
+                                  })
+                                }
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                              />
+                            </label>
+                          </div>
+                          {/* Text alignment */}
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">تراز افقی</span>
+                            <div className="flex gap-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1">
+                              {(
+                                [
+                                  { id: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, label: 'راست' },
+                                  { id: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, label: 'وسط' },
+                                  { id: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'چپ' }
+                                ] as const
+                              ).map((a) => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => updateWatermark({ textAlign: a.id })}
+                                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    watermark.textAlign === a.id
+                                      ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
+                                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                                  }`}
+                                >
+                                  {a.icon}
+                                  <span>{a.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">تراز عمودی</span>
+                            <div className="flex gap-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1">
+                              {(
+                                [
+                                  { id: 'top', icon: <AlignVerticalJustifyStart className="w-3.5 h-3.5" />, label: 'بالا' },
+                                  { id: 'center', icon: <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />, label: 'وسط' },
+                                  { id: 'bottom', icon: <AlignVerticalJustifyEnd className="w-3.5 h-3.5" />, label: 'پایین' }
+                                ] as const
+                              ).map((a) => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => updateWatermark({ alignVertical: a.id })}
+                                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    (watermark.alignVertical ?? 'center') === a.id
+                                      ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
+                                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                                  }`}
+                                >
+                                  {a.icon}
+                                  <span>{a.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                              <input
+                                type="color"
+                                value={watermark.backgroundColor}
+                                onChange={(e) => updateWatermark({ backgroundColor: e.target.value })}
+                                className="w-8 h-8 rounded-lg cursor-pointer"
+                              />
+                              رنگ پس‌زمینه
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => updateWatermark({ backgroundColor: 'transparent' })}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                                watermark.backgroundColor === 'transparent'
+                                  ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400'
+                                  : 'border-gray-200 dark:border-slate-800 text-slate-500'
+                              }`}
+                            >
+                              بدون پس‌زمینه
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Position & Size */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500">اندازه و موقعیت</span>
+                          <button
+                            type="button"
+                            title={wmAspectLock ? 'قفل نسبت ابعاد' : 'آزاد کردن نسبت ابعاد'}
+                            onClick={() => setWmAspectLock((l) => !l)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              wmAspectLock
+                                ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400'
+                                : 'border-gray-200 dark:border-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {wmAspectLock ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                            {wmAspectLock ? 'نسبت قفل' : 'نسبت آزاد'}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">موقعیت X (%)</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={Math.round(watermark.x)}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  x: clampNum(Number(e.target.value), 0, 100 - watermark.width)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">موقعیت Y (%)</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={Math.round(watermark.y)}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  y: clampNum(Number(e.target.value), 0, 100 - watermark.height)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">عرض (%)</span>
+                            <input
+                              type="number"
+                              min={2}
+                              max={100}
+                              value={Math.round(watermark.width)}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  width: clampNum(Number(e.target.value), 2, 100)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">ارتفاع (%)</span>
+                            <input
+                              type="number"
+                              min={2}
+                              max={100}
+                              value={Math.round(watermark.height)}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  height: clampNum(Number(e.target.value), 2, 100)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <span className="flex items-center gap-1.5">
+                            <Move className="w-3.5 h-3.5" />
+                            چرخش: {watermark.rotation}°
+                          </span>
+                          <input
+                            type="range"
+                            dir="ltr"
+                            min={-180}
+                            max={180}
+                            value={watermark.rotation}
+                            onChange={(e) =>
+                              updateWatermark({ rotation: Number(e.target.value) })
+                            }
+                            className="w-32 accent-teal-500 cursor-pointer"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <span>شفافیت</span>
+                            <span className="text-teal-600">{watermark.opacity}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            dir="ltr"
+                            min={10}
+                            max={100}
+                            value={watermark.opacity}
+                            onChange={(e) =>
+                              updateWatermark({ opacity: Number(e.target.value) })
+                            }
+                            className="w-full accent-teal-500 cursor-pointer"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">ضخامت حاشیه (px)</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={30}
+                              value={watermark.borderWidth}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  borderWidth: clampNum(Number(e.target.value), 0, 30)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] font-bold text-slate-500 block mb-1">گوشه گرد (px)</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={watermark.borderRadius}
+                              onChange={(e) =>
+                                updateWatermark({
+                                  borderRadius: clampNum(Number(e.target.value), 0, 200)
+                                })
+                              }
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                            <input
+                              type="color"
+                              value={watermark.borderColor}
+                              onChange={(e) =>
+                                updateWatermark({ borderColor: e.target.value })
+                              }
+                              className="w-8 h-8 rounded-lg cursor-pointer"
+                            />
+                            رنگ حاشیه
+                          </label>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 block mb-1">سایه</span>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {(Object.keys(WM_SHADOW_PRESETS) as WmShadowKey[]).map((key) => (
+                              <button
+                                key={key}
+                                onClick={() => updateWatermark({ shadow: key })}
+                                className={`p-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                                  watermark.shadow === key
+                                    ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400'
+                                    : 'border-gray-200 dark:border-slate-800 text-slate-500'
+                                }`}
+                              >
+                                {WM_SHADOW_PRESETS[key].label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={removeWatermark}
+                          className="w-full py-2 px-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          حذف واترمارک
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -934,6 +1753,18 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           </motion.div>
         </div>
       )}
+
+      {/* Media picker for watermark image (attached to the single watermark) */}
+      <MediaManager
+        open={wmPickerOpen}
+        onClose={() => setWmPickerOpen(false)}
+        onSelect={(url: string, file?: { id?: string; name?: string }) => {
+          updateWatermark({ imageContent: url, mediaId: file?.id });
+          setWmPickerOpen(false);
+        }}
+        filter="image"
+        title="انتخاب تصویر واترمارک"
+      />
     </AnimatePresence>
   );
 };
