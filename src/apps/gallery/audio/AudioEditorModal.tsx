@@ -52,6 +52,8 @@ import {
 interface AudioEditorModalProps {
   asset: GalleryAsset | null;
   folderId?: string | null;
+  localFile?: File | null; // ویرایش قبل از آپلود
+  onLocalSaved?: (file: File) => void;
   onClose: () => void;
   onSave: (updatedAsset: GalleryAsset) => void;
 }
@@ -133,6 +135,8 @@ const ActionButton: React.FC<{
 export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
   asset,
   folderId,
+  localFile,
+  onLocalSaved,
   onClose,
   onSave
 }) => {
@@ -279,14 +283,17 @@ export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
     setUndoStack([]);
     setRedoStack([]);
     stopPlayback();
-    if (!asset) {
+    if (!asset && !localFile) {
       setLoading(false);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
-        const b = await fetchAudioBuffer(getCtx(), getMediaStreamUrl(asset));
+        const url = localFile
+          ? URL.createObjectURL(localFile)
+          : getMediaStreamUrl(asset);
+        const b = await fetchAudioBuffer(getCtx(), url);
         if (cancelled) return;
         setBuffer(b);
         setLoading(false);
@@ -300,7 +307,7 @@ export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asset?.id]);
+  }, [asset?.id, localFile?.name, localFile?.size, localFile?.lastModified]);
 
   /* ---------- Playback ---------- */
   const stopPlayback = useCallback(() => {
@@ -774,8 +781,13 @@ export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
           break;
       }
       if (!blob.size) throw new Error('کدگذاری خروجی خالی بود؛ فرمت دیگری را امتحان کنید.');
-      const baseName = asset ? asset.name.replace(/\.[^.]+$/, '') : 'audio';
+      const baseName = (localFile ? localFile.name : asset?.name || 'audio').replace(/\.[^.]+$/, '');
       const file = new File([blob], `${baseName}-edited.${ext}`, { type });
+      if (localFile && onLocalSaved) {
+        onLocalSaved(file);
+        onClose();
+        return;
+      }
       const res = await uploadMediaFile(
         file,
         folderId === undefined || folderId === null || folderId === '' ? null : Number(folderId)
@@ -813,7 +825,7 @@ export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
 
   return (
     <AnimatePresence>
-      {asset && (
+      {(asset || localFile) && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -832,7 +844,8 @@ export const AudioEditorModal: React.FC<AudioEditorModalProps> = ({
                     ویرایشگر صدا
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    فایل: {asset.name} ({asset.type})
+                    فایل: {(localFile ? localFile.name : asset?.name) || ''} ({localFile ? localFile.type : asset?.type})
+                    {localFile ? ' — پیش از آپلود' : ''}
                   </p>
                 </div>
               </div>

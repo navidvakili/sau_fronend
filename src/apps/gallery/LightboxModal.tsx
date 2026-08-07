@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, Music } from 'lucide-react';
 import { GalleryAsset } from './types';
 import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
+import { OfficePreview } from './OfficePreview';
 import { getMediaStreamUrl } from './api';
 
 interface LightboxModalProps {
@@ -141,6 +142,18 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
                     src={getMediaStreamUrl(currentAsset)}
                     downloadUrl={currentAsset.url}
                     title={currentAsset.name}
+                  />
+                </div>
+              )}
+
+            {currentAsset?.fileType === 'document' &&
+              /\.(docx?|pptx?|xlsx?)$/i.test(currentAsset.name) && (
+                <div className="w-[min(90vw,1100px)] h-[80vh] max-w-full max-h-[80vh] rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
+                  <OfficePreview
+                    key={currentAsset.id}
+                    src={getMediaStreamUrl(currentAsset)}
+                    name={currentAsset.name}
+                    downloadUrl={currentAsset.url}
                   />
                 </div>
               )}

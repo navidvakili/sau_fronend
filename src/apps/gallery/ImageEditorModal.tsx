@@ -33,6 +33,8 @@ import { MediaManager } from '@/src/shared-components';
 interface ImageEditorModalProps {
   asset: GalleryAsset | null;
   folderId?: string | null;
+  localFile?: File | null; // ویرایش قبل از آپلود
+  onLocalSaved?: (file: File) => void;
   onClose: () => void;
   onSave: (updatedAsset: GalleryAsset) => void;
 }
@@ -95,6 +97,8 @@ const WM_SHADOW_PRESETS: Record<
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   asset,
   folderId = null,
+  localFile,
+  onLocalSaved,
   onClose,
   onSave
 }) => {
@@ -137,9 +141,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  // Reset editor state whenever a different asset is opened
+  // Reset editor state whenever a different asset (or local file) is opened
   useEffect(() => {
-    if (!asset) return;
+    if (!asset && !localFile) return;
     setActiveTab('transform');
     setRotation(0);
     setFlipH(false);
@@ -157,11 +161,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setHue(0);
     setExporting(false);
     setExportError(null);
-  }, [asset?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, localFile?.name, localFile?.size, localFile?.lastModified]);
 
   // Track the preview area width so rotated images can be fitted without clipping.
-  // The modal is always mounted (asset starts null), so the observer must (re)attach
-  // whenever an asset opens — otherwise previewW stays 0 and wide images get clipped.
+  // The modal is always mounted (asset/localFile starts null), so the observer must (re)attach
+  // whenever an asset or local file opens — otherwise previewW stays 0 and wide images get clipped.
   useEffect(() => {
     const el = previewRef.current;
     if (!el) return;
@@ -172,7 +177,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [asset?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, localFile?.name, localFile?.size, localFile?.lastModified]);
 
   const handleResetAll = () => {
     setRotation(0);
@@ -517,7 +523,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   // Render the edited image onto a canvas and upload it to the server as a NEW file.
   const handleExportSave = () => {
-    if (!asset) return;
+    if (!asset && !localFile) return;
     setExporting(true);
     setExportError(null);
     const img = new Image();
@@ -692,8 +698,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             return;
           }
           try {
-            const fileName = (asset.name || 'image').replace(/\.[^.]+$/, '') + '-edited.png';
+            const srcName = localFile ? localFile.name : asset?.name || 'image';
+            const fileName = srcName.replace(/\.[^.]+$/, '') + '-edited.png';
             const file = new File([blob], fileName, { type: 'image/png' });
+            if (localFile && onLocalSaved) {
+              onLocalSaved(file);
+              onClose();
+              return;
+            }
             const targetFolderId =
               folderId === undefined || folderId === null || folderId === ''
                 ? null
@@ -716,7 +728,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setExporting(false);
     };
     // آدرس stream هدر CORS دارد تا canvas با crossOrigin قابل استفاده باشد
-    img.src = getMediaStreamUrl(asset);
+    img.src = localFile ? URL.createObjectURL(localFile) : getMediaStreamUrl(asset);
   };
 
   const filterStyle = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) hue-rotate(${hue}deg)`;
@@ -724,7 +736,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   return (
     <AnimatePresence>
-      {asset && (
+      {(asset || localFile) && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md rtl">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -743,7 +755,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 ویرایشگر تصویر
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                فایل: {asset.name} ({asset.type})
+                فایل: {(localFile ? localFile.name : asset?.name) || ''} ({localFile ? localFile.type : asset?.type})
+                {localFile ? ' — پیش از آپلود' : ''}
               </p>
             </div>
           </div>
@@ -783,8 +796,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 }
               >
                 <img
-                  src={asset.url}
-                  alt={asset.name}
+                  src={localFile ? URL.createObjectURL(localFile) : asset.url}
+                  alt={asset?.name || localFile?.name || ''}
                   onPointerDown={() => {
                     /* no-op: single watermark keeps selection */
                   }}

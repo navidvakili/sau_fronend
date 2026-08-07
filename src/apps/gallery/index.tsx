@@ -53,6 +53,7 @@ import { AssetDetailsDrawer } from './AssetDetailsDrawer';
 import { ImageEditorModal } from './ImageEditorModal';
 import { VideoEditorModal } from './VideoEditorModal';
 import { AudioEditorModal } from './audio/AudioEditorModal';
+import { PdfEditorModal } from './pdf/PdfEditorModal';
 import { UploadModal } from './UploadModal';
 import { LightboxModal } from './LightboxModal';
 import { DamDashboard } from './DamDashboard';
@@ -102,6 +103,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   const [assetToEdit, setAssetToEdit] = useState<GalleryAsset | null>(null);
   const [videoToEdit, setVideoToEdit] = useState<GalleryAsset | null>(null);
   const [audioToEdit, setAudioToEdit] = useState<GalleryAsset | null>(null);
+  const [pdfToEdit, setPdfToEdit] = useState<GalleryAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [lightboxInitialId, setLightboxInitialId] = useState<string | null>(null);
 
@@ -271,6 +273,17 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     setAssetToEdit(null);
     setVideoToEdit(null);
     setAudioToEdit(null);
+    setPdfToEdit(null);
+  };
+
+  // Save multiple assets (e.g. split parts) — prepends all, then closes editors
+  const handleSaveManyFromEditor = (updated: GalleryAsset[]) => {
+    if (!updated.length) return;
+    setAssets((prev) => {
+      const existing = new Set(prev.map((a) => a.id));
+      return [...updated.filter((a) => !existing.has(a.id)), ...prev];
+    });
+    setPdfToEdit(null);
   };
 
   // Open the correct editor based on file type
@@ -279,6 +292,8 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
       setVideoToEdit(asset);
     } else if (asset.fileType === 'audio') {
       setAudioToEdit(asset);
+    } else if (asset.fileType === 'document' && /\.pdf$/i.test(asset.name)) {
+      setPdfToEdit(asset);
     } else {
       setAssetToEdit(asset);
     }
@@ -834,6 +849,15 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         folderId={filters.folderId}
         onClose={handleCloseAudioEditor}
         onSave={handleUpdateAssetFromEditor}
+      />
+
+      {/* Built-in PDF Editor Modal (always mounted — owns its own AnimatePresence) */}
+      <PdfEditorModal
+        asset={pdfToEdit}
+        folderId={filters.folderId}
+        onClose={() => setPdfToEdit(null)}
+        onSave={handleUpdateAssetFromEditor}
+        onSaveMany={handleSaveManyFromEditor}
       />
 
       {/* Upload Modal */}

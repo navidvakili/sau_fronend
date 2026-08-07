@@ -1,7 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { X, Upload, Loader2, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { X, Upload, Loader2, CheckCircle2, AlertCircle, FileText, Edit2 } from 'lucide-react';
 import { Folder as FolderType, MediaFile, formatBytes } from './types';
 import { uploadMediaFile } from './api';
+import { PdfEditorModal } from './pdf/PdfEditorModal';
+import { ImageEditorModal } from './ImageEditorModal';
+import { AudioEditorModal } from './audio/AudioEditorModal';
 
 interface UploadModalProps {
   folders: FolderType[];
@@ -30,7 +33,25 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<UploadItem | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /** ویرایش قبل از آپلود برای PDF/تصویر/صدا پشتیبانی می‌شود */
+  const canEditBeforeUpload = (f: File) => {
+    const name = f.name.toLowerCase();
+    const mime = (f.type || '').toLowerCase();
+    if (/\.pdf$/i.test(name)) return true;
+    if (mime.startsWith('image/')) return true;
+    if (mime.startsWith('audio/')) return true;
+    return false;
+  };
+
+  const handleLocalSaved = (id: string, file: File) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, file } : i)));
+    setEditingItem(null);
+  };
+
+  const closeEditorSafe = () => setEditingItem(null);
 
   const addFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
@@ -188,12 +209,24 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     </p>
                   </div>
                   {item.status === 'pending' && (
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <>
+                      {canEditBeforeUpload(item.file) && (
+                        <button
+                          onClick={() => setEditingItem(item)}
+                          className="px-2 py-1 rounded-lg bg-sky-500/10 border border-sky-500/25 text-sky-600 dark:text-sky-400 text-[10px] font-bold flex items-center gap-1 hover:bg-sky-500/20 transition-all cursor-pointer shrink-0"
+                          title="ویرایش قبل از آپلود"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          ویرایش
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                   {item.status === 'uploading' && (
                     <Loader2 className="w-4 h-4 text-teal-500 animate-spin shrink-0" />
@@ -255,6 +288,39 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ویرایش قبل از آپلود — ویرایشگرها با فایل محلی باز می‌شوند */}
+      {editingItem && (
+        <>
+          {/\.pdf$/i.test(editingItem.file.name) && (
+            <PdfEditorModal
+              asset={null}
+              localFile={editingItem.file}
+              onLocalSaved={(f) => handleLocalSaved(editingItem.id, f)}
+              onClose={closeEditorSafe}
+              onSave={() => undefined}
+            />
+          )}
+          {(editingItem.file.type || '').toLowerCase().startsWith('image/') && (
+            <ImageEditorModal
+              asset={null}
+              localFile={editingItem.file}
+              onLocalSaved={(f) => handleLocalSaved(editingItem.id, f)}
+              onClose={closeEditorSafe}
+              onSave={() => undefined}
+            />
+          )}
+          {(editingItem.file.type || '').toLowerCase().startsWith('audio/') && (
+            <AudioEditorModal
+              asset={null}
+              localFile={editingItem.file}
+              onLocalSaved={(f) => handleLocalSaved(editingItem.id, f)}
+              onClose={closeEditorSafe}
+              onSave={() => undefined}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 };

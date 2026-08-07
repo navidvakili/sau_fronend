@@ -171,21 +171,27 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
           </button>
         )}
 
-        {(asset.fileType === 'image' || asset.fileType === 'video' || asset.fileType === 'audio') && onOpenEditor && (
-          <button
-            onClick={onOpenEditor}
-            className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>
-              {asset.fileType === 'video'
-                ? 'ویرایش ویدئو'
-                : asset.fileType === 'audio'
-                  ? 'ویرایش صدا'
-                  : 'ویرایش تصویر'}
-            </span>
-          </button>
-        )}
+        {(asset.fileType === 'image' ||
+          asset.fileType === 'video' ||
+          asset.fileType === 'audio' ||
+          (asset.fileType === 'document' && isPdf)) &&
+          onOpenEditor && (
+            <button
+              onClick={onOpenEditor}
+              className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>
+                {asset.fileType === 'video'
+                  ? 'ویرایش ویدئو'
+                  : asset.fileType === 'audio'
+                    ? 'ویرایش صدا'
+                    : asset.fileType === 'document' && isPdf
+                      ? 'ویرایش پی‌دی‌اف'
+                      : 'ویرایش تصویر'}
+              </span>
+            </button>
+          )}
       </div>
 
       {/* Fullscreen Modal (video.js / PDF) */}
