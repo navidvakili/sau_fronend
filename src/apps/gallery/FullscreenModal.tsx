@@ -52,7 +52,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({ asset, onClose
             </div>
             <div className="min-w-0">
               <h3 className="text-xs font-black text-white truncate">{asset.name}</h3>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400">
                 {asset.sizeFormatted} • {isPdf ? 'PDF' : 'ویدیو'}
               </span>
             </div>

@@ -90,7 +90,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
             <h3 className="text-xs font-black text-slate-900 dark:text-white truncate">
               {asset.name}
             </h3>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">
               {asset.sizeFormatted} • {asset.type}
             </span>
           </div>
@@ -125,7 +125,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
         {asset.fileType === 'audio' && (
           <div className="flex flex-col items-center justify-center text-amber-500 gap-2">
             <FileText className="w-16 h-16" />
-            <span className="text-xs font-mono font-bold text-white">{asset.name}</span>
+            <span className="text-xs font-bold text-white">{asset.name}</span>
             <audio src={asset.url} controls className="w-4/5" />
           </div>
         )}
@@ -152,7 +152,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
         {asset.fileType === 'document' && !isPdf && (
           <div className="flex flex-col items-center justify-center text-amber-500 gap-2">
             <FileText className="w-16 h-16" />
-            <span className="text-xs font-mono font-bold text-white">{asset.name}</span>
+            <span className="text-xs font-bold text-white">{asset.name}</span>
           </div>
         )}
 
@@ -245,7 +245,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
                   <TagIcon className="w-3 h-3" />
                   نوع فرمت
                 </span>
-                <span className="font-bold font-mono text-slate-900 dark:text-white">{asset.type}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{asset.type}</span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
@@ -314,7 +314,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
                 readOnly
                 rows={4}
                 value={htmlSnippet}
-                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-950 text-emerald-400 font-mono text-[11px] focus:outline-none"
+                className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-950 text-emerald-400 text-[11px] focus:outline-none"
               />
             </div>
 
@@ -334,7 +334,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
                   type="text"
                   readOnly
                   value={asset.url}
-                  className="flex-1 p-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-mono text-[11px] focus:outline-none"
+                  className="flex-1 p-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 text-[11px] focus:outline-none"
                 />
                 <a
                   href={asset.url}

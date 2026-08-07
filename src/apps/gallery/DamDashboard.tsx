@@ -44,7 +44,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
             <span className="text-xs font-bold opacity-80">کل دارایی‌های دیجیتال</span>
             <HardDrive className="w-5 h-5" />
           </div>
-          <div className="text-2xl font-black font-mono">{totalAssets} فایل</div>
+          <div className="text-2xl font-black">{totalAssets} فایل</div>
           <p className="text-[11px] opacity-90">مجموع حجم: {formatBytes(totalSizeBytes)}</p>
         </div>
 
@@ -53,7 +53,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
             <span className="text-xs font-bold">تصاویر</span>
             <ImageIcon className="w-5 h-5" />
           </div>
-          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+          <div className="text-2xl font-black text-slate-900 dark:text-white">
             {imageAssets.length}
           </div>
           <p className="text-[11px] text-slate-400">فایل گرافیکی</p>
@@ -64,7 +64,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
             <span className="text-xs font-bold">ویدیوها</span>
             <Video className="w-5 h-5" />
           </div>
-          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+          <div className="text-2xl font-black text-slate-900 dark:text-white">
             {videoAssets.length}
           </div>
           <p className="text-[11px] text-slate-400">فایل ویدیویی</p>
@@ -75,7 +75,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
             <span className="text-xs font-bold">صداها</span>
             <Music className="w-5 h-5" />
           </div>
-          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+          <div className="text-2xl font-black text-slate-900 dark:text-white">
             {audioAssets.length}
           </div>
           <p className="text-[11px] text-slate-400">فایل صوتی</p>
@@ -86,7 +86,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
             <span className="text-xs font-bold">اسناد</span>
             <FileText className="w-5 h-5" />
           </div>
-          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+          <div className="text-2xl font-black text-slate-900 dark:text-white">
             {docAssets.length}
           </div>
           <p className="text-[11px] text-slate-400">PDF و فایل‌های متنی</p>
@@ -128,7 +128,7 @@ export const DamDashboard: React.FC<DamDashboardProps> = ({ assets, onSelectAsse
                     <h5 className="font-bold text-slate-900 dark:text-white truncate group-hover:text-teal-600 dark:group-hover:text-teal-400">
                       {ast.name}
                     </h5>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-400">
                       {formatDate(ast.created_at)} • {ast.sizeFormatted}
                     </span>
                   </div>

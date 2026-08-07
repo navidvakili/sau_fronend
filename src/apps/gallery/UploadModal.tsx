@@ -183,7 +183,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     <p className="font-bold text-slate-900 dark:text-white truncate">
                       {item.file.name}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-mono">
+                    <p className="text-[10px] text-slate-400">
                       {formatBytes(item.file.size)}
                     </p>
                   </div>

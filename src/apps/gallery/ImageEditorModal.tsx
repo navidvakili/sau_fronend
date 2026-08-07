@@ -199,7 +199,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             </div>
 
             {/* Canvas Badge */}
-            <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white text-[11px] font-mono flex items-center gap-2">
+            <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white text-[11px] flex items-center gap-2">
               <span>چرخش: {rotation}°</span>
               <span>•</span>
               <span>روشنایی: {brightness}%</span>
@@ -329,7 +329,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <div>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         <span>روشنایی (Brightness)</span>
-                        <span className="font-mono text-teal-600">{brightness}%</span>
+                        <span className="text-teal-600">{brightness}%</span>
                       </div>
                       <input
                         type="range"
@@ -344,7 +344,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <div>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         <span>کنتراست (Contrast)</span>
-                        <span className="font-mono text-teal-600">{contrast}%</span>
+                        <span className="text-teal-600">{contrast}%</span>
                       </div>
                       <input
                         type="range"
@@ -359,7 +359,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <div>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         <span>غلظت رنگ (Saturation)</span>
-                        <span className="font-mono text-teal-600">{saturate}%</span>
+                        <span className="text-teal-600">{saturate}%</span>
                       </div>
                       <input
                         type="range"
@@ -374,7 +374,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <div>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         <span>ماتی و محوشدگی (Blur)</span>
-                        <span className="font-mono text-teal-600">{blur}px</span>
+                        <span className="text-teal-600">{blur}px</span>
                       </div>
                       <input
                         type="range"
@@ -389,7 +389,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <div>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         <span>چرخش رنگ (Hue)</span>
-                        <span className="font-mono text-teal-600">{hue}°</span>
+                        <span className="text-teal-600">{hue}°</span>
                       </div>
                       <input
                         type="range"
@@ -452,7 +452,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   <div>
                     <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       <span>شفافیت (Opacity)</span>
-                      <span className="font-mono text-teal-600">{watermarkOpacity}%</span>
+                      <span className="text-teal-600">{watermarkOpacity}%</span>
                     </div>
                     <input
                       type="range"
@@ -476,7 +476,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     <Download className="w-4 h-4 shrink-0 mt-0.5 text-teal-500" />
                     <p>
                       تمام تغییرات (چرخش، قرینه، فیلترها و واترمارک) به‌صورت محلی روی مرورگر اعمال و به‌صورت
-                      فایل <span className="font-mono font-bold">PNG</span> دانلود می‌شود.
+                      فایل <span className="font-bold">PNG</span> دانلود می‌شود.
                     </p>
                   </div>
 

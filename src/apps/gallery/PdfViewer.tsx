@@ -135,7 +135,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             <span className="text-[11px] font-black text-white truncate max-w-[160px]">{title}</span>
           )}
           {numPages > 0 && (
-            <span className="text-[10px] font-mono text-slate-400 shrink-0">
+            <span className="text-[10px] text-slate-400 shrink-0">
               صفحه {pageNumber} از {numPages}
             </span>
           )}
@@ -166,7 +166,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           <button onClick={handleZoomOut} disabled={!numPages} className={btn} title="کوچک‌نمایی">
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-[10px] font-mono text-slate-300 w-11 text-center shrink-0">
+          <span className="text-[10px] text-slate-300 w-11 text-center shrink-0">
             {Math.round(scale * 100)}٪
           </span>
           <button onClick={handleZoomIn} disabled={!numPages} className={btn} title="بزرگ‌نمایی">

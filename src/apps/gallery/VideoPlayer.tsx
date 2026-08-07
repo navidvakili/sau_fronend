@@ -12,6 +12,7 @@
 import React, { useEffect, useRef } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
+import './VideoPlayer.css';
 import type Player from 'video.js/dist/types/player';
 
 interface VideoPlayerProps {
@@ -48,6 +49,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       sources: [{ src }],
     });
     playerRef.current = player;
+
+    // اطمینان از پر شدن کامل ظرف (علاوه بر قانون CSS با !important)
+    player.ready(() => {
+      const el = player.el() as HTMLElement;
+      el.style.width = '100%';
+      el.style.height = '100%';
+    });
 
     return () => {
       if (playerRef.current) {

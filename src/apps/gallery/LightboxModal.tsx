@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  X,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Play,
-  Pause,
-  Download,
-  Info,
-  HardDrive,
-  Calendar
-} from 'lucide-react';
-import { GalleryAsset, formatDate } from './types';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GalleryAsset } from './types';
 import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
 import { getMediaStreamUrl } from './api';
@@ -35,21 +22,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
     return idx >= 0 ? idx : 0;
   });
 
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showInfoOverlay, setShowInfoOverlay] = useState(false);
-
   const currentAsset = assets[currentIndex] || assets[0];
-
-  // Auto slideshow timer
-  useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % assets.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [isPlaying, assets.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -57,10 +30,6 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') handlePrev();
       if (e.key === 'ArrowLeft') handleNext();
-      if (e.key === ' ') {
-        e.preventDefault();
-        setIsPlaying((p) => !p);
-      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -68,14 +37,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   }, []);
 
   const handleNext = () => {
-    setZoom(1);
-    setRotation(0);
     setCurrentIndex((prev) => (prev + 1) % assets.length);
   };
 
   const handlePrev = () => {
-    setZoom(1);
-    setRotation(0);
     setCurrentIndex((prev) => (prev - 1 + assets.length) % assets.length);
   };
 
@@ -84,7 +49,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       {/* Lightbox Top Control Bar */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40 z-10">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono font-bold bg-white/10 px-3 py-1 rounded-full text-slate-300">
+          <span className="text-xs font-bold bg-white/10 px-3 py-1 rounded-full text-slate-300">
             {currentIndex + 1} از {assets.length}
           </span>
           <h3 className="text-xs font-black text-white truncate max-w-xs sm:max-w-md">
@@ -92,69 +57,12 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           </h3>
         </div>
 
-        {/* Toolbar Center / Left Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom((z) => Math.min(z + 0.5, 4))}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-            title="بزرگنمایی"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setZoom((z) => Math.max(z - 0.5, 1))}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-            title="کوچک‌نمایی"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setRotation((r) => (r + 90) % 360)}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-            title="چرخش"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setIsPlaying((p) => !p)}
-            className={`p-2 rounded-xl transition-colors cursor-pointer ${
-              isPlaying ? 'bg-teal-500 text-white' : 'bg-white/10 hover:bg-white/20'
-            }`}
-            title="اسلایدشو خودکار"
-          >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={() => setShowInfoOverlay((p) => !p)}
-            className={`p-2 rounded-xl transition-colors cursor-pointer ${
-              showInfoOverlay ? 'bg-teal-600 text-white' : 'bg-white/10 hover:bg-white/20'
-            }`}
-            title="اطلاعات فایل"
-          >
-            <Info className="w-4 h-4" />
-          </button>
-
-          <a
-            href={currentAsset?.url}
-            target="_blank"
-            rel="noreferrer"
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-            title="دانلود"
-          >
-            <Download className="w-4 h-4" />
-          </a>
-
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer mr-2"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Main Preview Center Area */}
@@ -182,14 +90,11 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
                 src={currentAsset.url}
                 alt={currentAsset.name}
                 className="max-w-full max-h-[80vh] object-contain shadow-2xl rounded-xl transition-all duration-200"
-                style={{
-                  transform: `scale(${zoom}) rotate(${rotation}deg)`
-                }}
               />
             )}
 
             {currentAsset?.fileType === 'video' && (
-              <div className="w-[min(80vw,1200px)] aspect-video max-w-full max-h-[80vh]">
+              <div className="w-[min(95vw,1700px)] aspect-video max-w-full max-h-[85vh]">
                 <VideoPlayer
                   key={currentAsset.id}
                   src={currentAsset.url}
@@ -221,28 +126,6 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        {/* File Info Overlay Card */}
-        {showInfoOverlay && currentAsset && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-6 right-6 p-4 rounded-2xl bg-black/80 backdrop-blur-md border border-white/10 text-xs space-y-2 max-w-sm z-10"
-          >
-            <h4 className="font-extrabold text-teal-400">اطلاعات فایل</h4>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] font-mono text-slate-300">
-              <div className="flex items-center gap-1.5">
-                <HardDrive className="w-3 h-3 text-teal-400" />
-                حجم: {currentAsset.sizeFormatted}
-              </div>
-              <div>فرمت: {currentAsset.type}</div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3 h-3 text-teal-400" />
-                بارگذاری: {formatDate(currentAsset.created_at)}
-              </div>
-              <div>شناسه: {currentAsset.id.slice(0, 12)}...</div>
-            </div>
-          </motion.div>
-        )}
       </div>
 
       {/* Lightbox Bottom Thumbnails Track */}
@@ -250,10 +133,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         {assets.map((ast, idx) => (
           <button
             key={ast.id}
-            onClick={() => {
-              setCurrentIndex(idx);
-              setZoom(1);
-            }}
+            onClick={() => setCurrentIndex(idx)}
             className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
               idx === currentIndex
                 ? 'border-teal-500 scale-105 shadow-lg shadow-teal-500/30'
@@ -264,7 +144,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               <img src={ast.url} alt={ast.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-400">
-                <span className="text-[8px] font-mono font-bold">{ast.fileType}</span>
+                <span className="text-[8px] font-bold">{ast.fileType}</span>
               </div>
             )}
           </button>
