@@ -74,11 +74,11 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
 
   return (
     <motion.div
-      initial={{ x: '100%', opacity: 0 }}
+      initial={{ x: '-100%', opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
+      exit={{ x: '-100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="w-full sm:w-[460px] bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 h-full flex flex-col shadow-2xl z-[60] select-none text-right rtl"
+      className="w-full sm:w-[460px] bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 h-full flex flex-col shadow-2xl z-[60] select-none text-right rtl"
     >
       {/* Drawer Header */}
       <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">

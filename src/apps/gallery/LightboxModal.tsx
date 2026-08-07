@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Music } from 'lucide-react';
 import { GalleryAsset } from './types';
 import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
@@ -108,6 +108,27 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
                   type={currentAsset.type}
                   autoPlay
                   className="w-full h-full rounded-xl shadow-2xl overflow-hidden"
+                />
+              </div>
+            )}
+
+            {currentAsset?.fileType === 'audio' && (
+              <div className="w-[min(92vw,520px)] rounded-2xl bg-slate-900/80 border border-white/10 shadow-2xl p-8 flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <Music className="w-9 h-9" />
+                </div>
+                <h4 className="text-sm font-black text-white truncate max-w-full">
+                  {currentAsset.name}
+                </h4>
+                <span className="text-[11px] text-slate-400">
+                  {currentAsset.sizeFormatted}
+                </span>
+                <audio
+                  key={currentAsset.id}
+                  src={getMediaStreamUrl(currentAsset)}
+                  controls
+                  autoPlay
+                  className="w-full h-11"
                 />
               </div>
             )}
