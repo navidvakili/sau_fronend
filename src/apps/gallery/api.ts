@@ -3,11 +3,19 @@
 // ============================================================
 
 import { API, APISendFiles } from '../../shared-utils/functions';
+import { API_BASE_URL } from '../../shared-constants';
 import type {
   MediaFile,
   MediaFolderDto,
   MediaListResponse,
 } from './types';
+
+/**
+ * آدرس «پخش مستقیم» فایل از بک‌اند (هدر CORS دارد).
+ * نمایشگرهای fetch-محور مثل pdf.js به این آدرس نیاز دارند.
+ */
+export const getMediaStreamUrl = (file: { id: string }): string =>
+  `${API_BASE_URL}/media/${file.id}/stream`;
 
 /** دریافت فایل‌های رسانه (همان سرویسی که MediaManager استفاده می‌کند) */
 export const fetchMediaPage = (

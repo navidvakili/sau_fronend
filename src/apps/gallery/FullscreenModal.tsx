@@ -2,7 +2,7 @@
 // FullscreenModal — نمایش فول‌اسکرین PDF و ویدیو
 // ============================================================
 // - ویدیو: با video.js (VideoPlayer) پخش می‌شود
-// - PDF: با PdfViewer (iframe — همانند پروژه HRM) نمایش داده می‌شود
+// - PDF: با PdfViewer (رندر داخلی pdf.js روی canvas) نمایش داده می‌شود
 // لایه بالاتر از دراور جزئیات (z-[60]) قرار می‌گیرد.
 
 import React, { useEffect } from 'react';
@@ -11,6 +11,7 @@ import { X, FileText, Film } from 'lucide-react';
 import { GalleryAsset } from './types';
 import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
+import { getMediaStreamUrl } from './api';
 
 interface FullscreenModalProps {
   asset: GalleryAsset;
@@ -79,7 +80,11 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({ asset, onClose
             </div>
           ) : isPdf ? (
             <div className="w-full h-full rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
-              <PdfViewer src={asset.url} />
+              <PdfViewer
+                src={getMediaStreamUrl(asset)}
+                downloadUrl={asset.url}
+                title={asset.name}
+              />
             </div>
           ) : (
             <div className="text-center text-slate-400 text-sm font-bold">

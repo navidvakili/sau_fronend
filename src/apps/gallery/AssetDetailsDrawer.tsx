@@ -21,6 +21,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
 import { FullscreenModal } from './FullscreenModal';
 import { ImageViewer } from './ImageViewer';
+import { getMediaStreamUrl } from './api';
 
 interface AssetDetailsDrawerProps {
   asset: GalleryAsset;
@@ -131,7 +132,11 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
         {asset.fileType === 'document' && isPdf && (
           <div className="w-full h-full flex flex-col gap-2">
             <div className="flex-1 min-h-0 overflow-hidden rounded-lg bg-white">
-              <PdfViewer src={asset.url} />
+              <PdfViewer
+                src={getMediaStreamUrl(asset)}
+                downloadUrl={asset.url}
+                title={asset.name}
+              />
             </div>
             <a
               href={asset.url}
