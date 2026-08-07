@@ -80,12 +80,23 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
           const XLSX = await import('xlsx');
           const wb = XLSX.read(bytes, { type: 'array' });
           if (!containerRef.current) return;
+          const esc = (v: unknown) =>
+            String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           let html = '';
           for (const sname of wb.SheetNames) {
-            const rows = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[sname], { header: 1 });
-            html += `<div class="xlsx-sheet"><h3>${sname}</h3><table>`;
-            rows.slice(0, 500).forEach((r, ri) => {
-              html += `<tr>${(r || []).map((c) => `<td>${String(c ?? '').replace(/</g, '&lt;')}</td>`).join('')}</tr>`;
+            const ws = wb.Sheets[sname];
+            if (!ws || !ws['!ref']) {
+              html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><p class="xlsx-empty">این برگه خالی است.</p></div>`;
+              continue;
+            }
+            const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: '' });
+            if (!rows.length) {
+              html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><p class="xlsx-empty">این برگه خالی است.</p></div>`;
+              continue;
+            }
+            html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><table>`;
+            rows.slice(0, 500).forEach((r) => {
+              html += `<tr>${(r || []).map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`;
             });
             html += '</table></div>';
           }

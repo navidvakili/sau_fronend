@@ -54,6 +54,7 @@ import { ImageEditorModal } from './ImageEditorModal';
 import { VideoEditorModal } from './VideoEditorModal';
 import { AudioEditorModal } from './audio/AudioEditorModal';
 import { PdfEditorModal } from './pdf/PdfEditorModal';
+import { isPdfName } from './pdf/pdfEngine';
 import { UploadModal } from './UploadModal';
 import { LightboxModal } from './LightboxModal';
 import { DamDashboard } from './DamDashboard';
@@ -73,6 +74,20 @@ const TYPE_LABELS: Record<MediaType, string> = {
   document: 'سند',
   '3d': 'سه‌بعدی',
   embed: 'جاسازی'
+};
+
+/** آیا برای این فایل ویرایشگری وجود دارد؟ (تصویر/ویدیو/صدا/پی‌دی‌اف) */
+const canEditAsset = (asset: GalleryAsset): boolean =>
+  asset.fileType === 'image' ||
+  asset.fileType === 'video' ||
+  asset.fileType === 'audio' ||
+  (asset.fileType === 'document' && isPdfName(asset.name));
+
+const editTitleFor = (asset: GalleryAsset): string => {
+  if (asset.fileType === 'video') return 'ویرایش ویدئو';
+  if (asset.fileType === 'audio') return 'ویرایش صدا';
+  if (asset.fileType === 'document' && isPdfName(asset.name)) return 'ویرایش پی‌دی‌اف';
+  return 'ویرایش تصویر';
 };
 
 export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManagementProps) {
@@ -790,6 +805,15 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
+                                {canEditAsset(asset) && (
+                                  <button
+                                    onClick={() => handleOpenEditor(asset)}
+                                    className="p-2 rounded-xl text-slate-500 hover:bg-teal-500/10 hover:text-teal-600 transition-colors"
+                                    title={editTitleFor(asset)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => setLightboxInitialId(asset.id)}
                                   className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -1067,14 +1091,14 @@ const AssetCard: React.FC<AssetCardProps> = ({
             <Eye className="w-4 h-4" />
           </button>
 
-          {(isImage || asset.fileType === 'video') && (
+          {canEditAsset(asset) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenEditor();
               }}
               className="p-2.5 rounded-xl bg-white text-slate-900 hover:bg-teal-500 hover:text-white transition-colors shadow-lg"
-              title={isImage ? 'ویرایش تصویر' : 'ویرایش ویدئو'}
+              title={editTitleFor(asset)}
             >
               <Edit className="w-4 h-4" />
             </button>

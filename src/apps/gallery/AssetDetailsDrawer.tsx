@@ -19,6 +19,7 @@ import {
 import { GalleryAsset, Folder as FolderType, formatDate } from './types';
 import { VideoPlayer } from './VideoPlayer';
 import { PdfViewer } from './PdfViewer';
+import { OfficePreview } from './OfficePreview';
 import { FullscreenModal } from './FullscreenModal';
 import { ImageViewer } from './ImageViewer';
 import { getMediaStreamUrl } from './api';
@@ -59,6 +60,11 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
   const isPdf =
     (asset.type || '').toLowerCase().includes('pdf') ||
     (asset.name || '').toLowerCase().endsWith('.pdf');
+
+  const isOfficeDoc =
+    asset.fileType === 'document' &&
+    !isPdf &&
+    /\.(docx?|pptx?|xlsx?)$/i.test(asset.name || '');
 
   const handleMoveClick = () => {
     const target = selectedFolderId === '' ? null : Number(selectedFolderId);
@@ -106,7 +112,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
 
       {/* Drawer Image / Media Header Preview */}
       <div
-        className={`relative bg-slate-950/90 ${isPdf ? 'h-72' : 'h-52'} flex items-center justify-center p-3 overflow-hidden border-b border-gray-200 dark:border-slate-800`}
+        className={`relative bg-slate-950/90 ${isPdf || isOfficeDoc ? 'h-72' : 'h-52'} flex items-center justify-center p-3 overflow-hidden border-b border-gray-200 dark:border-slate-800`}
       >
         {asset.fileType === 'image' && (
           <img
@@ -150,7 +156,16 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
             </a>
           </div>
         )}
-        {asset.fileType === 'document' && !isPdf && (
+        {isOfficeDoc && (
+          <div className="w-full h-full rounded-lg overflow-hidden">
+            <OfficePreview
+              src={getMediaStreamUrl(asset)}
+              name={asset.name}
+              downloadUrl={asset.url}
+            />
+          </div>
+        )}
+        {asset.fileType === 'document' && !isPdf && !isOfficeDoc && (
           <div className="flex flex-col items-center justify-center text-amber-500 gap-2">
             <FileText className="w-16 h-16" />
             <span className="text-xs font-bold text-white">{asset.name}</span>
