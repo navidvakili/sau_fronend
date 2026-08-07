@@ -481,12 +481,18 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
   };
 
   const handleTimelineDown = (e: React.PointerEvent) => {
-    if (!duration) return;
+    if (!duration || !timelineRef.current) return;
+    const el = timelineRef.current;
+    const rect = el.getBoundingClientRect();
     const t = timeFromEvent(e.clientX);
-    // decide mode based on proximity to handles
-    const nearStart = Math.abs(t - trimStart) <= (trimEnd - trimStart) * 0.12 || Math.abs(t - trimStart) <= 1;
-    const nearEnd = Math.abs(t - trimEnd) <= (trimEnd - trimStart) * 0.12 || Math.abs(t - trimEnd) <= 1;
-    const nearPlayhead = Math.abs(t - currentTime) <= Math.max((trimEnd - trimStart) * 0.06, 0.8);
+    // Pixel-based proximity: the handles are 8px wide and the playhead 2px,
+    // so a click is only a handle-grab within a small radius around its
+    // actual x position — everywhere else on the timeline just seeks.
+    const px = (sec: number) => rect.left + (sec / duration) * rect.width;
+    const R = 14; // grab radius in px
+    const nearStart = Math.abs(e.clientX - px(trimStart)) <= R;
+    const nearEnd = Math.abs(e.clientX - px(trimEnd)) <= R;
+    const nearPlayhead = Math.abs(e.clientX - px(currentTime)) <= R;
     let mode: 'start' | 'end' | 'playhead' | null = null;
     if (nearStart) mode = 'start';
     else if (nearEnd) mode = 'end';
@@ -1123,7 +1129,7 @@ export const VideoEditorModal: React.FC<VideoEditorModalProps> = ({
                           disabled={!hasAudio}
                           className="w-full accent-teal-500 cursor-pointer disabled:opacity-40"
                         />
-                        <div className="flex justify-between text-[9px] text-slate-400 font-bold">
+                        <div dir="ltr" className="flex justify-between text-[9px] text-slate-400 font-bold">
                           <span>۰٪</span>
                           <span>۱۰۰٪ (عادی)</span>
                           <span>۲۰۰٪ (تقویت)</span>

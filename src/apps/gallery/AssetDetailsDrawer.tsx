@@ -118,7 +118,8 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
         {asset.fileType === 'video' && (
           <VideoPlayer
             key={asset.id}
-            src={asset.url}
+            src={getMediaStreamUrl(asset)}
+            type={asset.type}
             className="max-h-full max-w-full rounded-lg shadow-lg overflow-hidden"
           />
         )}
@@ -126,7 +127,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
           <div className="flex flex-col items-center justify-center text-amber-500 gap-2">
             <FileText className="w-16 h-16" />
             <span className="text-xs font-bold text-white">{asset.name}</span>
-            <audio src={asset.url} controls className="w-4/5" />
+            <audio src={getMediaStreamUrl(asset)} controls className="w-4/5" />
           </div>
         )}
         {asset.fileType === 'document' && isPdf && (

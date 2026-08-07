@@ -97,7 +97,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               <div className="w-[min(95vw,1700px)] aspect-video max-w-full max-h-[85vh]">
                 <VideoPlayer
                   key={currentAsset.id}
-                  src={currentAsset.url}
+                  src={getMediaStreamUrl(currentAsset)}
+                  type={currentAsset.type}
                   autoPlay
                   className="w-full h-full rounded-xl shadow-2xl overflow-hidden"
                 />

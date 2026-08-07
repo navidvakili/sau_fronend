@@ -17,6 +17,8 @@ import type Player from 'video.js/dist/types/player';
 
 interface VideoPlayerProps {
   src: string;
+  /** نوع MIME (مثلاً video/mp4) — برای آدرس‌های stream بدون پسوند لازم است */
+  type?: string;
   /** کلاس روی ظرف (سایزدهی) — پیش‌فرض پر کردن والد */
   className?: string;
   autoPlay?: boolean;
@@ -24,6 +26,7 @@ interface VideoPlayerProps {
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   src,
+  type,
   className,
   autoPlay = false,
 }) => {
@@ -46,7 +49,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       preload: 'metadata',
       fluid: false,
       rtl: true,
-      sources: [{ src }],
+      sources: [{ src, ...(type ? { type } : {}) }],
     });
     playerRef.current = player;
 
@@ -67,7 +70,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         container.removeChild(videoEl);
       }
     };
-  }, [src, autoPlay]);
+  }, [src, type, autoPlay]);
 
   return (
     <div

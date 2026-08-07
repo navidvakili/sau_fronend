@@ -73,7 +73,8 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({ asset, onClose
             <div className="w-[min(92vw,1400px)] aspect-video max-h-full">
               <VideoPlayer
                 key={asset.id}
-                src={asset.url}
+                src={getMediaStreamUrl(asset)}
+                type={asset.type}
                 autoPlay
                 className="w-full h-full rounded-xl shadow-2xl overflow-hidden"
               />
