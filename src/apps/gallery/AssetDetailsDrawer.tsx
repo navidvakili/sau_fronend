@@ -13,10 +13,14 @@ import {
   Folder,
   Calendar,
   HardDrive,
-  Tag as TagIcon
+  Tag as TagIcon,
+  Maximize
 } from 'lucide-react';
 import { GalleryAsset, Folder as FolderType, formatDate } from './types';
 import { VideoPlayer } from './VideoPlayer';
+import { PdfViewer } from './PdfViewer';
+import { FullscreenModal } from './FullscreenModal';
+import { ImageViewer } from './ImageViewer';
 
 interface AssetDetailsDrawerProps {
   asset: GalleryAsset;
@@ -37,6 +41,8 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'embed'>('info');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string>(
     asset.folder_id !== null && asset.folder_id !== undefined ? String(asset.folder_id) : ''
   );
@@ -125,7 +131,7 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
         {asset.fileType === 'document' && isPdf && (
           <div className="w-full h-full flex flex-col gap-2">
             <div className="flex-1 min-h-0 overflow-hidden rounded-lg bg-white">
-              <embed src={asset.url} type="application/pdf" className="w-full h-full" />
+              <PdfViewer src={asset.url} />
             </div>
             <a
               href={asset.url}
@@ -145,6 +151,20 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
           </div>
         )}
 
+        {(asset.fileType === 'image' || asset.fileType === 'video' || (asset.fileType === 'document' && isPdf)) && (
+          <button
+            onClick={() => {
+              if (asset.fileType === 'image') setShowImageViewer(true);
+              else setShowFullscreen(true);
+            }}
+            className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-teal-600 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer z-10"
+            title="نمایش فول‌اسکرین"
+          >
+            <Maximize className="w-3.5 h-3.5" />
+            <span>نمایش فول‌اسکرین</span>
+          </button>
+        )}
+
         {asset.fileType === 'image' && onOpenEditor && (
           <button
             onClick={onOpenEditor}
@@ -155,6 +175,21 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
           </button>
         )}
       </div>
+
+      {/* Fullscreen Modal (video.js / PDF) */}
+      {showFullscreen && (
+        <FullscreenModal asset={asset} onClose={() => setShowFullscreen(false)} />
+      )}
+
+      {/* Image Viewer (مشابه HRM — زوم/چرخش/دانلود) */}
+      {showImageViewer && (
+        <ImageViewer
+          open={showImageViewer}
+          onClose={() => setShowImageViewer(false)}
+          imageUrl={asset.url}
+          title={asset.name}
+        />
+      )}
 
       {/* Tab Navigation */}
       <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/80 p-1 text-xs font-bold">

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { GalleryAsset, formatDate } from './types';
 import { VideoPlayer } from './VideoPlayer';
+import { PdfViewer } from './PdfViewer';
 
 interface LightboxModalProps {
   assets: GalleryAsset[];
@@ -196,6 +197,13 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
                 />
               </div>
             )}
+
+            {currentAsset?.fileType === 'document' &&
+              /\.pdf$/i.test(currentAsset.name) && (
+                <div className="w-[min(90vw,1100px)] h-[80vh] max-w-full max-h-[80vh] rounded-xl overflow-hidden bg-slate-900 shadow-2xl">
+                  <PdfViewer key={currentAsset.id} src={currentAsset.url} />
+                </div>
+              )}
           </motion.div>
         </AnimatePresence>
 
