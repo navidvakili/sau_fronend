@@ -51,6 +51,7 @@ import {
 } from './api';
 import { AssetDetailsDrawer } from './AssetDetailsDrawer';
 import { ImageEditorModal } from './ImageEditorModal';
+import { VideoEditorModal } from './VideoEditorModal';
 import { UploadModal } from './UploadModal';
 import { LightboxModal } from './LightboxModal';
 import { DamDashboard } from './DamDashboard';
@@ -98,6 +99,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   // Modals & Drawers
   const [selectedAssetForDrawer, setSelectedAssetForDrawer] = useState<GalleryAsset | null>(null);
   const [assetToEdit, setAssetToEdit] = useState<GalleryAsset | null>(null);
+  const [videoToEdit, setVideoToEdit] = useState<GalleryAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [lightboxInitialId, setLightboxInitialId] = useState<string | null>(null);
 
@@ -264,6 +266,21 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         ? prev.map((a) => (a.id === updated.id ? updated : a))
         : [updated, ...prev];
     });
+    setAssetToEdit(null);
+    setVideoToEdit(null);
+  };
+
+  // Open the correct editor based on file type
+  const handleOpenEditor = (asset: GalleryAsset) => {
+    if (asset.fileType === 'video') {
+      setVideoToEdit(asset);
+    } else {
+      setAssetToEdit(asset);
+    }
+  };
+
+  const handleCloseVideoEditor = () => {
+    setVideoToEdit(null);
     setAssetToEdit(null);
   };
 
@@ -664,7 +681,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
                         onSelect={() => setSelectedAssetForDrawer(asset)}
                         onToggleSelect={() => handleToggleSelectAsset(asset.id)}
                         onOpenLightbox={() => setLightboxInitialId(asset.id)}
-                        onOpenEditor={() => setAssetToEdit(asset)}
+                        onOpenEditor={() => handleOpenEditor(asset)}
                       />
                     );
                   })}
@@ -780,7 +797,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
               onClose={() => setSelectedAssetForDrawer(null)}
               onDelete={requestDeleteAsset}
               onMove={handleMoveAsset}
-              onOpenEditor={() => setAssetToEdit(selectedAssetForDrawer)}
+              onOpenEditor={() => handleOpenEditor(selectedAssetForDrawer)}
             />
           </div>
         )}
@@ -791,6 +808,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         asset={assetToEdit}
         folderId={filters.folderId}
         onClose={() => setAssetToEdit(null)}
+        onSave={handleUpdateAssetFromEditor}
+      />
+
+      {/* Built-in Video Editor Modal (always mounted — owns its own AnimatePresence) */}
+      <VideoEditorModal
+        asset={videoToEdit}
+        folderId={filters.folderId}
+        onClose={handleCloseVideoEditor}
         onSave={handleUpdateAssetFromEditor}
       />
 
@@ -1001,14 +1026,14 @@ const AssetCard: React.FC<AssetCardProps> = ({
             <Eye className="w-4 h-4" />
           </button>
 
-          {isImage && (
+          {(isImage || asset.fileType === 'video') && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenEditor();
               }}
               className="p-2.5 rounded-xl bg-white text-slate-900 hover:bg-teal-500 hover:text-white transition-colors shadow-lg"
-              title="ویرایش تصویر"
+              title={isImage ? 'ویرایش تصویر' : 'ویرایش ویدئو'}
             >
               <Edit className="w-4 h-4" />
             </button>
