@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   Crop,
@@ -7,14 +7,16 @@ import {
   FlipHorizontal,
   Sliders,
   Type,
-  Download,
+  Save,
   Undo,
   ImageOff
 } from 'lucide-react';
-import { GalleryAsset } from './types';
+import { GalleryAsset, toGalleryAsset } from './types';
+import { getMediaStreamUrl, uploadMediaFile } from './api';
 
 interface ImageEditorModalProps {
-  asset: GalleryAsset;
+  asset: GalleryAsset | null;
+  folderId?: string | null;
   onClose: () => void;
   onSave: (updatedAsset: GalleryAsset) => void;
 }
@@ -23,9 +25,8 @@ type EditorTab = 'transform' | 'adjust' | 'watermark' | 'export';
 
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   asset,
+  folderId = null,
   onClose,
-  // onSave is kept for API compatibility; edits are preview-only (client-side)
-  // and the final result is downloaded as PNG.
   onSave
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>('transform');
@@ -50,6 +51,22 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // Reset editor state whenever a different asset is opened
+  useEffect(() => {
+    if (!asset) return;
+    setActiveTab('transform');
+    setRotation(0);
+    setFlipH(false);
+    setCropPreset('free');
+    setBrightness(100);
+    setContrast(100);
+    setSaturate(100);
+    setBlur(0);
+    setHue(0);
+    setExporting(false);
+    setExportError(null);
+  }, [asset?.id]);
+
   const handleResetAll = () => {
     setRotation(0);
     setFlipH(false);
@@ -60,8 +77,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setHue(0);
   };
 
-  // Render the edited image onto a canvas and download it as PNG.
-  const handleExportDownload = () => {
+  // Render the edited image onto a canvas and upload it to the server as a NEW file.
+  const handleExportSave = () => {
+    if (!asset) return;
     setExporting(true);
     setExportError(null);
     const img = new Image();
@@ -104,11 +122,27 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           ctx.fillText(watermarkText, x, y);
         }
 
-        const link = document.createElement('a');
-        link.download = (asset.name || 'image').replace(/\.[^.]+$/, '') + '-edited.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        setExporting(false);
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            setExportError('خطا در ساخت تصویر خروجی.');
+            setExporting(false);
+            return;
+          }
+          try {
+            const fileName = (asset.name || 'image').replace(/\.[^.]+$/, '') + '-edited.png';
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const targetFolderId =
+              folderId === undefined || folderId === null || folderId === ''
+                ? null
+                : Number(folderId);
+            const res = await uploadMediaFile(file, targetFolderId);
+            setExporting(false);
+            onSave(toGalleryAsset(res.data));
+          } catch (e: any) {
+            setExportError(e?.message || 'خطا در ذخیره روی سرور.');
+            setExporting(false);
+          }
+        }, 'image/png');
       } catch (e) {
         setExportError('خطا در ساخت تصویر خروجی (ممکن است بارگذاری تصویر با محدودیت CORS مواجه شده باشد).');
         setExporting(false);
@@ -118,19 +152,22 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setExportError('امکان بارگذاری تصویر اصلی وجود ندارد.');
       setExporting(false);
     };
-    img.src = asset.url;
+    // آدرس stream هدر CORS دارد تا canvas با crossOrigin قابل استفاده باشد
+    img.src = getMediaStreamUrl(asset);
   };
 
   const filterStyle = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) hue-rotate(${hue}deg)`;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md rtl">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden"
-      >
+    <AnimatePresence>
+      {asset && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md rtl">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden"
+          >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
           <div className="flex items-center gap-3">
@@ -256,10 +293,10 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     ? 'bg-teal-500 text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="خروجی و دانلود"
+                title="ذخیره در سرور"
               >
-                <Download className="w-4 h-4" />
-                <span>خروجی</span>
+                <Save className="w-4 h-4" />
+                <span>ذخیره</span>
               </button>
             </div>
 
@@ -469,14 +506,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               {activeTab === 'export' && (
                 <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">
-                    خروجی تصویر ویرایش‌شده
+                    ذخیره تصویر ویرایش‌شده در سرور
                   </h4>
 
                   <div className="p-3 rounded-2xl bg-teal-500/5 border border-teal-500/20 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed flex items-start gap-2">
-                    <Download className="w-4 h-4 shrink-0 mt-0.5 text-teal-500" />
+                    <Save className="w-4 h-4 shrink-0 mt-0.5 text-teal-500" />
                     <p>
-                      تمام تغییرات (چرخش، قرینه، فیلترها و واترمارک) به‌صورت محلی روی مرورگر اعمال و به‌صورت
-                      فایل <span className="font-bold">PNG</span> دانلود می‌شود.
+                      تمام تغییرات (چرخش، قرینه، فیلترها و واترمارک) اعمال و به‌صورت یک
+                      فایل <span className="font-bold">PNG</span> جدید در سرور ذخیره می‌شود.
                     </p>
                   </div>
 
@@ -488,17 +525,16 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   )}
 
                   <button
-                    onClick={handleExportDownload}
+                    onClick={handleExportSave}
                     disabled={exporting}
                     className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
                   >
-                    <Download className="w-4 h-4" />
-                    {exporting ? 'در حال ساخت تصویر...' : 'دانلود تصویر ویرایش‌شده (PNG)'}
+                    <Save className="w-4 h-4" />
+                    {exporting ? 'در حال ذخیره روی سرور...' : 'ذخیره تصویر ویرایش‌شده در سرور (PNG)'}
                   </button>
 
                   <p className="text-[10px] text-slate-400 leading-relaxed">
-                    نکته: نسخه اصلی فایل روی سرور بدون تغییر باقی می‌ماند. در صورت نیاز می‌توانید نسخه
-                    ویرایش‌شده را جداگانه در مخزن آپلود کنید.
+                    نسخه ویرایش‌شده به‌صورت یک فایل جدید در مخزن ذخیره می‌شود؛ نسخه اصلی دست‌نخورده باقی می‌ماند.
                   </p>
                 </div>
               )}
@@ -507,12 +543,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             {/* Modal Actions Footer */}
             <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-2">
               <button
-                onClick={handleExportDownload}
+                onClick={handleExportSave}
                 disabled={exporting}
                 className="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
               >
-                <Download className="w-4 h-4" />
-                <span>دانلود نسخه ویرایش‌شده</span>
+                <Save className="w-4 h-4" />
+                <span>ذخیره نسخه ویرایش‌شده در سرور</span>
               </button>
 
               <button
@@ -524,7 +560,9 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             </div>
           </div>
         </div>
-      </motion.div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -104,7 +104,6 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   // New Folder Modal
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderParentId, setNewFolderParentId] = useState('0');
   const [folderActionError, setFolderActionError] = useState<string | null>(null);
 
   // Delete confirmation dialog
@@ -257,9 +256,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     }
   };
 
-  // ===================== Update from editor =====================
+  // ===================== Save from editor (always a NEW file) =====================
   const handleUpdateAssetFromEditor = (updated: GalleryAsset) => {
-    setAssets((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setAssets((prev) => {
+      const exists = prev.some((a) => a.id === updated.id);
+      return exists
+        ? prev.map((a) => (a.id === updated.id ? updated : a))
+        : [updated, ...prev];
+    });
     setAssetToEdit(null);
   };
 
@@ -274,8 +278,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     if (!name) return;
     setFolderActionError(null);
     try {
-      const parentId = newFolderParentId === '0' || newFolderParentId === '' ? null : Number(newFolderParentId);
-      const res = await createFolder(name, parentId);
+      const res = await createFolder(name, null);
       setFolders((prev) => [...prev, folderToTreeItem(res.data)]);
       setNewFolderName('');
       setShowNewFolderModal(false);
@@ -443,7 +446,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
           {/* Left Sidebar Navigation */}
           <div className="w-72 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 flex flex-col shrink-0 overflow-y-auto p-4 space-y-6">
             {/* Folder Navigation Tree (مجازی — از وب‌سرویس) */}
-            <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-slate-800">
+            <div className="space-y-2">
               <div className="flex items-center justify-between px-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                   ساختار پوشه‌ها (مجازی)
@@ -783,16 +786,13 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         )}
       </AnimatePresence>
 
-      {/* Built-in Image Editor Modal */}
-      <AnimatePresence>
-        {assetToEdit && (
-          <ImageEditorModal
-            asset={assetToEdit}
-            onClose={() => setAssetToEdit(null)}
-            onSave={handleUpdateAssetFromEditor}
-          />
-        )}
-      </AnimatePresence>
+      {/* Built-in Image Editor Modal (always mounted — owns its own AnimatePresence) */}
+      <ImageEditorModal
+        asset={assetToEdit}
+        folderId={filters.folderId}
+        onClose={() => setAssetToEdit(null)}
+        onSave={handleUpdateAssetFromEditor}
+      />
 
       {/* Upload Modal */}
       <AnimatePresence>
@@ -833,23 +833,6 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
                 placeholder="نام پوشه..."
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
               />
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                  پوشه والد (اختیاری):
-                </label>
-                <select
-                  value={newFolderParentId}
-                  onChange={(e) => setNewFolderParentId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white"
-                >
-                  <option value="0">— بدون والد (ریشه) —</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
               {folderActionError && (
                 <p className="text-[11px] font-bold text-red-600 dark:text-red-400">
                   {folderActionError}
