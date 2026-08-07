@@ -9,7 +9,8 @@ import {
   Type,
   Save,
   Undo,
-  ImageOff
+  ImageOff,
+  Trash2
 } from 'lucide-react';
 import { GalleryAsset, toGalleryAsset } from './types';
 import { getMediaStreamUrl, uploadMediaFile } from './api';
@@ -54,7 +55,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [hue, setHue] = useState(0);
 
   // Watermark states
-  const [watermarkText, setWatermarkText] = useState('متن واترمارک');
+  const [watermarkText, setWatermarkText] = useState('© متن واترمارک');
   const [watermarkPos, setWatermarkPos] = useState<'bottom-right' | 'bottom-left' | 'center' | 'top-right' | 'custom'>('bottom-right');
   const [watermarkOpacity, setWatermarkOpacity] = useState(75);
   const [watermarkX, setWatermarkX] = useState(100);
@@ -64,6 +65,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [cropRect, setCropRect] = useState<CropRect>({ x: 0, y: 0, w: 100, h: 100 });
   const [naturalDims, setNaturalDims] = useState<{ w: number; h: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewW, setPreviewW] = useState(0);
   const dragRef = useRef<{
     mode: CropDragMode | null;
     start: CropRect | null;
@@ -95,6 +98,19 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setExportError(null);
   }, [asset?.id]);
 
+  // Track the preview area width so rotated images can be fitted without clipping
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPreviewW(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const handleResetAll = () => {
     setRotation(0);
     setFlipH(false);
@@ -119,6 +135,28 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     naturalDims && naturalDims.h ? naturalDims.w / naturalDims.h : null;
   const ratioPct = ratioValue && imgAspect ? ratioValue / imgAspect : null;
 
+  const PREVIEW_MAX_H = 480;
+
+  // Compute the fitted display size of the image (the layout box BEFORE the CSS rotation
+  // is applied). The scale is computed against the *rotated* (effective) dimensions so that
+  // after the transform rotates the image, its whole visible box fits inside the preview area.
+  const computeFitted = () => {
+    const natW = naturalDims?.w ?? 0;
+    const natH = naturalDims?.h ?? 0;
+    if (!natW || !natH) return null;
+    const rotated = rotation % 180 !== 0;
+    const effW = rotated ? natH : natW;
+    const effH = rotated ? natW : natH;
+    const availW = previewW || effW;
+    const availH = PREVIEW_MAX_H;
+    const scale = Math.min(availW / effW, availH / effH, 1);
+    return {
+      rotated,
+      dispW: effW * scale,
+      dispH: effH * scale
+    };
+  };
+
   // Convert a screen point to image-local percentages (inverse of the CSS rotate/flip transform)
   const imagePointToPercent = (clientX: number, clientY: number) => {
     const el = wrapperRef.current;
@@ -134,9 +172,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     let ix = dx * cos + dy * sin;
     let iy = -dx * sin + dy * cos;
     if (flipH) ix = -ix;
+    const fitted = computeFitted();
+    const w = fitted ? fitted.dispW : rect.width;
+    const h = fitted ? fitted.dispH : rect.height;
     return {
-      x: Math.max(0, Math.min(100, ((ix / (rect.width / 2 || 1)) + 1) * 50)),
-      y: Math.max(0, Math.min(100, ((iy / (rect.height / 2 || 1)) + 1) * 50))
+      x: Math.max(0, Math.min(100, ((ix / (w / 2 || 1)) + 1) * 50)),
+      y: Math.max(0, Math.min(100, ((iy / (h / 2 || 1)) + 1) * 50))
     };
   };
 
@@ -367,6 +408,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   };
 
   const filterStyle = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) hue-rotate(${hue}deg)`;
+  const fitted = computeFitted();
 
   return (
     <AnimatePresence>
@@ -414,9 +456,20 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           {/* Main Interactive Canvas Preview */}
-          <div className="lg:col-span-8 bg-slate-950/90 relative flex items-center justify-center p-6 overflow-hidden min-h-[380px]">
+          <div ref={previewRef} className="lg:col-span-8 bg-slate-950/90 relative flex items-center justify-center p-6 overflow-hidden min-h-[380px]">
             <div className="relative max-w-full max-h-[520px] flex items-center justify-center overflow-hidden transition-all duration-300">
-              <div ref={wrapperRef} className="relative min-w-0 max-w-full">
+              <div
+                ref={wrapperRef}
+                className="relative min-w-0 flex items-center justify-center"
+                style={
+                  fitted
+                    ? {
+                        width: fitted.rotated ? fitted.dispH : fitted.dispW,
+                        height: fitted.rotated ? fitted.dispW : fitted.dispH
+                      }
+                    : undefined
+                }
+              >
                 <img
                   src={asset.url}
                   alt={asset.name}
@@ -426,8 +479,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       setNaturalDims({ w: el.naturalWidth, h: el.naturalHeight });
                     }
                   }}
-                  className="block max-w-full max-h-[480px] w-auto h-auto object-contain rounded-xl shadow-2xl transition-all duration-200"
+                  className="block shrink-0 max-w-full max-h-[480px] w-auto h-auto object-contain rounded-xl shadow-2xl transition-all duration-200"
                   style={{
+                    ...(fitted
+                      ? { width: fitted.dispW, height: fitted.dispH, maxWidth: 'none', maxHeight: 'none' }
+                      : {}),
                     transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})`,
                     filter: filterStyle
                   }}
@@ -490,14 +546,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   </div>
                 )}
 
-                {/* Watermark overlay preview — draggable (درگ و دراپ) */}
-                {watermarkText && activeTab === 'watermark' && (
+                {/* Watermark overlay preview — always visible while text is set (درگ و دراپ) */}
+                {watermarkText && (
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1})` }}
                   >
                     <div
-                      className={`absolute p-3 rounded-lg bg-black/60 backdrop-blur-xs text-white font-black text-xs select-none cursor-grab active:cursor-grabbing touch-none pointer-events-auto ${
+                      className={`absolute p-3 rounded-lg bg-black/60 backdrop-blur-xs text-white font-black text-xs select-none cursor-grab active:cursor-grabbing touch-none pointer-events-auto flex items-center gap-2 ${
                         watermarkPos === 'top-right'
                           ? 'top-4 right-4'
                           : watermarkPos === 'bottom-left'
@@ -523,7 +579,16 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       onPointerUp={endWmDrag}
                       onPointerCancel={endWmDrag}
                     >
-                      {watermarkText}
+                      <span>{watermarkText}</span>
+                      <button
+                        type="button"
+                        title="حذف واترمارک"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => setWatermarkText('')}
+                        className="shrink-0 p-0.5 rounded-md bg-white/25 hover:bg-red-500/90 text-white transition-colors cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -804,6 +869,17 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       className="w-full accent-teal-500 cursor-pointer"
                     />
                   </div>
+
+                  {watermarkText && (
+                    <button
+                      type="button"
+                      onClick={() => setWatermarkText('')}
+                      className="w-full py-2 px-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      حذف واترمارک
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -846,15 +922,6 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
             {/* Modal Actions Footer */}
             <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-2">
-              <button
-                onClick={handleExportSave}
-                disabled={exporting}
-                className="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>ذخیره نسخه ویرایش‌شده در سرور</span>
-              </button>
-
               <button
                 onClick={onClose}
                 className="w-full py-2 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
