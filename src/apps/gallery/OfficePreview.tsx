@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FileText, Loader2, AlertCircle, Printer, ExternalLink } from 'lucide-react';
+import { FileText, Loader2, AlertCircle, Printer, ExternalLink, Image as ImageIcon, BarChart3 } from 'lucide-react';
 import { isDocxName, isPptxName, isXlsxName } from './pdf/pdfEngine';
+import type { XlsxPreviewData } from './xlsxPreview';
 
 interface OfficePreviewProps {
   src: string; // آدرس استریم
@@ -18,9 +19,12 @@ interface OfficePreviewProps {
 export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloadUrl }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const pptxRef = useRef<{ destroy: () => void } | null>(null);
+  const urlRef = useRef<string[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
+  const [xlsxData, setXlsxData] = useState<XlsxPreviewData | null>(null);
+  const [activeSheet, setActiveSheet] = useState(0);
 
   const isDocx = isDocxName(name);
   const isPptx = isPptxName(name);
@@ -53,6 +57,7 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
   useEffect(() => {
     if (!bytes || status !== 'ready') return;
     let cancelled = false;
+    setXlsxData(null);
     (async () => {
       try {
         if (isDocx) {
@@ -77,30 +82,22 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
           await previewer.preview(bytes.slice().buffer as ArrayBuffer);
           if (cancelled) pptxRef.current?.destroy?.();
         } else if (isXlsx) {
-          const XLSX = await import('xlsx');
-          const wb = XLSX.read(bytes, { type: 'array' });
-          if (!containerRef.current) return;
-          const esc = (v: unknown) =>
-            String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          let html = '';
-          for (const sname of wb.SheetNames) {
-            const ws = wb.Sheets[sname];
-            if (!ws || !ws['!ref']) {
-              html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><p class="xlsx-empty">این برگه خالی است.</p></div>`;
-              continue;
-            }
-            const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: '' });
-            if (!rows.length) {
-              html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><p class="xlsx-empty">این برگه خالی است.</p></div>`;
-              continue;
-            }
-            html += `<div class="xlsx-sheet"><h3>${esc(sname)}</h3><table>`;
-            rows.slice(0, 500).forEach((r) => {
-              html += `<tr>${(r || []).map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`;
-            });
-            html += '</table></div>';
+          const { buildXlsxPreview } = await import('./xlsxPreview');
+          // آزادسازی Object URL های قبلی
+          urlRef.current.forEach((u) => URL.revokeObjectURL(u));
+          urlRef.current = [];
+          const data = await buildXlsxPreview(bytes);
+          if (cancelled) {
+            data.sheets.forEach((s) => s.images.forEach((i) => URL.revokeObjectURL(i.url)));
+            data.extraImages.forEach((i) => URL.revokeObjectURL(i.url));
+            return;
           }
-          containerRef.current.innerHTML = html;
+          urlRef.current = [
+            ...data.sheets.flatMap((s) => s.images.map((i) => i.url)),
+            ...data.extraImages.map((i) => i.url),
+          ];
+          setXlsxData(data);
+          setActiveSheet(0);
         } else {
           throw new Error('فرمت سند پشتیبانی نمی‌شود.');
         }
@@ -116,15 +113,150 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
       cancelled = true;
       pptxRef.current?.destroy?.();
       pptxRef.current = null;
+      urlRef.current.forEach((u) => URL.revokeObjectURL(u));
+      urlRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bytes, status, isDocx, isPptx, isXlsx]);
 
+  const esc = (v: unknown) =>
+    String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  /** تبدیل ایندکس ستون (۰-مبنا) به حرف ستون اکسل (A, B, ..., Z, AA, AB, ...) */
+  const colLetter = (i: number) => {
+    let n = i + 1;
+    let s = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      s = String.fromCharCode(65 + rem) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  };
+
+  /** رندر یک برگهٔ اکسل (جدول + نمودارها + تصاویر) */
+  const renderSheet = (sheet: XlsxPreviewData['sheets'][number]) => (
+    <div className="bg-white dark:bg-slate-950 rounded-lg shadow-sm p-4">
+      <h3 className="text-xs font-black text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+        <FileText className="w-3.5 h-3.5 text-teal-500" />
+        {sheet.name}
+      </h3>
+      {sheet.rows.length > 0 ? (
+        <div className="overflow-auto max-h-[45vh] border border-gray-200 dark:border-slate-800 rounded-lg">
+          <table className="w-full text-[11px] border-collapse min-w-[400px]" dir="ltr">
+            <thead>
+              <tr>
+                <th className="sticky top-0 left-0 z-20 bg-slate-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 px-2 py-1 text-slate-500 dark:text-slate-300 font-black min-w-[40px]">
+                  #
+                </th>
+                {sheet.rows[0].map((_, ci) => (
+                  <th
+                    key={ci}
+                    className="sticky top-0 z-10 bg-slate-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 px-2 py-1 text-center text-slate-500 dark:text-slate-300 font-black min-w-[70px]"
+                  >
+                    {colLetter(ci)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sheet.rows.map((r, ri) => (
+                <tr
+                  key={ri}
+                  className={
+                    ri === 0
+                      ? 'bg-teal-50/70 dark:bg-teal-950/30'
+                      : 'odd:bg-slate-50/60 dark:odd:bg-slate-900/40'
+                  }
+                >
+                  <td className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-2 py-1 text-center text-slate-400 dark:text-slate-500 font-bold min-w-[40px]">
+                    {ri + 1}
+                  </td>
+                  {r.map((c, ci) => (
+                    <td
+                      key={ci}
+                      className="border border-gray-200 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-200 whitespace-nowrap max-w-[240px] overflow-hidden text-ellipsis"
+                      dir="auto"
+                    >
+                      {esc(c)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-[11px] text-slate-400">این برگه خالی است.</p>
+      )}
+
+      {sheet.charts.length > 0 && (
+        <div className="mt-3">
+          <h4 className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
+            نمودارها
+          </h4>
+          <div className="grid gap-3">
+            {sheet.charts.map((c, i) => (
+              <div key={i} className="rounded-lg border border-gray-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-800">
+                  {c.title || 'نمودار'}
+                </div>
+                <div className="bg-white dark:bg-slate-950 p-2" dangerouslySetInnerHTML={{ __html: c.svg }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sheet.images.length > 0 && (
+        <div className="mt-3">
+          <h4 className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5 text-teal-500" />
+            تصاویر و شکل‌ها
+          </h4>
+          <div className="flex flex-wrap gap-3">
+            {sheet.images.map((img, i) => (
+              <figure key={i} className="rounded-lg border border-gray-200 dark:border-slate-800 p-2 bg-slate-50 dark:bg-slate-900">
+                <img src={img.url} alt={img.name} className="max-h-44 max-w-full object-contain" />
+                <figcaption className="text-[9px] text-slate-400 mt-1 text-center">{img.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const handlePrintToPdf = () => {
-    const container = containerRef.current;
-    if (!container) return;
     const win = window.open('', '_blank', 'width=1000,height=800');
     if (!win) return;
+    let inner = '';
+    if (xlsxData) {
+      for (const s of xlsxData.sheets) {
+        inner += `<h2>${esc(s.name)}</h2>`;
+        if (s.rows.length) {
+          inner += `<table><thead><tr><th>#</th>${s.rows[0]
+            .map((_, ci) => `<th>${colLetter(ci)}</th>`)
+            .join('')}</tr></thead><tbody>${s.rows
+            .map(
+              (r, ri) =>
+                `<tr><td>${ri + 1}</td>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`
+            )
+            .join('')}</tbody></table>`;
+        } else {
+          inner += '<p>این برگه خالی است.</p>';
+        }
+        s.charts.forEach((c) => (inner += `<div class="chart">${c.svg}</div>`));
+        s.images.forEach((img) => (inner += `<img src="${img.url}" alt="${esc(img.name)}"/>`));
+      }
+      xlsxData.extraCharts.forEach((c) => (inner += `<div class="chart">${c.svg}</div>`));
+      xlsxData.extraImages.forEach((img) => (inner += `<img src="${img.url}" alt="${esc(img.name)}"/>`));
+    } else {
+      const container = containerRef.current;
+      if (!container) return;
+      inner = container.innerHTML;
+    }
     win.document.write(
       `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>${name}</title>
       <style>
@@ -135,7 +267,9 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
         td, th { border: 1px solid #ccc; padding: 4px 6px; }
         .slide { page-break-after: always; }
         .docx-wrapper { background: #fff !important; }
-      </style></head><body>${container.innerHTML}</body></html>`
+        .chart svg { max-width: 100%; height: auto; }
+        .chart { page-break-inside: avoid; margin-bottom: 16px; }
+      </style></head><body>${inner}</body></html>`
     );
     win.document.close();
     win.focus();
@@ -170,7 +304,7 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
       </div>
 
       {/* بدنهٔ پیش‌نمایش */}
-      <div className="flex-1 min-h-0 overflow-auto p-3">
+      <div className="flex-1 min-h-0 p-3 flex flex-col">
         {status === 'loading' && (
           <div className="h-full flex items-center justify-center text-slate-400 gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
@@ -186,13 +320,65 @@ export const OfficePreview: React.FC<OfficePreviewProps> = ({ src, name, downloa
             </p>
           </div>
         )}
-        {status === 'ready' && (
-          <div
-            ref={containerRef}
-            className="mx-auto max-w-full bg-white dark:bg-slate-950 rounded-lg shadow-sm p-4 min-h-full"
-            dir="auto"
-          />
-        )}
+        {status === 'ready' &&
+          (isXlsx && xlsxData ? (
+            <div className="flex flex-col h-full min-h-0">
+              {/* تب برگه‌ها */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0" dir="rtl">
+                {xlsxData.sheets.map((s, i) => (
+                  <button
+                    key={s.name}
+                    onClick={() => setActiveSheet(i)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      i === activeSheet
+                        ? 'bg-teal-600 text-white shadow'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* محتوای برگهٔ فعال */}
+              <div className="flex-1 min-h-0 overflow-auto">
+                {renderSheet(xlsxData.sheets[activeSheet] ?? xlsxData.sheets[0])}
+
+                {(xlsxData.extraImages.length > 0 || xlsxData.extraCharts.length > 0) && (
+                  <div className="mt-4 border-t border-dashed border-slate-300 dark:border-slate-700 pt-3 pb-2">
+                    <h4 className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-teal-500" />
+                      سایر تصاویر و نمودارها
+                    </h4>
+                    <div className="grid gap-3">
+                      {xlsxData.extraCharts.map((c, i) => (
+                        <div key={`c${i}`} className="rounded-lg border border-gray-200 dark:border-slate-800 overflow-hidden">
+                          <div className="bg-slate-50 dark:bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-800">
+                            {c.title || 'نمودار'}
+                          </div>
+                          <div className="bg-white dark:bg-slate-950 p-2" dangerouslySetInnerHTML={{ __html: c.svg }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-2">
+                      {xlsxData.extraImages.map((img, i) => (
+                        <figure key={`i${i}`} className="rounded-lg border border-gray-200 dark:border-slate-800 p-2 bg-slate-50 dark:bg-slate-900">
+                          <img src={img.url} alt={img.name} className="max-h-44 max-w-full object-contain" />
+                          <figcaption className="text-[9px] text-slate-400 mt-1 text-center">{img.name}</figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={containerRef}
+              className="mx-auto max-w-full bg-white dark:bg-slate-950 rounded-lg shadow-sm p-4 h-full overflow-auto"
+              dir="auto"
+            />
+          ))}
       </div>
     </div>
   );
