@@ -54,7 +54,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [hue, setHue] = useState(0);
 
   // Watermark states
-  const [watermarkText, setWatermarkText] = useState('© دانشگاه علوم و فناوری');
+  const [watermarkText, setWatermarkText] = useState('متن واترمارک');
   const [watermarkPos, setWatermarkPos] = useState<'bottom-right' | 'bottom-left' | 'center' | 'top-right' | 'custom'>('bottom-right');
   const [watermarkOpacity, setWatermarkOpacity] = useState(75);
   const [watermarkX, setWatermarkX] = useState(100);
