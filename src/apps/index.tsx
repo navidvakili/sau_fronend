@@ -20,6 +20,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   departments: lazy(() => import('./departments')),
   fields: lazy(() => import('./fields')),
   'page-builder': lazy(() => import('./page-builder')),
+  gallery: lazy(() => import('./gallery')),
 };
 
 /**
@@ -68,6 +69,12 @@ export const moduleToAppMap: Record<string, string> = {
   // Smart Page Builder App (سازنده صفحه هوشمند)
   'page-builder': 'page-builder',
   'smart-page-builder': 'page-builder',
+
+  // Gallery App (مدیریت دارایی‌های دیجیتال / DAM)
+  'gallery': 'gallery',
+  'dam': 'gallery',
+  'dam-studio': 'gallery',
+  'dam-assets': 'gallery',
 
 };
 

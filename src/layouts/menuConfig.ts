@@ -8,7 +8,7 @@ import {
   Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
   Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
   Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe, Map,
-  Megaphone, Code, FileCode, University,
+  Megaphone, Code, FileCode, University, Image as ImageIcon, Box,
   type LucideIcon,
 } from 'lucide-react';
 import type { PortalNotification } from '@/src/layouts/types';
@@ -82,6 +82,11 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-code': 'Code',
   'fa fa-file-code': 'FileCode',
   'fa fa-university': 'University',
+  'fa fa-image': 'Image',
+  'fa fa-images': 'Image',
+  'fa fa-picture-o': 'Image',
+  'fa fa-box': 'Box',
+  'fa fa-cube': 'Box',
 };
 
 // ========== Utility Functions ==========
@@ -110,7 +115,7 @@ export function resolveIcon(name: string): LucideIcon {
     Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
     Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
     Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
-    Megaphone, Code, FileCode, University,
+    Megaphone, Code, FileCode, University, Image: ImageIcon, Box,
   };
   return iconMap[name] || Folder;
 }
