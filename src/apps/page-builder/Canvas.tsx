@@ -18,7 +18,8 @@ import {
   Sparkles,
   Grid,
   EyeOff,
-  Pencil
+  Pencil,
+  GripVertical
 } from 'lucide-react';
 
 interface CanvasProps {
@@ -37,6 +38,7 @@ interface CanvasProps {
   onDeleteSection: (sectionId: string) => void;
   onDeleteWidget: (widgetId: string) => void;
   onMoveWidget: (widgetId: string, direction: 'up' | 'down') => void;
+  onMoveWidgetToColumn?: (widgetId: string, targetColumnId: string) => void;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({
@@ -54,8 +56,13 @@ export const Canvas: React.FC<CanvasProps> = ({
   onOpenComponentPicker,
   onDeleteSection,
   onDeleteWidget,
-  onMoveWidget
+  onMoveWidget,
+  onMoveWidgetToColumn
 }) => {
+  // Drag & Drop state — widget being dragged + column currently hovered (highlight)
+  const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+
   // Breakpoint container width calculator
   const getCanvasWidthClass = () => {
     switch (activeBreakpoint) {
@@ -99,28 +106,6 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         ) : (
           <div className="space-y-0">
-            {/* Divider button before the first section */}
-            <div className="relative my-2 group/divider py-2 flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onOpenComponentPicker) {
-                    onOpenComponentPicker(0);
-                  } else {
-                    onAddSection('1col');
-                  }
-                }}
-                className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>افزودن بلوک جدید به ابتدا</span>
-              </button>
-            </div>
-
             {pageSchema.sections.map((sec, secIdx) => {
               const isSecSelected = selectedSectionId === sec.id;
 
@@ -229,10 +214,37 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 onSelectSection(sec.id);
                                 onSelectColumn(col.id);
                               }}
+                              onDragOver={(e) => {
+                                // Allow drop on any column — highlight while dragging over
+                                if (dragWidgetId) {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  setDragOverColumnId(col.id);
+                                }
+                              }}
+                              onDragLeave={() => {
+                                if (dragOverColumnId === col.id) {
+                                  setDragOverColumnId(null);
+                                }
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverColumnId(null);
+                                if (dragWidgetId) {
+                                  // Move the widget to this column (cross-section DnD)
+                                  onMoveWidgetToColumn?.(dragWidgetId, col.id);
+                                }
+                                setDragWidgetId(null);
+                              }}
                               className={`min-h-[100px] p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
                                 isColSelected
                                   ? 'border-indigo-500 bg-indigo-500/5'
                                   : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'
+                              } ${
+                                dragOverColumnId === col.id
+                                  ? 'border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/30'
+                                  : ''
                               }`}
                             >
                               {/* Widgets inside column */}
@@ -261,6 +273,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                                     return (
                                       <div
                                         key={widget.id}
+                                        draggable
+                                        onDragStart={(e) => {
+                                          setDragWidgetId(widget.id);
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          e.dataTransfer.setData('text/plain', widget.id);
+                                        }}
+                                        onDragEnd={() => {
+                                          setDragWidgetId(null);
+                                          setDragOverColumnId(null);
+                                        }}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onSelectSection(sec.id);
@@ -271,8 +293,19 @@ export const Canvas: React.FC<CanvasProps> = ({
                                           isWidgetSel
                                             ? 'border-amber-500 ring-2 ring-amber-500/20'
                                             : 'border-transparent hover:border-amber-400/50'
+                                        } ${
+                                          dragWidgetId === widget.id
+                                            ? 'opacity-40 cursor-grabbing'
+                                            : 'cursor-grab'
                                         }`}
                                       >
+                                        {/* Drag handle indicator on hover */}
+                                        <div className={`absolute top-2 right-2 z-30 p-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md transition-opacity ${
+                                          isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
+                                        }`}>
+                                          <GripVertical className="w-3.5 h-3.5" />
+                                        </div>
+
                                         {/* Widget Hover Action Bar */}
                                         <div className={`absolute top-2 left-2 z-30 flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl text-white text-xs border border-slate-700 backdrop-blur-md transition-opacity ${
                                           isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'

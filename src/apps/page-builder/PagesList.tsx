@@ -21,6 +21,7 @@ interface PagesListProps {
   onCreatePage: () => void;
   onEditPage: (id: number) => void;
   onOpenSettings: (id: number) => void;
+  onPreviewPage?: (id: number) => void;
   onDeletePage: (page: SmartPageDto) => void;
 }
 
@@ -71,8 +72,9 @@ const PageCard: React.FC<{
   page: SmartPageDto;
   onEdit: () => void;
   onSettings: () => void;
+  onPreview?: () => void;
   onDelete: () => void;
-}> = ({ page, onEdit, onSettings, onDelete }) => {
+}> = ({ page, onEdit, onSettings, onPreview, onDelete }) => {
   const updated = page.updated_at
     ? new Date(page.updated_at).toLocaleDateString('fa-IR')
     : '';
@@ -127,6 +129,18 @@ const PageCard: React.FC<{
         >
           <Pencil className="w-4 h-4" />
         </button>
+        {onPreview && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview();
+            }}
+            className="p-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md cursor-pointer"
+            title="پیش‌نمایش صفحه"
+          >
+            <Monitor className="w-4 h-4" />
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -160,6 +174,7 @@ export const PagesList: React.FC<PagesListProps> = ({
   onCreatePage,
   onEditPage,
   onOpenSettings,
+  onPreviewPage,
   onDeletePage
 }) => {
   return (
@@ -234,6 +249,7 @@ export const PagesList: React.FC<PagesListProps> = ({
                   page={page}
                   onEdit={() => onEditPage(page.id!)}
                   onSettings={() => onOpenSettings(page.id!)}
+                  onPreview={onPreviewPage ? () => onPreviewPage(page.id!) : undefined}
                   onDelete={() => onDeletePage(page)}
                 />
               ))

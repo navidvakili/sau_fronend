@@ -160,6 +160,29 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       });
     };
 
+    /** به‌روزرسانی فیلدهای سفارشی (customProps) بلوک */
+    const updateCustomProps = (patch: Record<string, any>) => {
+      onUpdateWidget({
+        ...selectedWidget,
+        settings: {
+          ...selectedWidget.settings,
+          customProps: {
+            ...(selectedWidget.settings.customProps || {}),
+            ...patch
+          }
+        }
+      });
+    };
+
+    const customProps = selectedWidget.settings.customProps || {};
+
+    // ── آیکون‌های قابل انتخاب برای باکس آیکون / کال‌اوت / آیکون ──
+    const ICON_CHOICES = [
+      'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
+      'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
+      'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar'
+    ];
+
     return (
       <div className="w-80 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col h-full select-none rtl text-right">
         {/* Header */}
@@ -288,6 +311,416 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     />
                   </div>
                 </>
+              )}
+
+              {/* ────────────────────────────────────────────────
+                   NEW BLOCK TYPES — محتوای بلوک‌های جدید
+              ──────────────────────────────────────────────── */}
+
+              {/* ریش‌تکست / بلاک متن WYSIWYG */}
+              {selectedWidget.type === 'richtext' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    محتوای HTML (ویرایشگر غنی)
+                  </label>
+                  <textarea
+                    rows={7}
+                    value={selectedWidget.content}
+                    onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                    placeholder="<h3>تیتر</h3><p>متن پاراگراف با <b>قلم ضخیم</b> و لینک...</p>"
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                  />
+                  <p className="text-[10px] text-slate-400">می‌توانید تگ‌های HTML (تیتر، پاراگراف، لینک و آیکون) بنویسید.</p>
+                </div>
+              )}
+
+              {/* باکس آیکون */}
+              {selectedWidget.type === 'icon-box' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیکون</label>
+                    <select
+                      value={customProps.iconName || 'sparkles'}
+                      onChange={(e) => updateCustomProps({ iconName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      {ICON_CHOICES.map((ic) => (
+                        <option key={ic} value={ic}>{ic}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">توضیح باکس</label>
+                    <textarea
+                      rows={3}
+                      value={selectedWidget.content}
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">متن دکمه (اختیاری)</label>
+                    <input
+                      type="text"
+                      value={customProps.buttonText || ''}
+                      onChange={(e) => updateCustomProps({ buttonText: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لینک دکمه (اختیاری)</label>
+                    <input
+                      type="text"
+                      value={customProps.buttonUrl || ''}
+                      onChange={(e) => updateCustomProps({ buttonUrl: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* دربرگیرنده‌ها (عمودی/افقی) */}
+              {(selectedWidget.type === 'vertical-container' || selectedWidget.type === 'horizontal-container') && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله بین زیربلوک‌ها (px)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      value={customProps.gap ?? 16}
+                      onChange={(e) => updateCustomProps({ gap: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">زیربلوک‌ها (هر خط یک آدرس تصویر یا متن)</label>
+                    <textarea
+                      rows={4}
+                      value={(customProps.children || []).map((c: any) => c.content).join('\n')}
+                      onChange={(e) => {
+                        const lines = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
+                        const children = lines.map((line, i) => ({
+                          id: `child-${Date.now()}-${i}`,
+                          type: 'text' as any,
+                          title: `زیربلوک ${i + 1}`,
+                          content: line,
+                          settings: {
+                            style: { textAlign: 'right' as const },
+                            binding: { dataSource: 'none' as const },
+                            visibility: { desktop: true, tablet: true, mobile: true },
+                            conditionalDisplay: { enabled: false, userRole: 'all' as any }
+                          }
+                        }));
+                        updateCustomProps({ children });
+                      }}
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* اسلایدر تصویر */}
+              {selectedWidget.type === 'image-slider' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    آدرس تصاویر (هر خط یک URL)
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={(customProps.images || []).join('\n')}
+                    onChange={(e) => {
+                      const urls = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
+                      updateCustomProps({ images: urls });
+                    }}
+                    placeholder={'https://example.com/1.jpg\nhttps://example.com/2.jpg'}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                  />
+                </div>
+              )}
+
+              {/* شمارنده */}
+              {selectedWidget.type === 'counter' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">مقدار عددی هدف</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={customProps.target ?? 100}
+                      onChange={(e) => updateCustomProps({ target: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پیشوند</label>
+                      <input
+                        type="text"
+                        value={customProps.prefix || ''}
+                        onChange={(e) => updateCustomProps({ prefix: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پسوند</label>
+                      <input
+                        type="text"
+                        value={customProps.suffix ?? '+'}
+                        onChange={(e) => updateCustomProps({ suffix: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* پیمایشگر */}
+              {selectedWidget.type === 'navigator' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تایپ محتوا</label>
+                    <select
+                      value={customProps.postType || 'صفحه'}
+                      onChange={(e) => updateCustomProps({ postType: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="صفحه">برگه‌ها (صفحات)</option>
+                      <option value="نوشته">نوشته‌ها (بلاگ)</option>
+                      <option value="خبر">اخبار</option>
+                      <option value="اطلاعیه">اطلاعیه‌ها</option>
+                      <option value="دسته">دسته‌بندی دلخواه</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      فهرست آیتم‌ها (هر خط: عنوان|لینک)
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={(customProps.items || []).map((i: any) => `${i.label}|${i.url}`).join('\n')}
+                      onChange={(e) => {
+                        const items = e.target.value
+                          .split('\n')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                          .map((line) => {
+                            const [label, url] = line.split('|');
+                            return { label: label || 'مورد', url: url || '#' };
+                          });
+                        updateCustomProps({ items });
+                      }}
+                      placeholder={'صفحه اصلی|/\nدرباره ما|/about'}
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* نقشه */}
+              {selectedWidget.type === 'map' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لینک جاسازی نقشه (Embed URL)</label>
+                    <input
+                      type="text"
+                      value={customProps.embedUrl || ''}
+                      onChange={(e) => updateCustomProps({ embedUrl: e.target.value })}
+                      placeholder="https://www.google.com/maps?q=Yazd&output=embed"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نشانی نمایشی</label>
+                    <input
+                      type="text"
+                      value={customProps.address || ''}
+                      onChange={(e) => updateCustomProps({ address: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* اطلاعات تماس */}
+              {selectedWidget.type === 'contact-info' && (
+                <>
+                  {(
+                    [
+                      ['phone', 'تلفن'],
+                      ['email', 'ایمیل'],
+                      ['address', 'نشانی'],
+                      ['workHours', 'ساعات کاری']
+                    ] as const
+                  ).map(([key, label]) => (
+                    <div key={key} className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{label}</label>
+                      <input
+                        type="text"
+                        value={customProps[key] || ''}
+                        onChange={(e) => updateCustomProps({ [key]: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* HTML دلخواه */}
+              {selectedWidget.type === 'custom-html' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">کد HTML / اسکریپت</label>
+                  <textarea
+                    rows={7}
+                    value={selectedWidget.content}
+                    onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                    placeholder={'<div>کد دلخواه شما...</div>'}
+                    className="w-full p-3 rounded-xl bg-slate-950 text-xs font-mono text-emerald-400 border border-gray-800 focus:outline-none focus:border-teal-500 leading-relaxed"
+                    dir="ltr"
+                  />
+                </div>
+              )}
+
+              {/* لینک‌های اجتماعی */}
+              {selectedWidget.type === 'social-links' && (
+                <>
+                  <p className="text-[10px] text-slate-400">آدرس شبکه‌های اجتماعی را وارد کنید (خالی = نمایش آیکون بدون لینک)</p>
+                  {(
+                    [
+                      ['telegram', 'تلگرام'],
+                      ['instagram', 'اینستاگرام'],
+                      ['twitter', 'توییتر'],
+                      ['linkedin', 'لینکدین'],
+                      ['youtube', 'یوتیوب'],
+                      ['whatsapp', 'واتساپ']
+                    ] as const
+                  ).map(([key, label]) => (
+                    <div key={key} className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{label}</label>
+                      <input
+                        type="text"
+                        value={(customProps.urls || {})[key] || ''}
+                        onChange={(e) =>
+                          updateCustomProps({ urls: { ...(customProps.urls || {}), [key]: e.target.value } })
+                        }
+                        placeholder="https://..."
+                        dir="ltr"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* دکمه‌های اشتراک‌گذاری */}
+              {selectedWidget.type === 'share-buttons' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    لینک صفحه برای اشتراک (اختیاری — خالی = آدرس فعلی)
+                  </label>
+                  <input
+                    type="text"
+                    value={customProps.pageUrl || ''}
+                    onChange={(e) => updateCustomProps({ pageUrl: e.target.value })}
+                    dir="ltr"
+                    placeholder="https://sau.ac.ir/page"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
+
+              {/* جدول قیمت */}
+              {selectedWidget.type === 'pricing-table' && (
+                <div className="space-y-3">
+                  <p className="text-[10px] text-slate-400">
+                    هر خط یک پلن: نام|قیمت|ویژگی۱،ویژگی۲|پیشنهادی(اختیاری yes)
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={(customProps.plans || []).map((p: any) => `${p.name}|${p.price}|${(p.features || []).join('،')}|${p.highlight ? 'yes' : 'no'}`).join('\n')}
+                    onChange={(e) => {
+                      const plans = e.target.value
+                        .split('\n')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((line) => {
+                          const parts = line.split('|');
+                          return {
+                            name: parts[0] || 'پلن',
+                            price: parts[1] || 'رایگان',
+                            features: (parts[2] || '').split(/[،,]/).map((f) => f.trim()).filter(Boolean),
+                            highlight: (parts[3] || '').trim() === 'yes'
+                          };
+                        });
+                      updateCustomProps({ plans });
+                    }}
+                    placeholder={'پایه|رایگان|۱ نوشته\nحرفه‌ای|۱۵۰۰۰۰۰|۱۰ نوشته،پشتیبانی|yes'}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                  />
+                </div>
+              )}
+
+              {/* نظر کاربر */}
+              {selectedWidget.type === 'testimonial' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">متن نظر</label>
+                    <textarea
+                      rows={3}
+                      value={selectedWidget.content}
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نام کاربر</label>
+                      <input
+                        type="text"
+                        value={customProps.author || ''}
+                        onChange={(e) => updateCustomProps({ author: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نقش کاربر</label>
+                      <input
+                        type="text"
+                        value={customProps.role || ''}
+                        onChange={(e) => updateCustomProps({ role: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* کال‌اوت / آیکون — انتخاب آیکون */}
+              {(selectedWidget.type === 'callout' || selectedWidget.type === 'icon') && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیکون</label>
+                  <select
+                    value={selectedWidget.iconName || 'info'}
+                    onChange={(e) => onUpdateWidget({ ...selectedWidget, iconName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    {ICON_CHOICES.map((ic) => (
+                      <option key={ic} value={ic}>{ic}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedWidget.type === 'callout' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">متن کال‌اوت</label>
+                  <textarea
+                    rows={3}
+                    value={selectedWidget.content}
+                    onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
               )}
 
               {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS */}

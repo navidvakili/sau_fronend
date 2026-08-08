@@ -18,7 +18,23 @@ import {
   Grid,
   Search,
   Layers,
-  Columns
+  Columns,
+  Rows,
+  Images,
+  Gauge,
+  Compass,
+  MapPin,
+  Phone,
+  Code2,
+  Share2,
+  BadgeDollarSign,
+  Quote,
+  Info,
+  StickyNote,
+  MousePointerClick,
+  PanelTop,
+  PanelBottom,
+  MessageSquareQuote
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -52,6 +68,24 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'stat-card', category: 'basic', name: 'کارت آمار و آیکون (Stat Card)', desc: 'نمایش آمار و شاخص‌های کلیدی بصری', icon: Sparkles },
     { type: 'accordion', category: 'basic', name: 'آکاردئون FAQ', desc: 'لیست باز و بسته شونده سوالات متداول', icon: ChevronDown },
     { type: 'divider', category: 'basic', name: 'خط جداکننده (Divider)', desc: 'تفکیک‌کننده بخش‌های مختلف با استایل تمیز', icon: Minus },
+
+    // NEW BASIC BLOCKS — بلوک‌های جدید
+    { type: 'richtext', category: 'basic', name: 'بلاک متن غنی (WYSIWYG)', desc: 'ویرایشگر متن با HTML — تیتر، پاراگراف، لینک و آیکون', icon: StickyNote, badge: 'ویرایشگر پیشرفته' },
+    { type: 'icon-box', category: 'basic', name: 'باکس آیکون (Icon Box)', desc: 'آیکون + عنوان + توضیح برای ویژگی‌ها و خدمات', icon: MousePointerClick },
+    { type: 'vertical-container', category: 'basic', name: 'دربرگیرنده عمودی (Vertical Container)', desc: 'چیدمان عمودی چند زیربلوک در یک قاب', icon: Rows },
+    { type: 'horizontal-container', category: 'basic', name: 'دربرگیرنده افقی (Horizontal Container)', desc: 'چیدمان افقی چند زیربلوک در یک ردیف', icon: Columns },
+    { type: 'image-slider', category: 'basic', name: 'اسلایدر تصویر (Image Slider)', desc: 'چرخش خودکار تصاویر با دکمه‌های پیمایش و نقاط', icon: Images, badge: 'کاروسل' },
+    { type: 'counter', category: 'basic', name: 'شمارنده (Counter)', desc: 'عدد متحرک با پیشوند/پسوند برای آمار', icon: Gauge },
+    { type: 'navigator', category: 'basic', name: 'پیمایشگر محتوا (Navigator)', desc: 'فهرست نوشته‌ها، برگه‌ها و پست‌های تایپ دلخواه', icon: Compass, badge: 'لیست' },
+    { type: 'map', category: 'basic', name: 'نقشه (Map)', desc: 'جاسازی نقشه گوگل با نشانگر و نشانی', icon: MapPin, badge: 'جاسازی' },
+    { type: 'contact-info', category: 'basic', name: 'اطلاعات تماس (Contact Info)', desc: 'تلفن، ایمیل، نشانی و ساعات کاری', icon: Phone },
+    { type: 'custom-html', category: 'basic', name: 'HTML دلخواه (Custom HTML)', desc: 'کد HTML/اسکریپت دلخواه شما', icon: Code2, badge: 'کد' },
+    { type: 'social-links', category: 'basic', name: 'لینک‌های اجتماعی (Social Links)', desc: 'آیکون‌های تلگرام، اینستاگرام، لینکدین و...', icon: Share2 },
+    { type: 'share-buttons', category: 'basic', name: 'دکمه‌های اشتراک‌گذاری (Share)', desc: 'اشتراک صفحه در تلگرام، واتساپ و...', icon: Share2 },
+    { type: 'pricing-table', category: 'basic', name: 'جدول قیمت (Pricing Table)', desc: 'پلن‌ها و تعرفه‌ها با پلن پیشنهادی', icon: BadgeDollarSign, badge: 'پلن‌ها' },
+    { type: 'testimonial', category: 'basic', name: 'نظر کاربر (Testimonial)', desc: 'گفت‌قول و تجربه کاربران با امضا', icon: MessageSquareQuote },
+    { type: 'callout', category: 'basic', name: 'یادآوری/هشدار (Callout)', desc: 'جعبه نکته یا هشدار رنگی', icon: Info },
+    { type: 'icon', category: 'basic', name: 'آیکون (Icon)', desc: 'نمایش تک آیکون تزئینی', icon: Sparkles },
     
     // Smart items
     { type: 'news-feed', category: 'smart', name: 'خوراک داینامیک اخبار', desc: 'اتصال زنده به ماژول اخبار با گرید و اسلایدر', icon: Newspaper, badge: 'ماژول اخبار' },

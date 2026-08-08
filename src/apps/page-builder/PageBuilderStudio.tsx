@@ -794,13 +794,13 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   };
 
   // Save Page Action — persist full schema to backend (create or update)
-  const handleSavePage = async () => {
+  const savePageWithStatus = async (status: 'published' | 'draft') => {
     setIsSavingPage(true);
     try {
       const payload = {
         title: pageSchema.title,
         slug: pageSchema.slug,
-        status: pageSchema.status,
+        status,
         seo: pageSchema.seo,
         schema: JSON.parse(JSON.stringify(pageSchema)),
       };
@@ -811,6 +811,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         setActivePageId(res.data.id!);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
       }
+      setPageSchema((prev) => ({ ...prev, status }));
       const list = await fetchSmartPages({ per_page: 100 });
       setPages(list.data);
       setSaveSuccess(true);
@@ -822,6 +823,48 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
+  /** ذخیره به‌صورت پیش‌نویس (وضعیت draft) */
+  const handleSaveDraft = () => savePageWithStatus('draft');
+
+  /** ذخیره و انتشار (وضعیت published) */
+  const handleSavePublish = () => savePageWithStatus('published');
+
+  // Move widget to a target column (cross-section Drag & Drop)
+  const handleMoveWidgetToColumn = (widgetId: string, targetColumnId: string) => {
+    let widgetToMove: WidgetInstance | null = null;
+
+    // Remove widget from its source column (first pass)
+    const removedSections = pageSchema.sections.map(sec => ({
+      ...sec,
+      columns: sec.columns.map(col => {
+        const idx = col.widgets.findIndex(w => w.id === widgetId);
+        if (idx !== -1) {
+          widgetToMove = col.widgets[idx];
+          const newWidgets = [...col.widgets];
+          newWidgets.splice(idx, 1);
+          return { ...col, widgets: newWidgets };
+        }
+        return col;
+      })
+    }));
+
+    if (!widgetToMove) return;
+
+    // Append widget to the target column (second pass)
+    const finalSections = removedSections.map(sec => ({
+      ...sec,
+      columns: sec.columns.map(col => {
+        if (col.id === targetColumnId) {
+          return { ...col, widgets: [...col.widgets, widgetToMove!] };
+        }
+        return col;
+      })
+    }));
+
+    pushState({ ...pageSchema, sections: finalSections });
+    setSelectedWidgetId(widgetId);
+  };
+
   return (
     <>
       {viewMode === 'list' ? (
@@ -831,9 +874,14 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onBackToPortal={onBackToPortal}
           onCreatePage={handleCreatePage}
           onEditPage={(id) => openEditor(id)}
-          onOpenSettings={(id) => {
-            openEditor(id);
+          onOpenSettings={async (id) => {
+            // فقط دیالوگ تنظیمات باز شود — بدون رفتن به صفحه ویرایش
+            await loadPage(id);
             setShowPageSettingsModal(true);
+          }}
+          onPreviewPage={async (id) => {
+            await loadPage(id);
+            setShowPreviewModal(true);
           }}
           onDeletePage={(page) => handleDeleteRequest(page)}
         />
@@ -1051,7 +1099,21 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           </button>
 
           <button
-            onClick={handleSavePage}
+            onClick={handleSaveDraft}
+            disabled={isSavingPage}
+            className="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-all border border-amber-500/20 disabled:opacity-60"
+            title="ذخیره به‌عنوان پیش‌نویس (بدون انتشار)"
+          >
+            {isSavingPage ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Clock className="w-4 h-4" />
+            )}
+            <span>ذخیره پیش‌نویس</span>
+          </button>
+
+          <button
+            onClick={handleSavePublish}
             disabled={isSavingPage}
             className="px-5 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all disabled:opacity-60"
           >
@@ -1068,7 +1130,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>انتشار / ذخیره</span>
+                <span>ذخیره و انتشار</span>
               </>
             )}
           </button>
@@ -1096,6 +1158,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDeleteSection={handleDeleteSection}
           onDeleteWidget={handleDeleteWidget}
           onMoveWidget={handleMoveWidget}
+          onMoveWidgetToColumn={handleMoveWidgetToColumn}
         />
 
         {/* Left Panel: Property Inspector & Binding Panel */}
@@ -1111,9 +1174,11 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDuplicateWidget={handleDuplicateWidget}
         />
       </div>
+      </div>
+      )}
 
       {/* ============================================================== */}
-      {/* MODALS */}
+      {/* MODALS (rendered outside viewMode so they work from the list) */}
       {/* ============================================================== */}
       {showComponentPickerModal && (
         <ComponentPickerModal
@@ -1178,8 +1243,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onSave={handleSavePageSettings}
           onClose={() => setShowPageSettingsModal(false)}
         />
-      )}
-      </div>
       )}
 
       {/* Delete confirmation dialog (replaces window.confirm) */}

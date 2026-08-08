@@ -34,13 +34,38 @@ import {
   RefreshCw,
   Clock,
   FolderOpen,
-  Layers
+  Layers,
+  MapPin,
+  Phone,
+  Mail,
+  Share2,
+  MessageCircle,
+  Link2,
+  Type,
+  Columns,
+  Rows,
+  Images,
+  Gauge,
+  Compass,
+  Code2,
+  Quote,
+  Info,
+  Send,
+  Globe,
+  Hash,
+  Heart,
+  CheckCircle2,
+  ArrowLeft,
+  Users,
+  BadgeDollarSign
 } from 'lucide-react';
 
 interface WidgetRendererProps {
   widget: WidgetInstance;
   currentUserRole?: UserRoleCondition;
   isEditorPreview?: boolean;
+  /** عمق تو در تویی رندر (برای دربرگیرنده‌ها) — جلوگیری از حلقه بی‌نهایت */
+  depth?: number;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -603,10 +628,466 @@ const FileManagerWidget: React.FC<{
   );
 };
 
+// ==============================================================
+// NEW STATIC BLOCKS — بلوک‌های جدید سازنده صفحه
+// ==============================================================
+
+/** آیکون‌های قابل انتخاب برای باکس آیکون / متن‌های دارای آیکون */
+const iconMap: Record<string, React.ReactNode> = {
+  map: <MapPin className="w-5 h-5" />,
+  phone: <Phone className="w-5 h-5" />,
+  mail: <Mail className="w-5 h-5" />,
+  share: <Share2 className="w-5 h-5" />,
+  chat: <MessageCircle className="w-5 h-5" />,
+  link: <Link2 className="w-5 h-5" />,
+  type: <Type className="w-5 h-5" />,
+  columns: <Columns className="w-5 h-5" />,
+  rows: <Rows className="w-5 h-5" />,
+  images: <Images className="w-5 h-5" />,
+  gauge: <Gauge className="w-5 h-5" />,
+  compass: <Compass className="w-5 h-5" />,
+  code: <Code2 className="w-5 h-5" />,
+  quote: <Quote className="w-5 h-5" />,
+  info: <Info className="w-5 h-5" />,
+  send: <Send className="w-5 h-5" />,
+  globe: <Globe className="w-5 h-5" />,
+  hash: <Hash className="w-5 h-5" />,
+  heart: <Heart className="w-5 h-5" />,
+  check: <CheckCircle2 className="w-5 h-5" />,
+  arrow: <ArrowLeft className="w-5 h-5" />,
+  users: <Users className="w-5 h-5" />,
+  dollar: <BadgeDollarSign className="w-5 h-5" />,
+  sparkles: <Sparkles className="w-5 h-5" />,
+};
+
+/** استخراج گزینه‌ها از محتوای متنی (هر خط: برچسب|مقدار|...) */
+const parseLines = (content: string, separators = '|،,;'): string[][] =>
+  (content || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(new RegExp(`[${separators}]`)).map((p) => p.trim()));
+
+/** بلوک متن غنی WYSIWYG (محتوای HTML) */
+const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => (
+  <div
+    style={containerStyle}
+    className="prose-sm max-w-none transition-all leading-relaxed richtext-content"
+    dangerouslySetInnerHTML={{
+      __html:
+        widget.content ||
+        '<p>متن غنی خود را اینجا بنویسید — از HTML برای تیتر، پاراگراف، لینک و آیکون استفاده کنید.</p>'
+    }}
+  />
+);
+
+/** باکس آیکون — آیکون + عنوان + متن */
+const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const icon = iconMap[props.iconName || widget.iconName || 'sparkles'] || <Sparkles className="w-5 h-5" />;
+  return (
+    <div style={containerStyle} className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm text-right flex flex-col items-start gap-3 transition-all hover:shadow-md">
+      <div className="p-3 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">{icon}</div>
+      <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'عنوان باکس آیکون'}</h3>
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        {widget.content || 'توضیحات کوتاه این باکس در این بخش نمایش داده می‌شود.'}
+      </p>
+      {props.buttonUrl && (
+        <a href={props.buttonUrl} className="mt-1 inline-flex items-center gap-1 text-xs font-black text-teal-600 dark:text-teal-400 hover:gap-2 transition-all cursor-pointer">
+          {props.buttonText || 'بیشتر بدانید'} <ArrowLeft className="w-3.5 h-3.5" />
+        </a>
+      )}
+    </div>
+  );
+};
+
+/** دربرگیرنده (Container) — عمودی یا افقی؛ شامل زیربلوک‌ها */
+const ContainerBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  vertical: boolean;
+  depth: number;
+  isEditorPreview: boolean;
+}> = ({ widget, containerStyle, vertical, depth, isEditorPreview }) => {
+  const children: WidgetInstance[] = (widget.settings.customProps?.children as WidgetInstance[]) || [];
+  const gap = (widget.settings.customProps?.gap as number) ?? 16;
+
+  return (
+    <div
+      style={{
+        ...containerStyle,
+        display: 'flex',
+        flexDirection: vertical ? 'column' : 'row',
+        gap: `${gap}px`,
+        flexWrap: vertical ? undefined : 'wrap',
+      }}
+      className={`rounded-2xl p-4 transition-all ${
+        vertical
+          ? 'flex-col'
+          : 'flex-row items-stretch'
+      }`}
+    >
+      {children.length === 0 ? (
+        <div className="flex-1 min-h-[80px] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs text-slate-400">
+          <Layers className="w-4 h-4 ml-1.5" />
+          دربرگیرنده خالی — از پنل تنظیمات زیربلوک‌ها را مدیریت کنید
+        </div>
+      ) : (
+        children.map((child) => (
+          <div key={child.id} style={vertical ? undefined : { flex: 1, minWidth: 180 }} className={vertical ? undefined : 'flex'}>
+            <WidgetRenderer
+              widget={child}
+              currentUserRole="all"
+              isEditorPreview={isEditorPreview}
+              depth={depth + 1}
+            />
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+/** اسلایدر تصویر — چرخش خودکار تصاویر */
+const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const images: string[] =
+    (props.images as string[]) ||
+    parseLines(widget.content || '').map((p) => p[0]).filter(Boolean) ||
+    [];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length < 2) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % images.length), 3500);
+    return () => clearInterval(t);
+  }, [images.length]);
+
+  if (images.length === 0) {
+    return (
+      <div style={containerStyle} className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 aspect-video text-slate-400 text-xs">
+        <Images className="w-5 h-5" />
+        تصاویری برای اسلایدر تنظیم نشده است
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 group">
+      <img src={images[index]} alt={`اسلاید ${index + 1}`} className="w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+      <div className="absolute bottom-3 right-4 text-white text-sm font-black drop-shadow">
+        {index + 1} / {images.length}
+      </div>
+      <div className="absolute bottom-3 left-3 flex gap-1.5">
+        {images.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIndex(i)}
+            className={`h-1.5 rounded-full transition-all cursor-pointer ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+            aria-label={`اسلاید ${i + 1}`}
+          />
+        ))}
+      </div>
+      <button
+        onClick={() => setIndex((index - 1 + images.length) % images.length)}
+        className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        aria-label="اسلاید قبلی"
+      >
+        <ChevronUp className="w-4 h-4 rotate-90" />
+      </button>
+      <button
+        onClick={() => setIndex((index + 1) % images.length)}
+        className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        aria-label="اسلاید بعدی"
+      >
+        <ChevronDown className="w-4 h-4 rotate-90" />
+      </button>
+    </div>
+  );
+};
+
+/** شمارنده — عدد متحرک با پیشوند/پسوند */
+const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const target = Number(props.target ?? (parseFloat(widget.content) || 100));
+  const prefix = props.prefix || '';
+  const suffix = props.suffix || '+';
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    let raf: number;
+    const duration = 1200;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / duration, 1);
+      setValue(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  return (
+    <div style={containerStyle} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 text-center flex flex-col items-center gap-1.5">
+      <div className="text-4xl font-black font-mono text-slate-900 dark:text-white">
+        {prefix}{value.toLocaleString('fa-IR')}{suffix}
+      </div>
+      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{widget.title || 'شمارنده آماری'}</span>
+    </div>
+  );
+};
+
+/** پیمایشگر — فهرستی از نوشته‌ها/برگه‌ها/پست‌های تایپ‌های دلخواه */
+const NavigatorBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const postType = props.postType || 'صفحه';
+  const items: { label: string; url: string }[] =
+    (props.items as { label: string; url: string }[]) ||
+    parseLines(widget.content || '').map((p) => ({ label: p[0] || 'مورد', url: p[1] || '#' }));
+
+  return (
+    <div style={containerStyle} className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center gap-2">
+        <Compass className="w-4 h-4 text-indigo-500" />
+        <span className="text-xs font-black text-slate-900 dark:text-white">{widget.title || 'پیمایش سریع'}</span>
+        <span className="mr-auto text-[10px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">{postType}</span>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-slate-800">
+        {(items.length ? items : [{ label: 'نمونه نوشته ۱', url: '#' }, { label: 'نمونه برگه ۲', url: '#' }]).map((item, i) => (
+          <a
+            key={i}
+            href={item.url || '#'}
+            className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all cursor-pointer"
+          >
+            <span className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+              <FileText className="w-3.5 h-3.5" />
+            </span>
+            <span className="flex-1 font-bold">{item.label}</span>
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** نقشه — جاسازی نقشه گوگل */
+const MapBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const embedUrl =
+    props.embedUrl ||
+    widget.content ||
+    'https://www.google.com/maps?q=Yazd&output=embed';
+
+  return (
+    <div style={containerStyle} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-800">
+      <iframe
+        src={embedUrl}
+        title={widget.title || 'نقشه'}
+        className="w-full h-72 border-0"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      <div className="px-4 py-2.5 bg-white dark:bg-slate-900 text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+        <MapPin className="w-3.5 h-3.5 text-rose-500" />
+        {props.address || widget.title || 'نشانی روی نقشه'}
+      </div>
+    </div>
+  );
+};
+
+/** اطلاعات تماس */
+const ContactInfoBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const rows: { icon: React.ReactNode; label: string; value: string; href?: string }[] = [
+    { icon: <Phone className="w-4 h-4" />, label: 'تلفن', value: props.phone || '۰۳۵-۳۱۲۳۴۵۶۷', href: `tel:${props.phone || ''}` },
+    { icon: <Mail className="w-4 h-4" />, label: 'ایمیل', value: props.email || 'info@example.ac.ir', href: `mailto:${props.email || ''}` },
+    { icon: <MapPin className="w-4 h-4" />, label: 'نشانی', value: props.address || 'یزد، بلوار دانشگاه، دانشگاه علم و هنر' },
+    { icon: <Clock className="w-4 h-4" />, label: 'ساعات کاری', value: props.workHours || 'شنبه تا چهارشنبه ۸ تا ۱۶' },
+  ];
+
+  return (
+    <div style={containerStyle} className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 space-y-3">
+      <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+        <Phone className="w-4 h-4 text-teal-500" />
+        {widget.title || 'اطلاعات تماس'}
+      </h3>
+      {rows.map((row, i) => (
+        <div key={i} className="flex items-center gap-3 text-xs">
+          <span className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0">{row.icon}</span>
+          <span className="text-slate-400 w-16 shrink-0 font-bold">{row.label}</span>
+          {row.href ? (
+            <a href={row.href} className="font-bold text-slate-700 dark:text-slate-200 hover:text-teal-600 transition-colors cursor-pointer" dir="auto">
+              {row.value}
+            </a>
+          ) : (
+            <span className="font-bold text-slate-700 dark:text-slate-200" dir="auto">{row.value}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/** HTML دلخواه */
+const CustomHtmlBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => (
+  <div
+    style={containerStyle}
+    className="transition-all custom-html-block"
+    dangerouslySetInnerHTML={{
+      __html:
+        widget.content ||
+        '<div style="padding:24px;border:2px dashed #94a3b8;border-radius:12px;text-align:center;color:#94a3b8;font-size:13px">HTML دلخواه خود را در پنل تنظیمات وارد کنید</div>'
+    }}
+  />
+);
+
+/** لینک‌های اجتماعی */
+const SocialLinksBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const networks = ['telegram', 'instagram', 'twitter', 'linkedin', 'youtube', 'whatsapp'];
+  const labels: Record<string, string> = { telegram: 'تلگرام', instagram: 'اینستاگرام', twitter: 'توییتر', linkedin: 'لینکدین', youtube: 'یوتیوب', whatsapp: 'واتساپ' };
+  const colors: Record<string, string> = { telegram: 'bg-sky-500', instagram: 'bg-pink-600', twitter: 'bg-sky-600', linkedin: 'bg-blue-700', youtube: 'bg-rose-600', whatsapp: 'bg-emerald-500' };
+  const urls = props.urls as Record<string, string> | undefined;
+
+  return (
+    <div style={containerStyle} className="flex items-center gap-2.5">
+      <span className="text-xs font-black text-slate-600 dark:text-slate-300">{widget.title || 'ما را دنبال کنید'}</span>
+      {networks.map((n) => {
+        const url = urls?.[n] || '#';
+        return (
+          <a
+            key={n}
+            href={url}
+            title={labels[n]}
+            className={`w-9 h-9 rounded-full ${colors[n]} text-white flex items-center justify-center hover:scale-110 hover:shadow-lg transition-all cursor-pointer`}
+          >
+            <Share2 className="w-4 h-4" />
+          </a>
+        );
+      })}
+    </div>
+  );
+};
+
+/** دکمه‌های اشتراک‌گذاری */
+const ShareButtonsBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const url = props.pageUrl || (typeof window !== 'undefined' ? window.location.href : '#');
+  const encoded = encodeURIComponent(url);
+  const title = encodeURIComponent(widget.title || 'صفحه');
+  const shareItems = [
+    { label: 'تلگرام', color: 'bg-sky-500', href: `https://t.me/share/url?url=${encoded}&text=${title}` },
+    { label: 'واتساپ', color: 'bg-emerald-500', href: `https://wa.me/?text=${title}%20${encoded}` },
+    { label: 'توییتر', color: 'bg-sky-600', href: `https://twitter.com/intent/tweet?url=${encoded}&text=${title}` },
+    { label: 'لینکدین', color: 'bg-blue-700', href: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}` },
+    { label: 'ایمیل', color: 'bg-slate-500', href: `mailto:?subject=${title}&body=${encoded}` },
+  ];
+
+  return (
+    <div style={containerStyle} className="flex items-center gap-2">
+      <span className="text-xs font-black text-slate-600 dark:text-slate-300 flex items-center gap-1">
+        <Share2 className="w-3.5 h-3.5 text-teal-500" />
+        اشتراک‌گذاری:
+      </span>
+      {shareItems.map((item) => (
+        <a
+          key={item.label}
+          href={item.href}
+          target="_blank"
+          rel="noreferrer"
+          title={item.label}
+          className="px-2.5 py-1.5 rounded-lg text-[10px] font-black text-white hover:scale-105 transition-all cursor-pointer shadow-sm"
+          style={{ backgroundColor: item.color }}
+        >
+          {item.label}
+        </a>
+      ))}
+    </div>
+  );
+};
+
+/** جدول قیمت */
+const PricingTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const plans: { name: string; price: string; features: string[]; highlight?: boolean }[] =
+    (props.plans as { name: string; price: string; features: string[]; highlight?: boolean }[]) ||
+    [
+      { name: 'پایه', price: 'رایگان', features: ['۱ نوشته', 'پشتیبانی ایمیل'] },
+      { name: 'حرفه‌ای', price: '۱٬۵۰۰٬۰۰۰ تومان', features: ['۱۰ نوشته', 'پشتیبانی ۲۴/۷', 'گزارش پیشرفته'], highlight: true },
+      { name: 'سازمانی', price: 'تماس بگیرید', features: ['نامحدود', 'مشاور اختصاصی'] },
+    ];
+
+  return (
+    <div style={containerStyle}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {plans.map((plan, i) => (
+          <div
+            key={i}
+            className={`rounded-2xl p-5 border flex flex-col gap-3 transition-all ${
+              plan.highlight
+                ? 'border-teal-500 bg-gradient-to-b from-teal-500/10 to-transparent shadow-lg -translate-y-1'
+                : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-900 dark:text-white">{plan.name}</span>
+              {plan.highlight && <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-teal-600 text-white">پیشنهادی</span>}
+            </div>
+            <div className="text-lg font-black text-slate-900 dark:text-white">{plan.price}</div>
+            <ul className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+              {plan.features.map((f, j) => (
+                <li key={j} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#"
+              className={`mt-auto text-center py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                plan.highlight
+                  ? 'bg-teal-600 hover:bg-teal-700 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-teal-500 hover:text-white text-slate-700 dark:text-slate-200'
+              }`}
+            >
+              انتخاب این پلن
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** نظر کاربر (Testimonial) */
+const TestimonialBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  return (
+    <div style={containerStyle} className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-3">
+      <Quote className="w-8 h-8 text-teal-500/40" />
+      <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+        {widget.content || 'تجربه کاربری یا نظر یک نفر از مخاطبان شما در این بخش نمایش داده می‌شود.'}
+      </p>
+      <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-slate-800">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 text-white flex items-center justify-center font-black text-sm">
+          {(props.author || 'ک').slice(0, 1)}
+        </div>
+        <div>
+          <div className="text-xs font-black text-slate-900 dark:text-white">{props.author || 'کاربر نمونه'}</div>
+          <div className="text-[10px] text-slate-400">{props.role || 'دانشجوی دانشگاه'}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   widget,
   currentUserRole = 'all',
-  isEditorPreview = false
+  isEditorPreview = false,
+  depth = 0
 }) => {
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
@@ -757,6 +1238,92 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           <div className="text-xs text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider">{widget.title}</div>
           <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">{widget.content || '1,420+'}</div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400">آمار به‌روزرسانی شده لحظه‌ای</span>
+        </div>
+      );
+
+    // -------------------------------------------------------------
+    // NEW STATIC BLOCKS — بلوک‌های جدید سازنده صفحه
+    // -------------------------------------------------------------
+    case 'richtext':
+      return <RichTextBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'icon-box':
+      return <IconBoxBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'vertical-container':
+      return (
+        <ContainerBlock
+          widget={widget}
+          containerStyle={containerStyle}
+          vertical
+          depth={depth}
+          isEditorPreview={isEditorPreview}
+        />
+      );
+
+    case 'horizontal-container':
+      return (
+        <ContainerBlock
+          widget={widget}
+          containerStyle={containerStyle}
+          vertical={false}
+          depth={depth}
+          isEditorPreview={isEditorPreview}
+        />
+      );
+
+    case 'image-slider':
+      return <ImageSliderBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'counter':
+      return <CounterBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'navigator':
+      return <NavigatorBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'map':
+      return <MapBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'contact-info':
+      return <ContactInfoBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'custom-html':
+      return <CustomHtmlBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'social-links':
+      return <SocialLinksBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'share-buttons':
+      return <ShareButtonsBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'pricing-table':
+      return <PricingTableBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'testimonial':
+      return <TestimonialBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'callout':
+      return (
+        <div
+          style={containerStyle}
+          className="flex items-start gap-3 p-4 rounded-2xl border border-amber-300/40 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200"
+        >
+          <span className="p-2 rounded-xl bg-amber-400/20 text-amber-600 dark:text-amber-300 shrink-0">
+            {iconMap[widget.iconName || 'info'] || <Info className="w-5 h-5" />}
+          </span>
+          <div>
+            <div className="text-sm font-black">{widget.title || 'یادآوری یا نکته مهم'}</div>
+            <p className="text-xs leading-relaxed mt-1">{widget.content || 'این متن می‌تواند نکته، هشدار یا اطلاعیه مهم باشد.'}</p>
+          </div>
+        </div>
+      );
+
+    case 'icon':
+      return (
+        <div style={containerStyle} className="flex justify-center">
+          <span className="p-4 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 inline-flex">
+            {iconMap[widget.iconName || 'sparkles'] || <Sparkles className="w-6 h-6" />}
+          </span>
         </div>
       );
 

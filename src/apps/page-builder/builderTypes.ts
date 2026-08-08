@@ -20,15 +20,29 @@ export type WidgetCategory = 'static' | 'dynamic' | 'layout';
 export type StaticWidgetType =
   | 'heading'
   | 'text'
+  | 'richtext' // بلاک متن WYSIWYG (HTML)
   | 'image'
   | 'button'
   | 'video'
   | 'icon'
+  | 'icon-box'
   | 'divider'
   | 'spacer'
   | 'stat-card'
+  | 'counter'
   | 'accordion'
-  | 'callout';
+  | 'callout'
+  | 'vertical-container'
+  | 'horizontal-container'
+  | 'image-slider'
+  | 'navigator'
+  | 'map'
+  | 'contact-info'
+  | 'custom-html'
+  | 'social-links'
+  | 'share-buttons'
+  | 'pricing-table'
+  | 'testimonial';
 
 export type SmartWidgetType =
   | 'announcements-feed'
