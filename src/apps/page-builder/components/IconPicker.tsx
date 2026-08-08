@@ -27,6 +27,7 @@ import {
   BadgeDollarSign,
   Search,
   Ban,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -34,7 +35,8 @@ import {
 export const ICON_CHOICES: string[] = [
   'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
   'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
-  'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar'
+  'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar',
+  'external'
 ];
 
 /** نگاشت نام آیکون به کامپوننت lucide — برای پیش‌نمایش انتخابگر */
@@ -63,6 +65,7 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
   arrow: ArrowLeft,
   users: Users,
   dollar: BadgeDollarSign,
+  external: ExternalLink,
 };
 
 interface IconPickerProps {

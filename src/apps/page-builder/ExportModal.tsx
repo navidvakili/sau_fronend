@@ -29,9 +29,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose })
     }
     const bgImage = layers.length ? `background-image: ${layers.join(', ')};` : '';
     const bgColor =
-      sec.backgroundImage || sec.backgroundGradient
+      sec.backgroundImage || sec.backgroundGradient || !sec.backgroundColor
         ? ''
-        : `background-color: ${sec.backgroundColor || '#ffffff'};`;
+        : `background-color: ${sec.backgroundColor};`;
     const bgPos = sec.backgroundImage
       ? `background-position: ${sec.backgroundPosition || 'center'}; background-size: ${sec.backgroundSize || 'cover'}; background-repeat: ${sec.backgroundRepeat || 'no-repeat'};`
       : '';

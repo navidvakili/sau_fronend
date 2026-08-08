@@ -742,6 +742,47 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </>
               )}
 
+              {/* نوار راهبری (منو) */}
+              {selectedWidget.type === 'nav-menu' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان برند (سمت راست نوار)</label>
+                    <input
+                      type="text"
+                      value={customProps.brand || ''}
+                      onChange={(e) => updateCustomProps({ brand: e.target.value })}
+                      placeholder="معاونت آموزشی و تحصیلات تکمیلی"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      آیتم‌های منو (هر خط: عنوان|لینک)
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={(customProps.items || []).map((i: any) => `${i.label}|${i.url}`).join('\n')}
+                      onChange={(e) => {
+                        const items = e.target.value
+                          .split('\n')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                          .map((line) => {
+                            const [label, url] = line.split('|');
+                            return { label: label || 'مورد', url: url || '#' };
+                          });
+                        updateCustomProps({ items });
+                      }}
+                      placeholder={'صفحه اصلی|/\nخدمات|#services'}
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                    برای نوار چسبان، وضعیت «چسبان (sticky)» را از بخش موقعیت سکشن انتخاب کنید و پس‌زمینه را روی همان سکشن تنظیم کنید.
+                  </p>
+                </>
+              )}
+
               {/* نقشه */}
               {selectedWidget.type === 'map' && (
                 <>
@@ -1144,12 +1185,22 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه</label>
-                  <input
-                    type="color"
-                    value={selectedWidget.settings.style.backgroundColor || '#ffffff'}
-                    onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                    className="w-full h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={selectedWidget.settings.style.backgroundColor || '#ffffff'}
+                      onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                      className="flex-1 min-w-0 h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
+                    />
+                    <button
+                      type="button"
+                      title="حذف رنگ پس‌زمینه"
+                      onClick={() => handleStyleChange('backgroundColor', undefined)}
+                      className="px-2 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shrink-0"
+                    >
+                      حذف
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1881,12 +1932,22 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه سکشن</label>
-            <input
-              type="color"
-              value={selectedSection.backgroundColor || '#ffffff'}
-              onChange={(e) => onUpdateSection({ ...selectedSection, backgroundColor: e.target.value })}
-              className="w-full h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
-            />
+            <div className="flex items-center gap-1.5">
+              <input
+                type="color"
+                value={selectedSection.backgroundColor || '#ffffff'}
+                onChange={(e) => onUpdateSection({ ...selectedSection, backgroundColor: e.target.value })}
+                className="flex-1 min-w-0 h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
+              />
+              <button
+                type="button"
+                title="حذف رنگ پس‌زمینه سکشن"
+                onClick={() => onUpdateSection({ ...selectedSection, backgroundColor: undefined })}
+                className="px-2 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shrink-0"
+              >
+                حذف
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1.5">

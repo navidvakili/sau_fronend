@@ -595,6 +595,7 @@ const iconMap: Record<string, React.ReactNode> = {
   arrow: <ArrowLeft className="w-5 h-5" />,
   users: <Users className="w-5 h-5" />,
   dollar: <BadgeDollarSign className="w-5 h-5" />,
+  external: <ExternalLink className="w-5 h-5" />,
   sparkles: <Sparkles className="w-5 h-5" />,
 };
 
@@ -843,6 +844,37 @@ const NavigatorBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.C
           </a>
         ))}
       </div>
+    </div>
+  );
+};
+
+/** نوار راهبری — برند + لینک‌های منو (ساخته‌شده از کامپوننت به‌جای HTML دلخواه) */
+const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const brand = props.brand || widget.title;
+  const items: { label: string; url: string }[] =
+    (props.items as { label: string; url: string }[]) ||
+    parseLines(widget.content || '').map((p) => ({ label: p[0] || 'مورد', url: p[1] || '#' }));
+
+  return (
+    <div
+      style={containerStyle}
+      className="flex items-center gap-4 flex-wrap py-1.5"
+    >
+      {brand ? (
+        <strong className="text-sm font-black text-white whitespace-nowrap">{brand}</strong>
+      ) : null}
+      <nav className="flex items-center gap-4 flex-wrap ms-auto">
+        {items.map((item, i) => (
+          <a
+            key={i}
+            href={item.url || '#'}
+            className="text-[13px] font-bold text-slate-200 hover:text-white transition-all border-b-2 border-transparent hover:border-teal-400 cursor-pointer"
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
     </div>
   );
 };
@@ -1326,6 +1358,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'navigator':
       return <NavigatorBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'nav-menu':
+      return <NavMenuBlock widget={widget} containerStyle={containerStyle} />;
 
     case 'map':
       return <MapBlock widget={widget} containerStyle={containerStyle} />;

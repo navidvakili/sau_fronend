@@ -77,6 +77,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'image-slider', category: 'basic', name: 'اسلایدر تصویر (Image Slider)', desc: 'چرخش خودکار تصاویر با دکمه‌های پیمایش و نقاط', icon: Images, badge: 'کاروسل' },
     { type: 'counter', category: 'basic', name: 'شمارنده (Counter)', desc: 'عدد متحرک با پیشوند/پسوند برای آمار', icon: Gauge },
     { type: 'navigator', category: 'basic', name: 'پیمایشگر محتوا (Navigator)', desc: 'فهرست نوشته‌ها، برگه‌ها و پست‌های تایپ دلخواه', icon: Compass, badge: 'لیست' },
+    { type: 'nav-menu', category: 'basic', name: 'نوار راهبری (Nav Menu)', desc: 'برند + لینک‌های منو برای نوار بالای صفحه', icon: PanelTop },
     { type: 'map', category: 'basic', name: 'نقشه (Map)', desc: 'جاسازی نقشه گوگل با نشانگر و نشانی', icon: MapPin, badge: 'جاسازی' },
     { type: 'contact-info', category: 'basic', name: 'اطلاعات تماس (Contact Info)', desc: 'تلفن، ایمیل، نشانی و ساعات کاری', icon: Phone },
     { type: 'custom-html', category: 'basic', name: 'HTML دلخواه (Custom HTML)', desc: 'کد HTML/اسکریپت دلخواه شما', icon: Code2, badge: 'کد' },

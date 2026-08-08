@@ -36,6 +36,7 @@ export type StaticWidgetType =
   | 'horizontal-container'
   | 'image-slider'
   | 'navigator'
+  | 'nav-menu'
   | 'map'
   | 'contact-info'
   | 'custom-html'

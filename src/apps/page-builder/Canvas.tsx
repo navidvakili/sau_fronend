@@ -40,7 +40,7 @@ interface CanvasProps {
   onDeleteSection: (sectionId: string) => void;
   onDeleteWidget: (widgetId: string) => void;
   onMoveWidget: (widgetId: string, direction: 'up' | 'down') => void;
-  onMoveWidgetToColumn?: (widgetId: string, targetColumnId: string) => void;
+  onMoveWidgetToColumn?: (widgetId: string, targetColumnId: string, index?: number) => void;
   // جابه‌جایی سکشن (بلوک/زیربلوک)
   onMoveSectionToColumn?: (sectionId: string, targetColumnId: string) => void;
   onMoveSectionToTop?: (sectionId: string, index?: number) => void;
@@ -82,6 +82,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   // Divider (بین سکشن‌ها) که هم‌اکنون نشانهٔ رهاسازی روی آن است — مقدار: 'before' یا 'after:<secId>'
   const [dragOverDividerId, setDragOverDividerId] = useState<string | null>(null);
+  const [dragInsertIndex, setDragInsertIndex] = useState<{ colId: string; index: number } | null>(null);
 
   /** ستون زیر نشانگر ماوس را پیدا می‌کند (برای رهاسازی روی هر نقطه از سکشن) */
   const resolveColumnIdAt = (e: React.DragEvent): string | undefined => {
@@ -158,11 +159,13 @@ export const Canvas: React.FC<CanvasProps> = ({
           } else if (dragWidgetId) {
             const colId = resolveColumnIdAt(e) ?? sec.columns[0]?.id;
             if (colId) {
-              onMoveWidgetToColumn?.(dragWidgetId, colId);
+              const idx = dragInsertIndex?.colId === colId ? dragInsertIndex.index : undefined;
+              onMoveWidgetToColumn?.(dragWidgetId, colId, idx);
             }
           }
           setDragWidgetId(null);
           setDragSectionId(null);
+          setDragInsertIndex(null);
         }}
         style={{
           // موقعیت و لایهٔ سکشن (fixed/sticky/relative + z-index)
@@ -223,6 +226,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               setDragSectionId(null);
               setDragOverColumnId(null);
               setDragOverDividerId(null);
+              setDragInsertIndex(null);
             }}
             title="برای جابه‌جایی بلوک بکشید — رها کردن روی یک ستون، آن را به زیربلوک آن ستون تبدیل می‌کند"
             className="px-2.5 py-1 rounded-lg bg-teal-600 text-white text-[10px] font-black shadow-md flex items-center gap-1 cursor-grab hover:bg-teal-700 select-none"
@@ -326,11 +330,13 @@ export const Canvas: React.FC<CanvasProps> = ({
                       // رها کردن یک بلوک روی ستون → تبدیل به زیربلوک
                       onMoveSectionToColumn?.(dragSectionId, col.id);
                     } else if (dragWidgetId) {
-                      // Move the widget to this column (cross-section DnD)
-                      onMoveWidgetToColumn?.(dragWidgetId, col.id);
+                      // Move the widget to this column (cross-section DnD) — index if hovering over a widget
+                      const idx = dragInsertIndex?.colId === col.id ? dragInsertIndex.index : undefined;
+                      onMoveWidgetToColumn?.(dragWidgetId, col.id, idx);
                     }
                     setDragWidgetId(null);
                     setDragSectionId(null);
+                    setDragInsertIndex(null);
                   }}
                   className={`min-h-[100px] p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
                     isColSelected
@@ -368,18 +374,43 @@ export const Canvas: React.FC<CanvasProps> = ({
                           const isWidgetSel = selectedWidgetId === widget.id;
                           return (
                             <div
-                              key={widget.id}
                               draggable
                               onDragStart={(e) => {
                                 setDragWidgetId(widget.id);
                                 setDragSectionId(null);
+                                setDragInsertIndex(null);
                                 e.dataTransfer.effectAllowed = 'move';
                                 e.dataTransfer.setData('text/plain', widget.id);
+                              }}
+                              onDragOver={(e) => {
+                                // رها کردن بین ویجت‌ها — نصف بالایی = قبل، نصف پایینی = بعد
+                                if (dragWidgetId && dragWidgetId !== widget.id) {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const before = e.clientY < rect.top + rect.height / 2;
+                                  setDragInsertIndex({ colId: col.id, index: before ? wIdx : wIdx + 1 });
+                                  setDragOverColumnId(col.id);
+                                  setDragOverDividerId(null);
+                                }
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (dragWidgetId) {
+                                  const idx = dragInsertIndex?.colId === col.id ? dragInsertIndex.index : undefined;
+                                  onMoveWidgetToColumn?.(dragWidgetId, col.id, idx);
+                                }
+                                setDragWidgetId(null);
+                                setDragOverColumnId(null);
+                                setDragOverDividerId(null);
+                                setDragInsertIndex(null);
                               }}
                               onDragEnd={() => {
                                 setDragWidgetId(null);
                                 setDragOverColumnId(null);
                                 setDragOverDividerId(null);
+                                setDragInsertIndex(null);
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -397,6 +428,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                                   : 'cursor-grab'
                               }`}
                             >
+                              {/* نشانگر درج — قبل از این ویجت */}
+                              {dragInsertIndex?.colId === col.id && dragInsertIndex.index === wIdx && (
+                                <div className="absolute -top-[9px] right-2 left-2 h-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_2px_rgba(20,184,166,0.45)] z-40 pointer-events-none" />
+                              )}
                               {/* Drag handle indicator on hover */}
                               <div
                                 className={`absolute top-2 right-2 z-30 p-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md transition-opacity ${
@@ -469,6 +504,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                             </div>
                           );
                         })}
+
+                        {/* نشانگر انتهای فهرست ویجت‌ها (افزودن بعد از آخرین ویجت) */}
+                        {dragInsertIndex?.colId === col.id && dragInsertIndex.index === col.widgets.length && (
+                          <div className="h-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_2px_rgba(20,184,166,0.45)] mt-1" />
+                        )}
 
                         {/* زیربلوک‌های این ستون — رندر بازگشتی */}
                         {depth + 1 < MAX_DEPTH && hasSubSections && (

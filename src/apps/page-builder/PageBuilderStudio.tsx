@@ -422,7 +422,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       id: newSecId,
       name: `سکشن جدید (${layoutPreset})`,
       layout: 'boxed',
-      backgroundColor: '#ffffff',
       paddingTop: 40,
       paddingBottom: 40,
       columns,
@@ -497,7 +496,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       id: newSecId,
       name: `سکشن جدید (${preset})`,
       layout: 'boxed',
-      backgroundColor: '#ffffff',
       paddingTop: 40,
       paddingBottom: 40,
       columns,
@@ -577,7 +575,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       id: newSecId,
       name: `سکشن ${title}`,
       layout: 'boxed',
-      backgroundColor: '#ffffff',
       paddingTop: 32,
       paddingBottom: 32,
       columns: [
@@ -941,8 +938,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const handleSavePublish = () => savePageWithStatus('published');
 
   // Move widget to a target column (cross-section Drag & Drop — بازگشتی)
-  const handleMoveWidgetToColumn = (widgetId: string, targetColumnId: string) => {
+  const handleMoveWidgetToColumn = (widgetId: string, targetColumnId: string, index?: number) => {
     let widgetToMove: WidgetInstance | null = null;
+    let sourceColumnId: string | null = null;
+    let sourceIndex = -1;
 
     // Remove widget from its source column (first pass — هر جای درخت)
     const removedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
@@ -951,6 +950,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         const idx = col.widgets.findIndex(w => w.id === widgetId);
         if (idx !== -1) {
           widgetToMove = col.widgets[idx];
+          sourceColumnId = col.id;
+          sourceIndex = idx;
           const newWidgets = [...col.widgets];
           newWidgets.splice(idx, 1);
           return { ...col, widgets: newWidgets };
@@ -961,12 +962,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     if (!widgetToMove) return;
 
-    // Append widget to the target column (second pass — بازگشتی)
+    // Append/insert widget at the target column (second pass — بازگشتی)
     const finalSections = mapSectionsRecursive(removedSections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         if (col.id === targetColumnId) {
-          return { ...col, widgets: [...col.widgets, widgetToMove!] };
+          let effectiveIndex =
+            typeof index === 'number' ? Math.min(Math.max(index, 0), col.widgets.length) : col.widgets.length;
+          // جابه‌جایی در همان ستون — حذف قبلی ایندکس‌ها را یکی به عقب برده است
+          if (col.id === sourceColumnId && typeof index === 'number' && sourceIndex < index) {
+            effectiveIndex = Math.min(Math.max(index - 1, 0), col.widgets.length);
+          }
+          const newWidgets = [...col.widgets];
+          newWidgets.splice(effectiveIndex, 0, widgetToMove!);
+          return { ...col, widgets: newWidgets };
         }
         return col;
       })
@@ -1096,7 +1105,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       id: newSecId,
       name: 'زیربلوک جدید',
       layout: 'boxed',
-      backgroundColor: '#ffffff',
       paddingTop: 24,
       paddingBottom: 24,
       columns: [{ id: newColId, width: 12, widths: withWidths(12), widgets: [] }],
