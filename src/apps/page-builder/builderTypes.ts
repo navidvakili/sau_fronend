@@ -86,7 +86,7 @@ export interface WidgetStyle {
   backgroundOpacity?: number; // 0-100
   objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
   /** کادر تصویر — خودکار/مستطیل | مربع | دایره */
-  imageFrame?: 'square' | 'circle';
+  imageFrame?: 'rounded' | 'square' | 'circle';
   maxWidth?: number; // px — caps widget width
   fullWidth?: boolean; // button stretches to full column width
   alignVertical?: 'top' | 'center' | 'bottom'; // vertical alignment inside the widget box
@@ -147,6 +147,8 @@ export interface ColumnInstance {
   width: number; // 1 to 12 in a 12-column grid (fallback / desktop)
   widths?: ColumnResponsiveWidths; // per-device widths (mobile defaults to 12 = single column)
   widgets: WidgetInstance[];
+  /** بلوک‌های زیرمجموعه (زیربلوک) داخل این ستون — سکشن‌های تو در تو */
+  subSections?: SectionInstance[];
   style?: {
     backgroundColor?: string;
     padding?: number;

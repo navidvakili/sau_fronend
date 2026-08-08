@@ -1538,18 +1538,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                   </div>
 
-                  {/* کادر تصویر — مستطیل/مربع/دایره */}
+                  {/* کادر تصویر — مستطیل/گوشه‌گرد/مربع/دایره (روی خود تصویر اعمال می‌شود) */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">کادر تصویر (شکل قاب)</label>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">شکل تصویر (کادر قاب)</label>
                     <select
                       value={selectedWidget.settings.style.imageFrame || ''}
                       onChange={(e) => handleStyleChange('imageFrame', e.target.value || undefined)}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                     >
                       <option value="">خودکار / مستطیل</option>
+                      <option value="rounded">گوشه‌گرد</option>
                       <option value="square">مربع</option>
                       <option value="circle">دایره</option>
                     </select>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">شعاع گوشه‌ها روی خود تصویر اعمال می‌شود (نه روی بلوک)</p>
                   </div>
                 </>
               )}

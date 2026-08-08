@@ -42,6 +42,60 @@ export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose })
     return `${bgColor} ${bgImage} ${bgPos} ${pos}`;
   };
 
+    /** Recursive section -> JSX (nested sub-sections inside columns are emitted too) */
+  const renderReactSection = (sec: SectionInstance, depth: number): string => {
+    const pad = '  '.repeat(2 + depth * 2);
+    return `${pad}<section className="page-section py-10">
+${pad}  <div className="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
+${pad}    <div className="grid grid-cols-12 gap-6">
+${sec.columns
+  .map((col) => {
+    const subs = (col.subSections || []).map((sub) => renderReactSection(sub, depth + 2)).join('\n');
+    return `${pad}      <div className="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
+${pad}        ${col.widgets
+      .map(
+        (w) => `{/* Widget: ${w.title} (${w.type}) */}
+${pad}        <div className="widget-block my-3">
+${pad}          ${w.type === 'heading' ? `<h2 className="text-2xl font-black">${w.content}</h2>` : ''}
+${pad}          ${w.type === 'text' ? `<p className="text-sm leading-relaxed">${w.content}</p>` : ''}
+${pad}          ${w.type === 'button' ? `<a href="${w.buttonUrl || '#'}" className="inline-block px-6 py-3 rounded-xl bg-teal-600 text-white font-bold">${w.buttonText || 'Action Button'}</a>` : ''}
+${pad}          ${w.type.includes('feed') || w.type.includes('staff') || w.type.includes('file') ? `<div className="dynamic-module-bound border rounded-2xl p-4">[Smart Binding: ${w.type}]</div>` : ''}
+${pad}        </div>`
+      )
+      .join(`\n${pad}        `)}
+${subs}
+${pad}      </div>`;
+  })
+  .join('\n')}
+${pad}    </div>
+${pad}  </div>
+${pad}</section>`;
+  };
+
+  /** Recursive section -> HTML (nested sub-sections inside columns are emitted too) */
+  const renderHtmlSection = (sec: SectionInstance, depth: number): string => {
+    const pad = '  '.repeat(2 + depth * 2);
+    return `${pad}<section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
+${pad}  <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
+${pad}    <div class="grid grid-cols-12 gap-6">
+${sec.columns
+  .map((col) => {
+    const subs = (col.subSections || []).map((sub) => renderHtmlSection(sub, depth + 2)).join('\n');
+    return `${pad}      <div class="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
+${pad}        ${col.widgets
+      .map((w) => `<div class="mb-4">
+${pad}          <p class="text-xs text-slate-600">${w.content}</p>
+${pad}        </div>`)
+      .join(`\n${pad}        `)}
+${subs}
+${pad}      </div>`;
+  })
+  .join('\n')}
+${pad}    </div>
+${pad}  </div>
+${pad}</section>`;
+  };
+
   const generateReactCode = () => {
     return `import React from 'react';
 
@@ -52,36 +106,7 @@ export default function SmartPage() {
   return (
     <div className="smart-page-wrapper w-full font-sans rtl text-right bg-white dark:bg-slate-900">
       {/* Sections rendering */}
-      ${pageSchema.sections
-        .map(
-          (sec, i) => `
-      <section className="page-section section-${i + 1} py-10">
-        <div className="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
-          <div className="grid grid-cols-12 gap-6">
-            ${sec.columns
-              .map(
-                (col) => `
-            <div className="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
-              ${col.widgets
-                .map(
-                  (w) => `
-              {/* Widget: ${w.title} (${w.type}) */}
-              <div className="widget-block my-3">
-                ${w.type === 'heading' ? `<h2 className="text-2xl font-black">${w.content}</h2>` : ''}
-                ${w.type === 'text' ? `<p className="text-sm leading-relaxed">${w.content}</p>` : ''}
-                ${w.type === 'button' ? `<a href="${w.buttonUrl || '#'}" className="inline-block px-6 py-3 rounded-xl bg-teal-600 text-white font-bold">${w.buttonText || 'دکمه اقدام'}</a>` : ''}
-                ${w.type.includes('feed') || w.type.includes('staff') || w.type.includes('file') ? `<div className="dynamic-module-bound border rounded-2xl p-4">[Smart Binding: ${w.type}]</div>` : ''}
-              </div>`
-                )
-                .join('\n')}
-            </div>`
-              )
-              .join('\n')}
-          </div>
-        </div>
-      </section>`
-        )
-        .join('\n')}
+      ${pageSchema.sections.map((sec) => renderReactSection(sec, 0)).join('\n')}
     </div>
   );
 }`;
@@ -101,38 +126,13 @@ export default function SmartPage() {
 </head>
 <body class="bg-slate-50 text-slate-900">
   <main className="w-full">
-    ${pageSchema.sections
-      .map(
-        (sec) => `
-    <section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
-      <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
-        <div class="grid grid-cols-12 gap-6">
-          ${sec.columns
-            .map(
-              (col) => `
-          <div class="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
-            ${col.widgets
-              .map(
-                (w) => `
-            <div class="mb-4">
-              <p class="text-xs text-slate-600">${w.content}</p>
-            </div>`
-              )
-              .join('\n')}
-          </div>`
-            )
-            .join('\n')}
-        </div>
-      </div>
-    </section>`
-      )
-      .join('\n')}
+    ${pageSchema.sections.map((sec) => renderHtmlSection(sec, 0)).join('\n')}
   </main>
 </body>
 </html>`;
   };
 
-  const currentCode =
+const currentCode =
     exportFormat === 'react'
       ? generateReactCode()
       : exportFormat === 'html'

@@ -293,24 +293,84 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setSelectedWidgetId(wId);
   };
 
-  // Find currently selected items
-  const currentSection = pageSchema.sections.find(s => s.id === selectedSectionId) || null;
+  // ============ Helpers بازگشتی — سکشن‌های تودرتو (بلوک و زیربلوک) ============
+
+  /** جستجوی بازگشتی یک سکشن در کل درخت (سطح اصلی یا زیربلوک‌های داخل ستون‌ها) */
+  const findSectionRecursive = (sections: SectionInstance[], id: string): SectionInstance | null => {
+    for (const s of sections) {
+      if (s.id === id) return s;
+      for (const col of s.columns) {
+        const found = findSectionRecursive(col.subSections || [], id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  /** اعمال تابع روی همهٔ سکشن‌های درخت (بازگشتی) — ستون‌ها و زیربلوک‌ها حفظ می‌شوند */
+  const mapSectionsRecursive = (
+    sections: SectionInstance[],
+    fn: (sec: SectionInstance) => SectionInstance
+  ): SectionInstance[] =>
+    sections.map((sec) => {
+      const mapped = fn(sec);
+      return {
+        ...mapped,
+        columns: (mapped.columns || []).map((col) => ({
+          ...col,
+          subSections: col.subSections ? mapSectionsRecursive(col.subSections, fn) : undefined
+        }))
+      };
+    });
+
+  /** حذف یک سکشن از هر جای درخت (سطح اصلی یا زیربلوک) */
+  const removeSectionRecursive = (sections: SectionInstance[], id: string): SectionInstance[] =>
+    sections
+      .filter((s) => s.id !== id)
+      .map((s) => ({
+        ...s,
+        columns: (s.columns || []).map((col) => ({
+          ...col,
+          subSections: col.subSections ? removeSectionRecursive(col.subSections, id) : undefined
+        }))
+      }));
+
+  /** آیا سکشن sec حاوی سکشن id در زیردرخت خود است؟ (برای جابه‌جایی بلوک) */
+  const containsSection = (sec: SectionInstance, id: string): boolean =>
+    sec.id === id ||
+    sec.columns.some((col) => (col.subSections || []).some((sub) => containsSection(sub, id)));
+
+  /** آیا ستون colId در زیردرخت سکشن sec قرار دارد؟ (جلوگیری از تودرتویی خودارجاع) */
+  const isColumnInSection = (sec: SectionInstance, colId: string): boolean =>
+    sec.columns.some(
+      (col) => col.id === colId || (col.subSections || []).some((sub) => isColumnInSection(sub, colId))
+    );
+
+  // Find currently selected items (بازگشتی — ویجت/ستون ممکن است داخل زیربلوک باشد)
+  let currentSection: SectionInstance | null = selectedSectionId
+    ? findSectionRecursive(pageSchema.sections, selectedSectionId)
+    : null;
   let currentColumn: ColumnInstance | null = null;
   let currentWidget: WidgetInstance | null = null;
 
-  if (currentSection) {
-    for (const col of currentSection.columns) {
-      if (col.id === selectedColumnId) {
-        currentColumn = col;
-      }
-      const w = col.widgets.find(item => item.id === selectedWidgetId);
-      if (w) {
-        currentWidget = w;
-        currentColumn = col;
-        break;
+  const findSelection = (sections: SectionInstance[]): boolean => {
+    for (const sec of sections) {
+      if (sec.id === selectedSectionId) currentSection = sec;
+      for (const col of sec.columns) {
+        if (col.id === selectedColumnId) currentColumn = col;
+        const w = col.widgets.find((item) => item.id === selectedWidgetId);
+        if (w) {
+          currentWidget = w;
+          currentColumn = col;
+          if (!currentSection) currentSection = sec;
+          return true;
+        }
+        if (col.subSections && findSelection(col.subSections)) return true;
       }
     }
-  }
+    return !!currentWidget;
+  };
+  findSelection(pageSchema.sections);
 
   // Adding new Section
   /** عرض‌های واکنش‌گرای پیش‌فرض برای یک ستون — موبایل تک‌ستونه (تمام‌عرض) */
@@ -558,7 +618,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       case '8-4': targetWidths = [8, 4]; break;
     }
 
-    const updatedSections = pageSchema.sections.map(sec => {
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => {
       if (sec.id !== secId) return sec;
 
       const currentCols = sec.columns;
@@ -607,9 +667,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     pushState({ ...pageSchema, sections: updatedSections });
   };
 
-  // Update single column width for a specific breakpoint (responsive layout)
+  // Update single column width for a specific breakpoint (responsive layout — بازگشتی)
   const handleUpdateColumnWidth = (secId: string, colId: string, bp: Breakpoint, value: number) => {
-    const updatedSections = pageSchema.sections.map(sec => {
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => {
       if (sec.id !== secId) return sec;
       return {
         ...sec,
@@ -678,7 +738,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       }
     };
 
-    const updatedSections = pageSchema.sections.map(sec => ({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         if (col.id === colId) {
@@ -699,9 +759,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setSelectedWidgetId(newWidgetId);
   };
 
-  // Updating Widget
+  // Updating Widget (بازگشتی — ویجت داخل زیربلوک هم پشتیبانی می‌شود)
   const handleUpdateWidget = (updatedWidget: WidgetInstance) => {
-    const updatedSections = pageSchema.sections.map(sec => ({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => ({
         ...col,
@@ -715,18 +775,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     });
   };
 
-  // Updating Section
+  // Updating Section (بازگشتی — زیربلوک‌ها هم پشتیبانی می‌شوند)
   const handleUpdateSection = (updatedSection: SectionInstance) => {
-    const updatedSections = pageSchema.sections.map(sec => (sec.id === updatedSection.id ? updatedSection : sec));
-    setPageSchema({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec =>
+      sec.id === updatedSection.id ? updatedSection : sec
+    );
+    pushState({
       ...pageSchema,
       sections: updatedSections
     });
   };
 
-  // Deleting Section
+  // Deleting Section (از هر جای درخت)
   const handleDeleteSection = (secId: string) => {
-    const updatedSections = pageSchema.sections.filter(s => s.id !== secId);
+    const updatedSections = removeSectionRecursive(pageSchema.sections, secId);
     pushState({
       ...pageSchema,
       sections: updatedSections
@@ -739,9 +801,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
-  // Deleting Widget
+  // Deleting Widget (بازگشتی)
   const handleDeleteWidget = (wId: string) => {
-    const updatedSections = pageSchema.sections.map(sec => ({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => ({
         ...col,
@@ -759,9 +821,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
-  // Moving Widget Up / Down inside column
+  // Moving Widget Up / Down inside column (بازگشتی)
   const handleMoveWidget = (wId: string, direction: 'up' | 'down') => {
-    const updatedSections = pageSchema.sections.map(sec => ({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         const index = col.widgets.findIndex(w => w.id === wId);
@@ -786,7 +848,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     });
   };
 
-  // Duplicate widget
+  // Duplicate widget (بازگشتی)
   const handleDuplicateWidget = (widget: WidgetInstance) => {
     const duplicated: WidgetInstance = {
       ...widget,
@@ -794,7 +856,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       title: `${widget.title} (کپی)`
     };
 
-    const updatedSections = pageSchema.sections.map(sec => ({
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         if (col.widgets.some(w => w.id === widget.id)) {
@@ -878,12 +940,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   /** ذخیره و انتشار (وضعیت published) */
   const handleSavePublish = () => savePageWithStatus('published');
 
-  // Move widget to a target column (cross-section Drag & Drop)
+  // Move widget to a target column (cross-section Drag & Drop — بازگشتی)
   const handleMoveWidgetToColumn = (widgetId: string, targetColumnId: string) => {
     let widgetToMove: WidgetInstance | null = null;
 
-    // Remove widget from its source column (first pass)
-    const removedSections = pageSchema.sections.map(sec => ({
+    // Remove widget from its source column (first pass — هر جای درخت)
+    const removedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         const idx = col.widgets.findIndex(w => w.id === widgetId);
@@ -899,8 +961,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     if (!widgetToMove) return;
 
-    // Append widget to the target column (second pass)
-    const finalSections = removedSections.map(sec => ({
+    // Append widget to the target column (second pass — بازگشتی)
+    const finalSections = mapSectionsRecursive(removedSections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
         if (col.id === targetColumnId) {
@@ -912,6 +974,149 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     pushState({ ...pageSchema, sections: finalSections });
     setSelectedWidgetId(widgetId);
+  };
+
+  // ============ جابه‌جایی سکشن (بلوک و زیربلوک) با کشیدن و رها کردن ============
+
+  /**
+   * انتقال یک سکشن به داخل ستون هدف (تبدیل به زیربلوک)
+   * — جلوگیری از تودرتویی خودارجاع (سکشن داخل خودش)
+   */
+  const handleMoveSectionToColumn = (sectionId: string, targetColumnId: string) => {
+    const sec = findSectionRecursive(pageSchema.sections, sectionId);
+    if (!sec) return;
+    if (isColumnInSection(sec, targetColumnId)) return; // داخل خودش — ممنوع
+
+    const removedSections = removeSectionRecursive(pageSchema.sections, sectionId);
+    const clone = JSON.parse(JSON.stringify(sec)) as SectionInstance;
+
+    const finalSections = mapSectionsRecursive(removedSections, s => ({
+      ...s,
+      columns: s.columns.map(col =>
+        col.id === targetColumnId
+          ? { ...col, subSections: [...(col.subSections || []), clone] }
+          : col
+      )
+    }));
+
+    pushState({ ...pageSchema, sections: finalSections });
+    setSelectedSectionId(sectionId);
+    setSelectedColumnId(null);
+    setSelectedWidgetId(null);
+  };
+
+  /**
+   * انتقال سکشن به سطح اصلی در ایندکس مشخص
+   * — برای رها کردن روی خط‌جداکننده و دکمهٔ «خروج از بلوک»
+   */
+  const handleMoveSectionToTop = (sectionId: string, index?: number) => {
+    const sec = findSectionRecursive(pageSchema.sections, sectionId);
+    if (!sec) return;
+
+    const removedSections = removeSectionRecursive(pageSchema.sections, sectionId);
+    const clone = JSON.parse(JSON.stringify(sec)) as SectionInstance;
+
+    const sectionsCopy = [...removedSections];
+    const pos = index !== undefined ? Math.min(index, sectionsCopy.length) : sectionsCopy.length;
+    sectionsCopy.splice(pos, 0, clone);
+
+    pushState({ ...pageSchema, sections: sectionsCopy });
+    setSelectedSectionId(sectionId);
+    setSelectedColumnId(null);
+    setSelectedWidgetId(null);
+  };
+
+  /** خروج از بلوک: انتقال سکشن تودرتو به سطح اصلی، دقیقاً بعد از والد خود */
+  const handleMoveSectionOut = (sectionId: string) => {
+    const sec = findSectionRecursive(pageSchema.sections, sectionId);
+    if (!sec) return;
+
+    // والد سطح اصلی که این سکشن داخل زیردرخت آن است (یا خودش اگر سطح اصلی باشد)
+    const topLevelIdx = pageSchema.sections.findIndex(
+      s => s.id === sectionId || s.columns.some(col => (col.subSections || []).some(sub => containsSection(sub, sectionId)))
+    );
+    if (topLevelIdx === -1) return;
+
+    const removedSections = removeSectionRecursive(pageSchema.sections, sectionId);
+    const clone = JSON.parse(JSON.stringify(sec)) as SectionInstance;
+
+    const sectionsCopy = [...removedSections];
+    sectionsCopy.splice(topLevelIdx + 1, 0, clone);
+
+    pushState({ ...pageSchema, sections: sectionsCopy });
+    setSelectedSectionId(sectionId);
+    setSelectedColumnId(null);
+    setSelectedWidgetId(null);
+  };
+
+  /** جابه‌جایی سکشن بالا/پایین درون والد خود (سطح اصلی یا زیربلوک‌های یک ستون) */
+  const handleMoveSection = (sectionId: string, direction: 'up' | 'down') => {
+    // ابتدا سطح اصلی
+    const topIdx = pageSchema.sections.findIndex(s => s.id === sectionId);
+    if (topIdx !== -1) {
+      const target = direction === 'up' ? topIdx - 1 : topIdx + 1;
+      if (target >= 0 && target < pageSchema.sections.length) {
+        const copy = [...pageSchema.sections];
+        const t = copy[topIdx];
+        copy[topIdx] = copy[target];
+        copy[target] = t;
+        pushState({ ...pageSchema, sections: copy });
+      }
+      return;
+    }
+
+    // سپس زیربلوک‌ها (بازگشتی)
+    let moved = false;
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => {
+      if (moved) return sec;
+      const newCols = sec.columns.map(col => {
+        if (moved || !col.subSections) return col;
+        const idx = col.subSections.findIndex(s => s.id === sectionId);
+        if (idx === -1) return col;
+        const target = direction === 'up' ? idx - 1 : idx + 1;
+        if (target < 0 || target >= col.subSections.length) return col;
+        const copy = [...col.subSections];
+        const t = copy[idx];
+        copy[idx] = copy[target];
+        copy[target] = t;
+        moved = true;
+        return { ...col, subSections: copy };
+      });
+      return { ...sec, columns: newCols };
+    });
+
+    if (moved) pushState({ ...pageSchema, sections: updatedSections });
+  };
+
+  /** افزودن زیربلوک جدید به داخل یک ستون */
+  const handleAddSubSection = (columnId: string) => {
+    const newSecId = `sub-section-${Date.now()}`;
+    const newColId = `col-${Date.now()}-1`;
+    const newSub: SectionInstance = {
+      id: newSecId,
+      name: 'زیربلوک جدید',
+      layout: 'boxed',
+      backgroundColor: '#ffffff',
+      paddingTop: 24,
+      paddingBottom: 24,
+      columns: [{ id: newColId, width: 12, widths: withWidths(12), widgets: [] }],
+      visibility: { desktop: true, tablet: true, mobile: true },
+      conditionalDisplay: { enabled: false, userRole: 'all' }
+    };
+
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
+      ...sec,
+      columns: sec.columns.map(col =>
+        col.id === columnId
+          ? { ...col, subSections: [...(col.subSections || []), newSub] }
+          : col
+      )
+    }));
+
+    pushState({ ...pageSchema, sections: updatedSections });
+    setSelectedSectionId(newSecId);
+    setSelectedColumnId(newColId);
+    setSelectedWidgetId(null);
   };
 
   return (
@@ -1199,6 +1404,11 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDeleteWidget={handleDeleteWidget}
           onMoveWidget={handleMoveWidget}
           onMoveWidgetToColumn={handleMoveWidgetToColumn}
+          onMoveSectionToColumn={handleMoveSectionToColumn}
+          onMoveSectionToTop={handleMoveSectionToTop}
+          onMoveSectionOut={handleMoveSectionOut}
+          onMoveSection={handleMoveSection}
+          onAddSubSection={handleAddSubSection}
         />
 
         {/* Left Panel: Property Inspector & Binding Panel */}

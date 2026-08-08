@@ -1136,27 +1136,28 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'image': {
       const frame = style.imageFrame;
-      const framed = frame === 'square' || frame === 'circle';
+      const squaredFrame = frame === 'square' || frame === 'circle';
+      // شعاع گوشه فقط روی خود تصویر اعمال شود، نه روی بلوک/قالب دور آن
+      const { borderRadius: _containerRadius, ...imgWrapperStyle } = containerStyle;
       return (
         <div
-          style={containerStyle}
+          style={imgWrapperStyle}
           className={`overflow-hidden transition-all ${
-            frame === 'circle'
-              ? 'aspect-square rounded-full'
-              : frame === 'square'
-                ? 'aspect-square'
-                : ''
+            squaredFrame ? 'aspect-square' : ''
           }`}
         >
           <img
             src={widget.imageUrl || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
             alt={widget.title}
             className={`transition-transform duration-300 hover:scale-[1.02] ${
-              framed ? 'w-full h-full' : 'w-full h-auto'
+              squaredFrame ? 'w-full h-full' : 'w-full h-auto'
             }`}
             style={{
               objectFit: style.objectFit || 'cover',
-              borderRadius: frame === 'circle' ? '9999px' : resolveBorderRadius(style)
+              borderRadius:
+                frame === 'circle'
+                  ? '9999px'
+                  : resolveBorderRadius(style) || (frame === 'rounded' ? '16px' : undefined)
             }}
           />
         </div>

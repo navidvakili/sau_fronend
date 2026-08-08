@@ -20,7 +20,8 @@ import {
   Grid,
   EyeOff,
   Pencil,
-  GripVertical
+  GripVertical,
+  CornerUpLeft
 } from 'lucide-react';
 
 interface CanvasProps {
@@ -40,7 +41,16 @@ interface CanvasProps {
   onDeleteWidget: (widgetId: string) => void;
   onMoveWidget: (widgetId: string, direction: 'up' | 'down') => void;
   onMoveWidgetToColumn?: (widgetId: string, targetColumnId: string) => void;
+  // جابه‌جایی سکشن (بلوک/زیربلوک)
+  onMoveSectionToColumn?: (sectionId: string, targetColumnId: string) => void;
+  onMoveSectionToTop?: (sectionId: string, index?: number) => void;
+  onMoveSectionOut?: (sectionId: string) => void;
+  onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
+  onAddSubSection?: (columnId: string) => void;
 }
+
+/** حداکثر عمق تودرتو برای جلوگیری از رندر بینهایت */
+const MAX_DEPTH = 6;
 
 export const Canvas: React.FC<CanvasProps> = ({
   pageSchema,
@@ -58,10 +68,17 @@ export const Canvas: React.FC<CanvasProps> = ({
   onDeleteSection,
   onDeleteWidget,
   onMoveWidget,
-  onMoveWidgetToColumn
+  onMoveWidgetToColumn,
+  onMoveSectionToColumn,
+  onMoveSectionToTop,
+  onMoveSectionOut,
+  onMoveSection,
+  onAddSubSection
 }) => {
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
   const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
+  // سکشن (بلوک/زیربلوک) در حال کشیدن
+  const [dragSectionId, setDragSectionId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   // Divider (بین سکشن‌ها) که هم‌اکنون نشانهٔ رهاسازی روی آن است — مقدار: 'before' یا 'after:<secId>'
   const [dragOverDividerId, setDragOverDividerId] = useState<string | null>(null);
@@ -100,6 +117,406 @@ export const Canvas: React.FC<CanvasProps> = ({
     return layers.length ? layers.join(', ') : undefined;
   };
 
+  /**
+   * رندر بازگشتی یک سکشن (بلوک) — زیربلوک‌ها داخل ستون‌ها به‌صورت بازگشتی رندر می‌شوند
+   * depth=0 یعنی بلوک سطح اصلی؛ depth>0 یعنی زیربلوک داخل ستون یک بلوک دیگر
+   */
+  const renderSectionBlock = (sec: SectionInstance, depth: number, secIdx: number, isTopLevel: boolean) => {
+    const isSecSelected = selectedSectionId === sec.id;
+    return (
+      <div
+        id={sec.bookmark || sec.id}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectSection(sec.id);
+        }}
+        onDragOver={(e) => {
+          // رهاسازی روی هر نقطهٔ سکشن (حتی حاشیه/پدینگ) — ستون زیر نشانگر، وگرنه اولین ستون
+          if (dragWidgetId || dragSectionId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setDragOverColumnId(resolveColumnIdAt(e) ?? sec.columns[0]?.id ?? null);
+            setDragOverDividerId(null);
+          }
+        }}
+        onDragLeave={(e) => {
+          const related = e.relatedTarget as Node | null;
+          if (dragOverColumnId && (!related || !e.currentTarget.contains(related))) {
+            setDragOverColumnId(null);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverColumnId(null);
+          setDragOverDividerId(null);
+          if (dragSectionId) {
+            const colId = resolveColumnIdAt(e) ?? sec.columns[0]?.id;
+            if (colId) {
+              onMoveSectionToColumn?.(dragSectionId, colId);
+            }
+          } else if (dragWidgetId) {
+            const colId = resolveColumnIdAt(e) ?? sec.columns[0]?.id;
+            if (colId) {
+              onMoveWidgetToColumn?.(dragWidgetId, colId);
+            }
+          }
+          setDragWidgetId(null);
+          setDragSectionId(null);
+        }}
+        style={{
+          // موقعیت و لایهٔ سکشن (fixed/sticky/relative + z-index)
+          position: sec.position || undefined,
+          zIndex: sec.zIndex || undefined,
+          // برای fixed/sticky معمولاً چسبیدن به بالای صفحه کافی است
+          top: sec.position === 'fixed' || sec.position === 'sticky' ? 0 : undefined,
+          backgroundColor:
+            sec.backgroundImage || sec.backgroundGradient
+              ? undefined
+              : sec.backgroundColor
+                ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                : undefined,
+          backgroundImage: buildSectionBackgroundImage(sec),
+          // وقتی تصویر پس‌زمینه هست، پیش‌فرض cover/center/no-repeat — نه auto (وگرنه تصویر با اندازهٔ طبیعی کوچک دیده می‌شود)
+          backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
+          backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
+          backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
+          paddingTop: `${sec.paddingTop}px`,
+          paddingBottom: `${sec.paddingBottom}px`,
+          // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
+          borderRadius: sec.borderRadius
+            ? [
+                sec.borderRadius.topLeft,
+                sec.borderRadius.topRight,
+                sec.borderRadius.bottomRight,
+                sec.borderRadius.bottomLeft
+              ]
+                .map((v) => (v ? `${v}px` : '0px'))
+                .join(' ')
+            : undefined
+        }}
+        className={`relative group transition-all border-2 ${
+          isSecSelected
+            ? 'border-teal-500 shadow-lg'
+            : depth > 0
+              ? 'border-teal-500/25 hover:border-teal-500/50'
+              : 'border-transparent hover:border-teal-500/40'
+        }`}
+      >
+        {/* Section Label & Quick Toolbar on Hover/Select */}
+        <div
+          className={`absolute top-2 right-4 z-20 flex items-center gap-1.5 transition-opacity ${
+            isSecSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {/* نوار نام بلوک — با کشیدن این نوار، کل بلوک جابه‌جا می‌شود */}
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              setDragSectionId(sec.id);
+              setDragWidgetId(null);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', `section:${sec.id}`);
+            }}
+            onDragEnd={() => {
+              setDragSectionId(null);
+              setDragOverColumnId(null);
+              setDragOverDividerId(null);
+            }}
+            title="برای جابه‌جایی بلوک بکشید — رها کردن روی یک ستون، آن را به زیربلوک آن ستون تبدیل می‌کند"
+            className="px-2.5 py-1 rounded-lg bg-teal-600 text-white text-[10px] font-black shadow-md flex items-center gap-1 cursor-grab hover:bg-teal-700 select-none"
+          >
+            <GripVertical className="w-3 h-3" />
+            {sec.name}
+            {depth > 0 && <span className="opacity-80 text-[9px]">(زیربلوک)</span>}
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveSection?.(sec.id, 'up');
+            }}
+            className="p-1 rounded-lg bg-slate-700 text-white hover:bg-slate-600 shadow-md cursor-pointer"
+            title="انتقال بلوک به بالا"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveSection?.(sec.id, 'down');
+            }}
+            className="p-1 rounded-lg bg-slate-700 text-white hover:bg-slate-600 shadow-md cursor-pointer"
+            title="انتقال بلوک به پایین"
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          {depth > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveSectionOut?.(sec.id);
+              }}
+              className="p-1 rounded-lg bg-violet-600 text-white hover:bg-violet-700 shadow-md cursor-pointer"
+              title="خروج از بلوک (انتقال به سطح اصلی، بعد از بلوک والد)"
+            >
+              <CornerUpLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectSection(sec.id);
+            }}
+            className="p-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-md cursor-pointer"
+            title="ویرایش مشخصات سکشن در پنل تنظیمات"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteSection(sec.id);
+            }}
+            className="p-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer"
+            title="حذف سکشن"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Section Content Container (Boxed or Full Width) */}
+        <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
+          <div className="grid grid-cols-12 gap-4 md:gap-6">
+            {sec.columns.map((col) => {
+              const isColSelected = selectedColumnId === col.id;
+              const hasSubSections = col.subSections && col.subSections.length > 0;
+              return (
+                <div
+                  key={col.id}
+                  data-col-id={col.id}
+                  style={{
+                    gridColumn: `span ${getColumnWidth(col, activeBreakpoint)} / span ${getColumnWidth(col, activeBreakpoint)}`
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectSection(sec.id);
+                    onSelectColumn(col.id);
+                  }}
+                  onDragOver={(e) => {
+                    // Allow drop on any column — highlight while dragging over (ویجت یا بلوک)
+                    if (dragWidgetId || dragSectionId) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDragOverColumnId(col.id);
+                      setDragOverDividerId(null);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverColumnId === col.id) {
+                      setDragOverColumnId(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverColumnId(null);
+                    setDragOverDividerId(null);
+                    if (dragSectionId) {
+                      // رها کردن یک بلوک روی ستون → تبدیل به زیربلوک
+                      onMoveSectionToColumn?.(dragSectionId, col.id);
+                    } else if (dragWidgetId) {
+                      // Move the widget to this column (cross-section DnD)
+                      onMoveWidgetToColumn?.(dragWidgetId, col.id);
+                    }
+                    setDragWidgetId(null);
+                    setDragSectionId(null);
+                  }}
+                  className={`min-h-[100px] p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
+                    isColSelected
+                      ? 'border-indigo-500 bg-indigo-500/5'
+                      : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'
+                  } ${
+                    dragOverColumnId === col.id
+                      ? 'border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/30'
+                      : ''
+                  }`}
+                >
+                  {/* Widgets + زیربلوک‌ها inside column */}
+                  <div className="space-y-4">
+                    {col.widgets.length === 0 && !hasSubSections ? (
+                      <div className="p-6 text-center border-2 border-dashed border-gray-200 dark:border-slate-800/80 rounded-xl text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                        <span>ستون خالی است — بلوک یا کامپوننت را اینجا رها کنید</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenComponentPicker) {
+                              onOpenComponentPicker(undefined, col.id);
+                            } else {
+                              onAddWidget('heading', col.id);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-500 hover:text-white text-slate-600 dark:text-slate-300 font-bold transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>افزودن کامپوننت</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {col.widgets.map((widget, wIdx) => {
+                          const isWidgetSel = selectedWidgetId === widget.id;
+                          return (
+                            <div
+                              key={widget.id}
+                              draggable
+                              onDragStart={(e) => {
+                                setDragWidgetId(widget.id);
+                                setDragSectionId(null);
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', widget.id);
+                              }}
+                              onDragEnd={() => {
+                                setDragWidgetId(null);
+                                setDragOverColumnId(null);
+                                setDragOverDividerId(null);
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectSection(sec.id);
+                                onSelectColumn(col.id);
+                                onSelectWidget(widget.id);
+                              }}
+                              className={`relative group/widget rounded-xl transition-all border-2 ${
+                                isWidgetSel
+                                  ? 'border-amber-500 ring-2 ring-amber-500/20'
+                                  : 'border-transparent hover:border-amber-400/50'
+                              } ${
+                                dragWidgetId === widget.id
+                                  ? 'opacity-40 cursor-grabbing'
+                                  : 'cursor-grab'
+                              }`}
+                            >
+                              {/* Drag handle indicator on hover */}
+                              <div
+                                className={`absolute top-2 right-2 z-30 p-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md transition-opacity ${
+                                  isWidgetSel
+                                    ? 'opacity-100'
+                                    : 'opacity-0 group-hover/widget:opacity-100'
+                                }`}
+                              >
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </div>
+
+                              {/* Widget Hover Action Bar */}
+                              <div
+                                className={`absolute top-2 left-2 z-30 flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl text-white text-xs border border-slate-700 backdrop-blur-md transition-opacity ${
+                                  isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
+                                }`}
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectSection(sec.id);
+                                    onSelectColumn(col.id);
+                                    onSelectWidget(widget.id);
+                                  }}
+                                  className="p-1 hover:text-amber-400 cursor-pointer"
+                                  title="ویرایش مشخصات ویجت در پنل تنظیمات"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onMoveWidget(widget.id, 'up');
+                                  }}
+                                  disabled={wIdx === 0}
+                                  className="p-1 hover:text-amber-400 disabled:opacity-30 cursor-pointer"
+                                  title="انتقال به بالا"
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onMoveWidget(widget.id, 'down');
+                                  }}
+                                  disabled={wIdx === col.widgets.length - 1}
+                                  className="p-1 hover:text-amber-400 disabled:opacity-30 cursor-pointer"
+                                  title="انتقال به پایین"
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteWidget(widget.id);
+                                  }}
+                                  className="p-1 hover:text-rose-400 cursor-pointer"
+                                  title="حذف ویجت"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Render Widget */}
+                              <WidgetRenderer
+                                widget={widget}
+                                currentUserRole={currentUserRole}
+                                isEditorPreview={true}
+                              />
+                            </div>
+                          );
+                        })}
+
+                        {/* زیربلوک‌های این ستون — رندر بازگشتی */}
+                        {depth + 1 < MAX_DEPTH && hasSubSections && (
+                          <div className="space-y-3 pt-1">
+                            {col.subSections!.map((sub, subIdx) => renderSectionBlock(sub, depth + 1, subIdx, false))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Column Add Widget / Add Sub-Block Trigger Button at bottom */}
+                  <div className="pt-2 flex flex-col items-center gap-1.5 opacity-0 group-hover/col:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenComponentPicker) {
+                          onOpenComponentPicker(undefined, col.id);
+                        } else {
+                          onAddWidget('heading', col.id);
+                        }
+                      }}
+                      className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm cursor-pointer hover:bg-indigo-700"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>افزودن کامپوننت به این ستون</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddSubSection?.(col.id);
+                      }}
+                      className="px-3 py-1 rounded-lg bg-teal-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm cursor-pointer hover:bg-teal-700"
+                      title="ایجاد بلوک زیرمجموعه (زیربلوک) داخل این ستون"
+                    >
+                      <Layers className="w-3 h-3" />
+                      <span>افزودن زیربلوک به این ستون</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Breakpoint container width calculator
   const getCanvasWidthClass = () => {
     switch (activeBreakpoint) {
@@ -119,7 +536,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all"
       onDragOver={(e) => {
         // رهاسازی روی فضای خالی بوم (خارج از سکشن‌ها) مجاز باشد
-        if (dragWidgetId) {
+        if (dragWidgetId || dragSectionId) {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
         }
@@ -128,7 +545,10 @@ export const Canvas: React.FC<CanvasProps> = ({
         e.preventDefault();
         setDragOverColumnId(null);
         setDragOverDividerId(null);
-        if (dragWidgetId) {
+        if (dragSectionId) {
+          // رها کردن بلوک روی فضای خالی بوم → انتقال به انتهای صفحه
+          onMoveSectionToTop?.(dragSectionId, pageSchema.sections.length);
+        } else if (dragWidgetId) {
           const last = pageSchema.sections[pageSchema.sections.length - 1];
           const targetColId = last ? last.columns[last.columns.length - 1]?.id : undefined;
           if (targetColId) {
@@ -136,6 +556,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           }
         }
         setDragWidgetId(null);
+        setDragSectionId(null);
       }}
     >
       {/* Canvas Frame Container — shrink-0 keeps natural height so the overflow-auto canvas scrolls (x & y) when sections exceed viewport */}
@@ -146,7 +567,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           color: globalStyles.textColor
         }}
         onDragOver={(e) => {
-          if (dragWidgetId) {
+          if (dragWidgetId || dragSectionId) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
           }
@@ -156,7 +577,10 @@ export const Canvas: React.FC<CanvasProps> = ({
           e.stopPropagation();
           setDragOverColumnId(null);
           setDragOverDividerId(null);
-          if (dragWidgetId) {
+          if (dragSectionId) {
+            // رها کردن بلوک روی قاب بوم → انتقال به انتهای صفحه
+            onMoveSectionToTop?.(dragSectionId, pageSchema.sections.length);
+          } else if (dragWidgetId) {
             const last = pageSchema.sections[pageSchema.sections.length - 1];
             const targetColId = last ? last.columns[last.columns.length - 1]?.id : undefined;
             if (targetColId) {
@@ -164,6 +588,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             }
           }
           setDragWidgetId(null);
+          setDragSectionId(null);
         }}
       >
         {pageSchema.sections.length === 0 ? (
@@ -193,7 +618,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                   : ''
               }`}
               onDragOver={(e) => {
-                if (dragWidgetId) {
+                if (dragWidgetId || dragSectionId) {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'move';
                   setDragOverDividerId('before');
@@ -211,7 +636,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                 e.stopPropagation();
                 setDragOverColumnId(null);
                 setDragOverDividerId(null);
-                if (dragWidgetId) {
+                if (dragSectionId) {
+                  // رها کردن بلوک روی خط‌جداکننده ابتدا → انتقال به ابتدای صفحه
+                  onMoveSectionToTop?.(dragSectionId, 0);
+                } else if (dragWidgetId) {
                   const first = pageSchema.sections[0];
                   const targetColId = first ? first.columns[0]?.id : undefined;
                   if (targetColId) {
@@ -219,6 +647,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                   }
                 }
                 setDragWidgetId(null);
+                setDragSectionId(null);
               }}
             >
               <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -241,8 +670,6 @@ export const Canvas: React.FC<CanvasProps> = ({
               </button>
             </div>
             {pageSchema.sections.map((sec, secIdx) => {
-              const isSecSelected = selectedSectionId === sec.id;
-
               // Check section visibility for active breakpoint
               if (!sec.visibility[activeBreakpoint]) {
                 return (
@@ -266,7 +693,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                           : ''
                       }`}
                       onDragOver={(e) => {
-                        if (dragWidgetId) {
+                        if (dragWidgetId || dragSectionId) {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
                           setDragOverDividerId('after:' + sec.id);
@@ -287,7 +714,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                         e.stopPropagation();
                         setDragOverColumnId(null);
                         setDragOverDividerId(null);
-                        if (dragWidgetId) {
+                        if (dragSectionId) {
+                          // رها کردن بلوک روی خط‌جداکننده → انتقال به سطح اصلی در این مکان
+                          onMoveSectionToTop?.(dragSectionId, secIdx + 1);
+                        } else if (dragWidgetId) {
                           const next = pageSchema.sections[secIdx + 1];
                           const targetColId = next
                             ? next.columns[0]?.id
@@ -297,6 +727,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                           }
                         }
                         setDragWidgetId(null);
+                        setDragSectionId(null);
                       }}
                     >
                       <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -324,305 +755,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
               return (
                 <React.Fragment key={sec.id}>
-                  <div
-                    id={sec.bookmark || sec.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectSection(sec.id);
-                    }}
-                    onDragOver={(e) => {
-                      // رهاسازی روی هر نقطهٔ سکشن (حتی حاشیه/پدینگ) — ستون زیر نشانگر، وگرنه اولین ستون
-                      if (dragWidgetId) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDragOverColumnId(resolveColumnIdAt(e) ?? sec.columns[0]?.id ?? null);
-                        setDragOverDividerId(null);
-                      }
-                    }}
-                    onDragLeave={(e) => {
-                      const related = e.relatedTarget as Node | null;
-                      if (dragOverColumnId && (!related || !e.currentTarget.contains(related))) {
-                        setDragOverColumnId(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDragOverColumnId(null);
-                      setDragOverDividerId(null);
-                      if (dragWidgetId) {
-                        const colId = resolveColumnIdAt(e) ?? sec.columns[0]?.id;
-                        if (colId) {
-                          onMoveWidgetToColumn?.(dragWidgetId, colId);
-                        }
-                      }
-                      setDragWidgetId(null);
-                    }}
-                    style={{
-                      // موقعیت و لایهٔ سکشن (fixed/sticky/relative + z-index)
-                      position: sec.position || undefined,
-                      zIndex: sec.zIndex || undefined,
-                      // برای fixed/sticky معمولاً چسبیدن به بالای صفحه کافی است
-                      top: sec.position === 'fixed' || sec.position === 'sticky' ? 0 : undefined,
-                      backgroundColor:
-                        sec.backgroundImage || sec.backgroundGradient
-                          ? undefined
-                          : sec.backgroundColor
-                            ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
-                            : undefined,
-                      backgroundImage: buildSectionBackgroundImage(sec),
-                      // وقتی تصویر پس‌زمینه هست، پیش‌فرض cover/center/no-repeat — نه auto (وگرنه تصویر با اندازهٔ طبیعی کوچک دیده می‌شود)
-                      backgroundPosition: sec.backgroundImage
-                        ? sec.backgroundPosition || 'center'
-                        : undefined,
-                      backgroundSize: sec.backgroundImage
-                        ? sec.backgroundSize || 'cover'
-                        : undefined,
-                      backgroundRepeat: sec.backgroundImage
-                        ? sec.backgroundRepeat || 'no-repeat'
-                        : undefined,
-                      paddingTop: `${sec.paddingTop}px`,
-                      paddingBottom: `${sec.paddingBottom}px`,
-                      // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
-                      borderRadius: sec.borderRadius
-                        ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
-                            .map((v) => (v ? `${v}px` : '0px'))
-                            .join(' ')
-                        : undefined
-                    }}
-                    className={`relative group transition-all border-2 ${
-                      isSecSelected
-                        ? 'border-teal-500 shadow-lg'
-                        : 'border-transparent hover:border-teal-500/40'
-                    }`}
-                  >
-                    {/* Section Label & Quick Toolbar on Hover/Select */}
-                    <div className={`absolute top-2 right-4 z-20 flex items-center gap-2 transition-opacity ${
-                      isSecSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}>
-                      <span className="px-2.5 py-1 rounded-lg bg-teal-600 text-white text-[10px] font-black shadow-md flex items-center gap-1">
-                        <Layers className="w-3 h-3" />
-                        {sec.name}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectSection(sec.id);
-                        }}
-                        className="p-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-md cursor-pointer"
-                        title="ویرایش مشخصات سکشن در پنل تنظیمات"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteSection(sec.id);
-                        }}
-                        className="p-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer"
-                        title="حذف سکشن"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Section Content Container (Boxed or Full Width) */}
-                    <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
-                      <div className="grid grid-cols-12 gap-4 md:gap-6">
-                        {sec.columns.map((col) => {
-                          const isColSelected = selectedColumnId === col.id;
-                          return (
-                            <div
-                              key={col.id}
-                              data-col-id={col.id}
-                              style={{
-                                gridColumn: `span ${getColumnWidth(col, activeBreakpoint)} / span ${getColumnWidth(col, activeBreakpoint)}`
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectSection(sec.id);
-                                onSelectColumn(col.id);
-                              }}
-                              onDragOver={(e) => {
-                                // Allow drop on any column — highlight while dragging over
-                                if (dragWidgetId) {
-                                  e.preventDefault();
-                                  e.dataTransfer.dropEffect = 'move';
-                                  setDragOverColumnId(col.id);
-                                  setDragOverDividerId(null);
-                                }
-                              }}
-                              onDragLeave={() => {
-                                if (dragOverColumnId === col.id) {
-                                  setDragOverColumnId(null);
-                                }
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setDragOverColumnId(null);
-                                setDragOverDividerId(null);
-                                if (dragWidgetId) {
-                                  // Move the widget to this column (cross-section DnD)
-                                  onMoveWidgetToColumn?.(dragWidgetId, col.id);
-                                }
-                                setDragWidgetId(null);
-                              }}
-                              className={`min-h-[100px] p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
-                                isColSelected
-                                  ? 'border-indigo-500 bg-indigo-500/5'
-                                  : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'
-                              } ${
-                                dragOverColumnId === col.id
-                                  ? 'border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/30'
-                                  : ''
-                              }`}
-                            >
-                              {/* Widgets inside column */}
-                              <div className="space-y-4">
-                                {col.widgets.length === 0 ? (
-                                  <div className="p-6 text-center border-2 border-dashed border-gray-200 dark:border-slate-800/80 rounded-xl text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                                    <span>ستون خالی است</span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onOpenComponentPicker) {
-                                          onOpenComponentPicker(undefined, col.id);
-                                        } else {
-                                          onAddWidget('heading', col.id);
-                                        }
-                                      }}
-                                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-500 hover:text-white text-slate-600 dark:text-slate-300 font-bold transition-all cursor-pointer flex items-center gap-1"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>افزودن کامپوننت</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  col.widgets.map((widget, wIdx) => {
-                                    const isWidgetSel = selectedWidgetId === widget.id;
-                                    return (
-                                      <div
-                                        key={widget.id}
-                                        draggable
-                                        onDragStart={(e) => {
-                                          setDragWidgetId(widget.id);
-                                          e.dataTransfer.effectAllowed = 'move';
-                                          e.dataTransfer.setData('text/plain', widget.id);
-                                        }}
-                                        onDragEnd={() => {
-                                          setDragWidgetId(null);
-                                          setDragOverColumnId(null);
-                                          setDragOverDividerId(null);
-                                        }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onSelectSection(sec.id);
-                                          onSelectColumn(col.id);
-                                          onSelectWidget(widget.id);
-                                        }}
-                                        className={`relative group/widget rounded-xl transition-all border-2 ${
-                                          isWidgetSel
-                                            ? 'border-amber-500 ring-2 ring-amber-500/20'
-                                            : 'border-transparent hover:border-amber-400/50'
-                                        } ${
-                                          dragWidgetId === widget.id
-                                            ? 'opacity-40 cursor-grabbing'
-                                            : 'cursor-grab'
-                                        }`}
-                                      >
-                                        {/* Drag handle indicator on hover */}
-                                        <div className={`absolute top-2 right-2 z-30 p-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md transition-opacity ${
-                                          isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
-                                        }`}>
-                                          <GripVertical className="w-3.5 h-3.5" />
-                                        </div>
-
-                                        {/* Widget Hover Action Bar */}
-                                        <div className={`absolute top-2 left-2 z-30 flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl text-white text-xs border border-slate-700 backdrop-blur-md transition-opacity ${
-                                          isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
-                                        }`}>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              onSelectSection(sec.id);
-                                              onSelectColumn(col.id);
-                                              onSelectWidget(widget.id);
-                                            }}
-                                            className="p-1 hover:text-amber-400 cursor-pointer"
-                                            title="ویرایش مشخصات ویجت در پنل تنظیمات"
-                                          >
-                                            <Pencil className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              onMoveWidget(widget.id, 'up');
-                                            }}
-                                            disabled={wIdx === 0}
-                                            className="p-1 hover:text-amber-400 disabled:opacity-30 cursor-pointer"
-                                            title="انتقال به بالا"
-                                          >
-                                            <ChevronUp className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              onMoveWidget(widget.id, 'down');
-                                            }}
-                                            disabled={wIdx === col.widgets.length - 1}
-                                            className="p-1 hover:text-amber-400 disabled:opacity-30 cursor-pointer"
-                                            title="انتقال به پایین"
-                                          >
-                                            <ChevronDown className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              onDeleteWidget(widget.id);
-                                            }}
-                                            className="p-1 hover:text-rose-400 cursor-pointer"
-                                            title="حذف ویجت"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-
-                                        {/* Render Widget */}
-                                        <WidgetRenderer
-                                          widget={widget}
-                                          currentUserRole={currentUserRole}
-                                          isEditorPreview={true}
-                                        />
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-
-                              {/* Column Add Widget Trigger Button at bottom */}
-                              <div className="pt-2 flex justify-center opacity-0 group-hover/col:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (onOpenComponentPicker) {
-                                      onOpenComponentPicker(undefined, col.id);
-                                    } else {
-                                      onAddWidget('heading', col.id);
-                                    }
-                                  }}
-                                  className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm cursor-pointer hover:bg-indigo-700"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>افزودن کامپوننت به این ستون</span>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                  {renderSectionBlock(sec, 0, secIdx, true)}
 
                   {/* Interactive Add Section Divider between blocks */}
                   <div
@@ -632,7 +765,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                         : ''
                     }`}
                     onDragOver={(e) => {
-                      if (dragWidgetId) {
+                      if (dragWidgetId || dragSectionId) {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
                         setDragOverDividerId('after:' + sec.id);
@@ -653,7 +786,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                       e.stopPropagation();
                       setDragOverColumnId(null);
                       setDragOverDividerId(null);
-                      if (dragWidgetId) {
+                      if (dragSectionId) {
+                        // رها کردن بلوک روی خط‌جداکننده → انتقال به سطح اصلی در این مکان
+                        onMoveSectionToTop?.(dragSectionId, secIdx + 1);
+                      } else if (dragWidgetId) {
                         const next = pageSchema.sections[secIdx + 1];
                         const targetColId = next
                           ? next.columns[0]?.id
@@ -663,6 +799,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                         }
                       }
                       setDragWidgetId(null);
+                      setDragSectionId(null);
                     }}
                   >
                     <div className="absolute inset-0 flex items-center" aria-hidden="true">

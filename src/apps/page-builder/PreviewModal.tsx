@@ -33,6 +33,69 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
   const globalStyles = pageSchema.globalStyles;
 
+  /** رندر بازگشتی سکشن‌ها — سکشن‌های تو در تو (زیربلوک) داخل ستون‌ها هم رندر می‌شوند */
+  const renderSection = (sec: (typeof pageSchema.sections)[number], depth = 0) => {
+    if (depth >= 6) return null;
+    if (!sec.visibility[deviceSize]) return null;
+    const hasSubSections = sec.columns.some((c) => (c.subSections?.length ?? 0) > 0);
+
+    return (
+      <div
+        key={sec.id}
+        id={sec.bookmark || sec.id}
+        style={{
+          position: sec.position || undefined,
+          zIndex: sec.zIndex || undefined,
+          backgroundColor: sec.backgroundColor || undefined,
+          backgroundImage: sec.backgroundImage
+            ? `url("${sec.backgroundImage}")`
+            : sec.backgroundGradient || undefined,
+          backgroundPosition: sec.backgroundPosition || undefined,
+          backgroundSize: sec.backgroundSize || undefined,
+          backgroundRepeat: sec.backgroundRepeat || undefined,
+          paddingTop: `${sec.paddingTop}px`,
+          paddingBottom: `${sec.paddingBottom}px`,
+          // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BL BR
+          borderRadius: sec.borderRadius
+            ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
+                .map((v) => (v ? `${v}px` : '0px'))
+                .join(' ')
+            : undefined
+        }}
+      >
+        <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
+          <div className="grid grid-cols-12 gap-4 md:gap-6">
+            {sec.columns.map((col) => (
+              <div
+                key={col.id}
+                style={{
+                  gridColumn: `span ${getColumnWidth(col, deviceSize)} / span ${getColumnWidth(col, deviceSize)}`
+                }}
+                className="space-y-4"
+              >
+                {col.widgets.map((widget) => {
+                  if (!widget.settings.visibility[deviceSize]) return null;
+
+                  return (
+                    <WidgetRenderer
+                      key={widget.id}
+                      widget={widget}
+                      currentUserRole="all"
+                      isEditorPreview={false}
+                    />
+                  );
+                })}
+                {/* زیربلوک‌های داخل ستون (بازگشتی) */}
+                {hasSubSections &&
+                  col.subSections!.map((sub) => renderSection(sub, depth + 1))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 dark:bg-slate-950/95 backdrop-blur-xl text-slate-900 dark:text-white font-sans rtl text-right transition-colors">
       {/* Top Preview Controls Bar */}
@@ -100,61 +163,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
             color: globalStyles.textColor
           }}
         >
-          {pageSchema.sections.map((sec) => {
-            // Check responsiveness visibility
-            if (!sec.visibility[deviceSize]) return null;
-
-            return (
-              <div
-                key={sec.id}
-                id={sec.bookmark || sec.id}
-                style={{
-                  backgroundColor: sec.backgroundColor || undefined,
-                  backgroundImage: sec.backgroundImage
-                    ? `url("${sec.backgroundImage}")`
-                    : sec.backgroundGradient || undefined,
-                  backgroundPosition: sec.backgroundPosition || undefined,
-                  backgroundSize: sec.backgroundSize || undefined,
-                  backgroundRepeat: sec.backgroundRepeat || undefined,
-                  paddingTop: `${sec.paddingTop}px`,
-                  paddingBottom: `${sec.paddingBottom}px`,
-                  // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
-                  borderRadius: sec.borderRadius
-                    ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
-                        .map((v) => (v ? `${v}px` : '0px'))
-                        .join(' ')
-                    : undefined
-                }}
-              >
-                <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
-                  <div className="grid grid-cols-12 gap-4 md:gap-6">
-                    {sec.columns.map((col) => (
-                      <div
-                        key={col.id}
-                        style={{
-                          gridColumn: `span ${getColumnWidth(col, deviceSize)} / span ${getColumnWidth(col, deviceSize)}`
-                        }}
-                        className="space-y-4"
-                      >
-                        {col.widgets.map((widget) => {
-                          if (!widget.settings.visibility[deviceSize]) return null;
-
-                          return (
-                            <WidgetRenderer
-                              key={widget.id}
-                              widget={widget}
-                              currentUserRole="all"
-                              isEditorPreview={false}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {pageSchema.sections.map((sec) => renderSection(sec, 0))}
         </div>
       </div>
     </div>
