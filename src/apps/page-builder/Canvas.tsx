@@ -17,7 +17,8 @@ import {
   Layers,
   Sparkles,
   Grid,
-  EyeOff
+  EyeOff,
+  Pencil
 } from 'lucide-react';
 
 interface CanvasProps {
@@ -70,10 +71,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   const globalStyles = pageSchema.globalStyles;
 
   return (
-    <div className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-y-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all">
-      {/* Canvas Frame Container */}
+    <div className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all">
+      {/* Canvas Frame Container — shrink-0 keeps natural height so the overflow-auto canvas scrolls (x & y) when sections exceed viewport */}
       <div
-        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 ${getCanvasWidthClass()}`}
+        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 ${getCanvasWidthClass()}`}
         style={{
           fontFamily: globalStyles.fontFamily,
           color: globalStyles.textColor
@@ -193,6 +194,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          onSelectSection(sec.id);
+                        }}
+                        className="p-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-md cursor-pointer"
+                        title="ویرایش مشخصات سکشن در پنل تنظیمات"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           onDeleteSection(sec.id);
                         }}
                         className="p-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md cursor-pointer"
@@ -266,6 +277,18 @@ export const Canvas: React.FC<CanvasProps> = ({
                                         <div className={`absolute top-2 left-2 z-30 flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl text-white text-xs border border-slate-700 backdrop-blur-md transition-opacity ${
                                           isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
                                         }`}>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onSelectSection(sec.id);
+                                              onSelectColumn(col.id);
+                                              onSelectWidget(widget.id);
+                                            }}
+                                            className="p-1 hover:text-amber-400 cursor-pointer"
+                                            title="ویرایش مشخصات ویجت در پنل تنظیمات"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                          </button>
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();

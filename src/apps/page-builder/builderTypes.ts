@@ -148,11 +148,19 @@ export interface PageVersion {
   schemaSnapshot: SmartPageSchema;
 }
 
+export interface SmartPageSeo {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  og_image?: string;
+}
+
 export interface SmartPageSchema {
   id: string;
   title: string;
   slug: string;
   status: 'draft' | 'published';
+  seo?: SmartPageSeo;
   createdAt: string;
   updatedAt: string;
   version: number;

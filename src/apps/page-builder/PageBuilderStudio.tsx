@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SmartPageSchema,
   SectionInstance,
@@ -20,6 +20,16 @@ import { TemplateModal } from './TemplateModal';
 import { PreviewModal } from './PreviewModal';
 import { ExportModal } from './ExportModal';
 import { ComponentPickerModal } from './ComponentPickerModal';
+import { PageManagerModal } from './PageManagerModal';
+import { PageSettingsModal } from './PageSettingsModal';
+import {
+  fetchSmartPages,
+  fetchSmartPage,
+  createSmartPage,
+  updateSmartPage,
+  deleteSmartPage,
+  SmartPageDto
+} from './api';
 import {
   Save,
   Undo2,
@@ -37,7 +47,10 @@ import {
   Layers,
   FileCode,
   ArrowRight,
-  Plus
+  Plus,
+  Globe,
+  Settings2,
+  Loader2
 } from 'lucide-react';
 
 interface PageBuilderStudioProps {
@@ -47,6 +60,144 @@ interface PageBuilderStudioProps {
 export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal }) => {
   // Main Page Schema state
   const [pageSchema, setPageSchema] = useState<SmartPageSchema>(INITIAL_SMART_PAGE);
+
+  // Multi-page state (persisted via backend SmartPage API)
+  const [pages, setPages] = useState<SmartPageDto[]>([]);
+  const [activePageId, setActivePageId] = useState<number | null>(null);
+  const [isLoadingPages, setIsLoadingPages] = useState(true);
+  const [isSavingPage, setIsSavingPage] = useState(false);
+  const [showPageManagerModal, setShowPageManagerModal] = useState(false);
+  const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
+
+  // Load saved pages from backend on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetchSmartPages({ per_page: 100 })
+      .then((res) => {
+        if (cancelled) return;
+        setPages(res.data);
+        setIsLoadingPages(false);
+        if (res.data.length > 0 && res.data[0].id) {
+          loadPage(res.data[0].id);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsLoadingPages(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load a saved page (full schema) and make it active
+  const loadPage = async (id: number) => {
+    try {
+      const dto = await fetchSmartPage(id);
+      const schema = (dto.schema ?? {}) as unknown as SmartPageSchema;
+      const merged: SmartPageSchema = {
+        ...schema,
+        id: `page-${dto.id}`,
+        title: dto.title ?? schema.title ?? 'صفحه بدون عنوان',
+        slug: dto.slug ?? schema.slug ?? `page-${dto.id}`,
+        status: dto.status ?? schema.status ?? 'draft',
+        seo: dto.seo ?? schema.seo,
+        updatedAt: dto.updated_at ?? schema.updatedAt,
+      };
+      setActivePageId(dto.id!);
+      setPageSchema(merged);
+      setUndoStack([]);
+      setRedoStack([]);
+      setSelectedSectionId(merged.sections[0]?.id ?? null);
+      setSelectedColumnId(merged.sections[0]?.columns[0]?.id ?? null);
+      setSelectedWidgetId(merged.sections[0]?.columns[0]?.widgets[0]?.id ?? null);
+    } catch {
+      // ignore — keep current schema
+    }
+  };
+
+  // Create a brand-new (unsaved) page
+  const handleCreatePage = () => {
+    const fresh = JSON.parse(JSON.stringify(INITIAL_SMART_PAGE)) as SmartPageSchema;
+    fresh.id = `page-new-${Date.now()}`;
+    fresh.slug = `page-${Date.now()}`;
+    fresh.title = 'صفحه جدید';
+    fresh.status = 'draft';
+    fresh.seo = { title: '', description: '', keywords: '', og_image: '' };
+    fresh.createdAt = new Date().toISOString().slice(0, 10);
+    fresh.updatedAt = new Date().toISOString().slice(0, 10);
+    fresh.versionHistory = [];
+    fresh.sections = [];
+    setActivePageId(null);
+    setPageSchema(fresh);
+    setUndoStack([]);
+    setRedoStack([]);
+    setSelectedSectionId(null);
+    setSelectedColumnId(null);
+    setSelectedWidgetId(null);
+    setShowPageManagerModal(false);
+    // Prompt user to fill title/slug/SEO right away
+    setShowPageSettingsModal(true);
+  };
+
+  // Delete a saved page; switch away if it was active
+  const handleDeletePage = async (id: number) => {
+    if (!window.confirm('این صفحه برای همیشه حذف شود؟')) return;
+    try {
+      await deleteSmartPage(id);
+      const remaining = pages.filter((p) => p.id !== id);
+      setPages(remaining);
+      if (activePageId === id) {
+        if (remaining.length > 0 && remaining[0].id) {
+          loadPage(remaining[0].id);
+        } else {
+          handleCreatePage();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Save page meta (title/slug/status/seo) — create or update
+  const handleSavePageSettings = async (data: {
+    title: string;
+    slug: string;
+    status: 'published' | 'draft';
+    seo: { title?: string; description?: string; keywords?: string; og_image?: string };
+  }) => {
+    setIsSavingPage(true);
+    try {
+      const payload = {
+        title: data.title,
+        slug: data.slug,
+        status: data.status,
+        seo: data.seo,
+        schema: JSON.parse(JSON.stringify(pageSchema)),
+      };
+      if (activePageId) {
+        await updateSmartPage(activePageId, payload);
+      } else {
+        const res = await createSmartPage(payload);
+        setActivePageId(res.data.id!);
+        setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
+      }
+      setPageSchema((prev) => ({
+        ...prev,
+        title: data.title,
+        slug: data.slug,
+        status: data.status,
+        seo: data.seo,
+      }));
+      const list = await fetchSmartPages({ per_page: 100 });
+      setPages(list.data);
+      setShowPageSettingsModal(false);
+    } catch {
+      // keep modal open on failure
+    } finally {
+      setIsSavingPage(false);
+    }
+  };
 
   // Undo / Redo history stack
   const [undoStack, setUndoStack] = useState<SmartPageSchema[]>([]);
@@ -615,10 +766,33 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     pushState(template.schema);
   };
 
-  // Save Page Action
-  const handleSavePage = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+  // Save Page Action — persist full schema to backend (create or update)
+  const handleSavePage = async () => {
+    setIsSavingPage(true);
+    try {
+      const payload = {
+        title: pageSchema.title,
+        slug: pageSchema.slug,
+        status: pageSchema.status,
+        seo: pageSchema.seo,
+        schema: JSON.parse(JSON.stringify(pageSchema)),
+      };
+      if (activePageId) {
+        await updateSmartPage(activePageId, payload);
+      } else {
+        const res = await createSmartPage(payload);
+        setActivePageId(res.data.id!);
+        setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
+      }
+      const list = await fetchSmartPages({ per_page: 100 });
+      setPages(list.data);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch {
+      // API layer shows the error toast; keep editing
+    } finally {
+      setIsSavingPage(false);
+    }
   };
 
   return (
@@ -659,6 +833,26 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
               </div>
             </div>
           </div>
+
+          {/* Page switcher — create/select pages */}
+          <button
+            onClick={() => setShowPageManagerModal(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            title="مدیریت صفحات (ساخت / انتخاب / حذف)"
+          >
+            <Globe className="w-4 h-4 text-teal-500" />
+            <span className="text-xs font-bold">{isLoadingPages ? '...' : pages.length}</span>
+            <span className="text-[10px] text-slate-400 hidden lg:inline">صفحه</span>
+          </button>
+
+          {/* Page settings (title / slug / SEO) */}
+          <button
+            onClick={() => setShowPageSettingsModal(true)}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            title="تنظیمات صفحه و سئو (عنوان، لینک، متادیتا)"
+          >
+            <Settings2 className="w-4 h-4 text-indigo-500" />
+          </button>
         </div>
 
         {/* Center Section: Responsive Breakpoint Switcher & Undo/Redo */}
@@ -763,9 +957,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
           <button
             onClick={handleSavePage}
-            className="px-5 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all"
+            disabled={isSavingPage}
+            className="px-5 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all disabled:opacity-60"
           >
-            {saveSuccess ? (
+            {isSavingPage ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>در حال ذخیره...</span>
+              </>
+            ) : saveSuccess ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-white dark:text-slate-950" />
                 <span>ذخیره گردید</span>
@@ -787,17 +987,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         {/* Right Panel: Sidebar Elements & Widgets Palette */}
         <SidebarPanels
           pageSchema={pageSchema}
-          selectedSectionId={selectedSectionId}
-          selectedColumnId={selectedColumnId}
-          selectedWidgetId={selectedWidgetId}
-          onSelectSection={handleSelectSection}
-          onSelectColumn={handleSelectColumn}
-          onSelectWidget={handleSelectWidget}
-          onAddSection={handleAddSection}
-          onAddWidget={handleAddWidget}
           onOpenComponentPicker={handleOpenComponentPicker}
-          onDeleteSection={handleDeleteSection}
-          onDeleteWidget={handleDeleteWidget}
           onOpenGlobalStyles={() => setShowGlobalStylesModal(true)}
           onOpenTemplatesModal={() => setShowTemplateModal(true)}
           onRestoreVersion={handleRestoreVersion}
@@ -886,6 +1076,42 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         <ExportModal
           pageSchema={pageSchema}
           onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {showPageManagerModal && (
+        <PageManagerModal
+          pages={pages}
+          activePageId={activePageId}
+          isLoading={isLoadingPages}
+          onCreatePage={handleCreatePage}
+          onSelectPage={(id) => {
+            loadPage(id);
+            setShowPageManagerModal(false);
+          }}
+          onOpenSettings={(id) => {
+            if (activePageId !== id) loadPage(id);
+            setShowPageManagerModal(false);
+            setShowPageSettingsModal(true);
+          }}
+          onDeletePage={handleDeletePage}
+          onClose={() => setShowPageManagerModal(false)}
+        />
+      )}
+
+      {showPageSettingsModal && (
+        <PageSettingsModal
+          page={{
+            id: activePageId ?? undefined,
+            title: pageSchema.title,
+            slug: pageSchema.slug,
+            status: pageSchema.status,
+            seo: pageSchema.seo,
+            schema: pageSchema as unknown as Record<string, unknown>,
+          }}
+          isSaving={isSavingPage}
+          onSave={handleSavePageSettings}
+          onClose={() => setShowPageSettingsModal(false)}
         />
       )}
     </div>

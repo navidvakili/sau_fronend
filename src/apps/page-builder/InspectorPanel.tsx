@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   WidgetInstance,
   SectionInstance,
@@ -8,6 +8,14 @@ import {
   ConditionalDisplayRule,
   UserRoleCondition
 } from './builderTypes';
+import {
+  fetchDataSourceNewsCategories,
+  fetchDataSourceAnnouncementGroups,
+  fetchDataSourceAnnouncementCategories,
+  fetchDataSourceMediaFolders
+} from './api';
+import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
+import type { MediaFolderDto } from '../gallery/types';
 import {
   Sliders,
   Paintbrush,
@@ -55,6 +63,39 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onDuplicateWidget
 }) => {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
+
+  // ── Data-source option lists (گروه‌ها و دسته‌بندی‌ها از وب‌سرویس) ──
+  const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
+  const [announcementGroups, setAnnouncementGroups] = useState<string[]>([]);
+  const [announcementCategories, setAnnouncementCategories] = useState<AnnouncementCategory[]>([]);
+  const [mediaFolders, setMediaFolders] = useState<MediaFolderDto[]>([]);
+  const [dataSourceError, setDataSourceError] = useState<string | null>(null);
+
+  const activeDataSource = selectedWidget?.settings.binding.dataSource;
+
+  useEffect(() => {
+    let cancelled = false;
+    setDataSourceError(null);
+
+    if (activeDataSource === 'news') {
+      fetchDataSourceNewsCategories()
+        .then((cats) => { if (!cancelled) setNewsCategories(cats); })
+        .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت دسته‌بندی اخبار'); });
+    } else if (activeDataSource === 'announcements') {
+      fetchDataSourceAnnouncementGroups()
+        .then((groups) => { if (!cancelled) setAnnouncementGroups(groups); })
+        .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت گروه‌های اطلاعیه'); });
+      fetchDataSourceAnnouncementCategories()
+        .then((cats) => { if (!cancelled) setAnnouncementCategories(cats); })
+        .catch(() => { /* optional */ });
+    } else if (activeDataSource === 'gallery' || activeDataSource === 'files') {
+      fetchDataSourceMediaFolders()
+        .then((folders) => { if (!cancelled) setMediaFolders(folders); })
+        .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت پوشه‌های رسانه'); });
+    }
+
+    return () => { cancelled = true; };
+  }, [activeDataSource]);
 
   if (!selectedWidget && !selectedSection) {
     return (
@@ -302,6 +343,127 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         <option value="table">جدول همراه با سورت (Table)</option>
                       </select>
                     </div>
+
+                    {/* ── گروه‌ها و دسته‌بندی‌ها از وب‌سرویس ── */}
+                    {activeDataSource === 'news' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          دسته‌بندی خبر (اتصال به گروه)
+                        </label>
+                        <select
+                          value={selectedWidget.settings.binding.categoryFilter || 'all'}
+                          onChange={(e) => handleBindingChange('categoryFilter', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="all">همه دسته‌بندی‌ها</option>
+                          {newsCategories.map((c) => (
+                            <option key={c.id} value={String(c.id)}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {activeDataSource === 'announcements' && (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            گروه اطلاعیه (اتصال به گروه)
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.categoryFilter || 'all'}
+                            onChange={(e) => handleBindingChange('categoryFilter', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="all">همه گروه‌ها</option>
+                            {announcementGroups.map((g) => (
+                              <option key={g} value={g}>
+                                {g}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            دسته‌بندی اطلاعیه
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.yearFilter || 'all'}
+                            onChange={(e) => handleBindingChange('yearFilter', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="all">همه دسته‌بندی‌ها</option>
+                            {announcementCategories.map((c) => (
+                              <option key={c.id} value={String(c.id)}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            فیلتر اولویت (فوری / عادی)
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.priorityFilter || 'all'}
+                            onChange={(e) => handleBindingChange('priorityFilter', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="all">همه</option>
+                            <option value="urgent">فقط فوری</option>
+                            <option value="standard">فقط عادی</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {(activeDataSource === 'gallery' || activeDataSource === 'files') && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          پوشه رسانه (اختیاری)
+                        </label>
+                        <select
+                          value={selectedWidget.settings.binding.folderFilter || 'all'}
+                          onChange={(e) => handleBindingChange('folderFilter', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="all">همه پوشه‌ها</option>
+                          {mediaFolders.map((f) => (
+                            <option key={f.id} value={String(f.id)}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {activeDataSource === 'staff' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          نوع اعضا
+                        </label>
+                        <select
+                          value={selectedWidget.settings.binding.departmentFilter || 'faculty_member'}
+                          onChange={(e) => handleBindingChange('departmentFilter', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="faculty_member">اعضای هیئت علمی</option>
+                          <option value="visiting_professor">اساتید مدعو</option>
+                          <option value="staff">کارکنان</option>
+                          <option value="student">دانشجویان</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {dataSourceError && (
+                      <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1">
+                        <Layers className="w-3 h-3" />
+                        {dataSourceError}
+                      </p>
+                    )}
                   </>
                 )}
               </div>

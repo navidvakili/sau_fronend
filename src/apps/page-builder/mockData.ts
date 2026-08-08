@@ -283,6 +283,12 @@ export const INITIAL_SMART_PAGE: SmartPageSchema = {
   title: 'صفحه اصلی پرتال دانشگاهی (Smart Portal Page)',
   slug: 'home-portal',
   status: 'published',
+  seo: {
+    title: 'پرتال دانشگاهی | صفحه اصلی',
+    description: 'پرتال هوشمند دانشگاه — دسترسی سریع به اخبار، اطلاعیه‌ها، افتخارات و خدمات.',
+    keywords: 'دانشگاه, پرتال, اخبار, اطلاعیه',
+    og_image: '',
+  },
   createdAt: '2026-08-01',
   updatedAt: '2026-08-02',
   version: 1,

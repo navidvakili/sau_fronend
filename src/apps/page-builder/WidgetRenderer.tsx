@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   WidgetInstance,
-  UserRoleCondition
+  UserRoleCondition,
+  WidgetDataBinding
 } from './builderTypes';
 import {
-  MOCK_ANNOUNCEMENTS,
-  MOCK_NEWS,
-  MOCK_GALLERY,
-  MOCK_ACHIEVEMENTS,
-  MOCK_STAFF,
-  MOCK_FILES
-} from './mockData';
+  fetchDataSourceAnnouncements,
+  fetchDataSourceNews,
+  fetchDataSourceMedia,
+  fetchDataSourceAchievements,
+  fetchDataSourcePeople
+} from './api';
+import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
+import type { MediaFile } from '../gallery/types';
 import {
   Bell,
   Newspaper,
@@ -26,7 +28,12 @@ import {
   ChevronUp,
   Play,
   Sparkles,
-  Tag
+  Tag,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Clock,
+  FolderOpen
 } from 'lucide-react';
 
 interface WidgetRendererProps {
@@ -34,6 +41,512 @@ interface WidgetRendererProps {
   currentUserRole?: UserRoleCondition;
   isEditorPreview?: boolean;
 }
+
+/** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
+const formatFaDate = (iso?: string | null): string => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fa-IR');
+  } catch {
+    return '';
+  }
+};
+
+/** فرمت حجم فایل (بایت → KB/MB) */
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes || bytes <= 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/** هوک عمومی دریافت داده از وب‌سرویس با حالت بارگذاری/خطا */
+function useSmartData<T>(
+  fetcher: () => Promise<T[]>,
+  deps: React.DependencyList
+) {
+  const [data, setData] = useState<T[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setError(null);
+    fetcher()
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'خطا در دریافت داده از وب‌سرویس');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, retryKey]);
+
+  return { data, error, retry: () => setRetryKey((k) => k + 1) };
+}
+
+/** حالت بارگذاری ویجت هوشمند */
+const SmartLoading: React.FC = () => (
+  <div className="flex items-center justify-center gap-2 py-8 text-slate-400 text-xs">
+    <Loader2 className="w-4 h-4 animate-spin" />
+    <span>در حال دریافت داده از وب‌سرویس...</span>
+  </div>
+);
+
+/** حالت خطا / داده خالی ویجت هوشمند */
+const SmartEmpty: React.FC<{ error?: string | null; onRetry?: () => void }> = ({ error, onRetry }) => (
+  <div className="py-6 text-center space-y-2">
+    <div className={`flex items-center justify-center gap-2 text-xs font-bold ${error ? 'text-rose-500' : 'text-slate-400'}`}>
+      {error ? <AlertTriangle className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
+      <span>{error || 'داده‌ای برای نمایش یافت نشد'}</span>
+    </div>
+    {error && onRetry && (
+      <button
+        onClick={onRetry}
+        className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-bold flex items-center gap-1.5 mx-auto cursor-pointer"
+      >
+        <RefreshCw className="w-3 h-3" />
+        <span>تلاش مجدد</span>
+      </button>
+    )}
+  </div>
+);
+
+/** سربرگ مشترک ویجت‌های هوشمند */
+const SmartHeader: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  badge: string;
+  badgeColor: string;
+}> = ({ icon, title, badge, badgeColor }) => (
+  <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
+    <div className="flex items-center gap-2">
+      <div className={`p-2 rounded-xl ${badgeColor}`}>{icon}</div>
+      <h3 className="text-base font-black text-slate-900 dark:text-white">{title}</h3>
+    </div>
+    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md font-bold border flex items-center gap-1">
+      <Tag className="w-3 h-3" />
+      {badge}
+    </span>
+  </div>
+);
+
+// ==============================================================
+// SMART WIDGETS — اتصال به وب‌سرویس‌های واقعی
+// ==============================================================
+
+/** ویجت اطلاعیه‌ها — اتصال به وب‌سرویس اطلاعیه‌ها + فیلتر گروه */
+const AnnouncementsFeedWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const { data, error, retry } = useSmartData<AnnouncementItem>(() =>
+    fetchDataSourceAnnouncements({
+      per_page: binding.limit || 5,
+      group: binding.categoryFilter && binding.categoryFilter !== 'all' ? binding.categoryFilter : null,
+      category_id:
+        binding.yearFilter && binding.yearFilter !== 'all' ? Number(binding.yearFilter) || null : null,
+      status: 'published'
+    }).then((res) => res.data),
+    [binding.limit, binding.categoryFilter, binding.yearFilter]
+  );
+
+  let items = data || [];
+  if (binding.priorityFilter && binding.priorityFilter !== 'all') {
+    items = items.filter(
+      (a) =>
+        (binding.priorityFilter === 'urgent' && a.type === 'important') ||
+        (binding.priorityFilter === 'standard' && a.type === 'normal')
+    );
+  }
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<Bell className="w-4 h-4" />}
+        title={widget.title || 'اطلاعیه‌های متصل'}
+        badge="ماژول اطلاعیه‌ها"
+        badgeColor="bg-teal-500/20 text-teal-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || items.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className="space-y-2.5">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-teal-500/40 transition-all flex flex-col gap-1 shadow-xs"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  {item.type === 'important' && (
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="فوری" />
+                  )}
+                  {item.title}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 shrink-0">
+                  <Clock className="w-3 h-3" />
+                  {formatFaDate(item.published_at || item.date)}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed truncate">
+                {item.summary || item.content}
+              </p>
+              <div className="flex items-center gap-2 text-[10px] font-mono text-teal-600 dark:text-teal-400">
+                {item.group && (
+                  <span className="px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/20">
+                    {item.group}
+                  </span>
+                )}
+                {item.category_name && (
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                    {item.category_name}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت خوراک اخبار — اتصال به وب‌سرویس اخبار + فیلتر دسته‌بندی */
+const NewsFeedWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const categoryId =
+    binding.categoryFilter && binding.categoryFilter !== 'all'
+      ? Number(binding.categoryFilter) || null
+      : null;
+
+  const { data, error, retry } = useSmartData<NewsItem>(() =>
+    fetchDataSourceNews({
+      per_page: binding.limit || 4,
+      category_id: categoryId,
+      status: 'published'
+    }).then((res) => res.data),
+    [binding.limit, categoryId]
+  );
+
+  const newsList = data || [];
+  const cols = binding.columnsCount || 2;
+  const gridClass =
+    cols === 3
+      ? 'grid grid-cols-1 md:grid-cols-3 gap-4'
+      : cols === 1
+        ? 'grid grid-cols-1 gap-4'
+        : 'grid grid-cols-1 md:grid-cols-2 gap-4';
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<Newspaper className="w-4 h-4" />}
+        title={widget.title || 'اخبار دانشگاه'}
+        badge="ماژول اخبار"
+        badgeColor="bg-indigo-500/20 text-indigo-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || newsList.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className={gridClass}>
+          {newsList.map((news) => (
+            <div
+              key={news.id}
+              className="group rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden shadow-xs hover:border-indigo-500/40 transition-all flex flex-col"
+            >
+              <div className="h-36 overflow-hidden relative">
+                <img
+                  src={news.image_url || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
+                  alt={news.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-md">
+                  {news.category_name || 'بدون دسته'}
+                </div>
+              </div>
+
+              <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
+                <h4 className="text-xs font-black text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {news.title}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                  {news.summary}
+                </p>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-gray-100 dark:border-slate-800/60">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {formatFaDate(news.published_at || news.created_at)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    {news.views_count}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت گالری تصاویر — اتصال به وب‌سرویس رسانه */
+const ImageGalleryWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const { data, error, retry } = useSmartData<MediaFile>(() =>
+    fetchDataSourceMedia({
+      per_page: binding.limit || 8,
+      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null
+    }).then((res) => res.data.filter((f) => f.type.startsWith('image/'))),
+    [binding.limit, binding.folderFilter]
+  );
+
+  const gallery = data || [];
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<ImageIcon className="w-4 h-4" />}
+        title={widget.title || 'گالری تصاویر'}
+        badge="آلبوم تصاویر"
+        badgeColor="bg-amber-500/20 text-amber-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || gallery.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {gallery.map((img) => (
+            <div
+              key={img.id}
+              className="group relative h-32 rounded-xl overflow-hidden bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs"
+            >
+              <img
+                src={img.url}
+                alt={img.name}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white">
+                <span className="text-[11px] font-bold truncate">{img.name}</span>
+                <span className="text-[9px] text-amber-300 font-mono">{formatFileSize(img.size)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت تایم‌لاین افتخارات — اتصال به وب‌سرویس افتخارات */
+const AchievementsWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const { data, error, retry } = useSmartData<AchievementItem>(() =>
+    fetchDataSourceAchievements({
+      per_page: binding.limit || 5,
+      status: 'published'
+    }).then((res) => res.data),
+    [binding.limit]
+  );
+
+  const achs = data || [];
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<Award className="w-4 h-4" />}
+        title={widget.title || 'افتخارات دانشگاه'}
+        badge="ماژول افتخارات"
+        badgeColor="bg-yellow-500/20 text-yellow-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || achs.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className="space-y-3 relative before:absolute before:right-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-yellow-500/30">
+          {achs.map((ach) => (
+            <div key={ach.id} className="relative pr-9 flex flex-col gap-1">
+              <div className="absolute right-2 top-1 w-5 h-5 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-md">
+                {ach.icon || '★'}
+              </div>
+              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-1 shadow-xs">
+                <div className="flex items-center justify-between text-xs font-black text-slate-900 dark:text-white">
+                  <span>{ach.title}</span>
+                  <span className="font-mono text-[10px] text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10">
+                    {ach.published_at ? formatFaDate(ach.published_at) : ''}
+                  </span>
+                </div>
+                {ach.subtitle && (
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">{ach.subtitle}</div>
+                )}
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
+                  {ach.desc || ach.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت دلیل اعضای هیئت علمی — اتصال به وب‌سرویس پرسنلی */
+const StaffDirectoryWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const { data, error, retry } = useSmartData<PersonItem>(() =>
+    fetchDataSourcePeople({
+      per_page: binding.limit || 6,
+      type: binding.departmentFilter && binding.departmentFilter !== 'all' ? binding.departmentFilter : 'faculty_member',
+      status: 'published'
+    }).then((res) => res.data),
+    [binding.limit, binding.departmentFilter]
+  );
+
+  const staffList = data || [];
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<UserCheck className="w-4 h-4" />}
+        title={widget.title || 'هیئت علمی و اساتید'}
+        badge="سامانه پرسنلی"
+        badgeColor="bg-teal-500/20 text-teal-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || staffList.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className="space-y-3">
+          {staffList.map((st) => (
+            <div
+              key={st.id}
+              className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
+            >
+              <img
+                src={st.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(st.title || st.lastName || '')}
+                alt={st.title || `${st.firstName} ${st.lastName}`}
+                className="w-12 h-12 rounded-full object-cover border border-teal-500/30 bg-slate-100"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  {st.title || `${st.firstName || ''} ${st.lastName || ''}`}
+                </div>
+                <div className="text-[11px] text-teal-600 dark:text-teal-400 font-bold truncate">
+                  {st.rank || st.position || st.specialization}
+                </div>
+                {st.email && <div className="text-[10px] text-slate-400 font-mono truncate">{st.email}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت مخزن اسناد و فایل‌ها — اتصال به وب‌سرویس رسانه */
+const FileManagerWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const { data, error, retry } = useSmartData<MediaFile>(() =>
+    fetchDataSourceMedia({
+      per_page: binding.limit || 6,
+      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null
+    }).then((res) => res.data.filter((f) => !f.type.startsWith('image/'))),
+    [binding.limit, binding.folderFilter]
+  );
+
+  const files = data || [];
+
+  const getExt = (name: string) => {
+    const parts = name.split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase().slice(0, 4) : 'FILE';
+  };
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<FileText className="w-4 h-4" />}
+        title={widget.title || 'مخزن فایل‌ها و فرم‌ها'}
+        badge="مدیریت فایل"
+        badgeColor="bg-blue-500/20 text-blue-500"
+      />
+
+      {!data && !error ? (
+        <SmartLoading />
+      ) : error || files.length === 0 ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : (
+        <div className="space-y-2">
+          {files.map((file) => (
+            <div
+              key={file.id}
+              className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-blue-500/30 transition-all"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black text-xs uppercase shrink-0">
+                  {getExt(file.name)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{file.name}</div>
+                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                    <span>حجم: {formatFileSize(file.size)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shrink-0"
+                title="دانلود فایل"
+              >
+                <Download className="w-4 h-4" />
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   widget,
@@ -193,291 +706,25 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
 
     // -------------------------------------------------------------
-    // SMART DYNAMIC WIDGETS
+    // SMART DYNAMIC WIDGETS — اتصال به وب‌سرویس‌های واقعی
     // -------------------------------------------------------------
-    case 'announcements-feed': {
-      let items = [...MOCK_ANNOUNCEMENTS];
-      if (binding.priorityFilter && binding.priorityFilter !== 'all') {
-        items = items.filter(a => a.priority === binding.priorityFilter);
-      }
-      if (binding.limit) {
-        items = items.slice(0, binding.limit);
-      }
+    case 'announcements-feed':
+      return <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-teal-500/20 text-teal-500">
-                <Bell className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'اطلاعیه‌های متصل'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-bold">
-              ماژول اطلاعیه ها
-            </span>
-          </div>
+    case 'news-feed':
+      return <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
-          <div className="space-y-2.5">
-            {items.map(item => (
-              <div
-                key={item.id}
-                className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-teal-500/40 transition-all flex flex-col gap-1 shadow-xs"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    {item.priority === 'urgent' && (
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="فوری" />
-                    )}
-                    {item.title}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">{item.date}</span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed truncate">{item.excerpt}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+    case 'image-gallery':
+      return <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
-    case 'news-feed': {
-      let newsList = [...MOCK_NEWS];
-      if (binding.categoryFilter && binding.categoryFilter !== 'all') {
-        newsList = newsList.filter(n => n.category === binding.categoryFilter);
-      }
-      if (binding.limit) {
-        newsList = newsList.slice(0, binding.limit);
-      }
+    case 'achievements-timeline':
+      return <AchievementsWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
-      const cols = binding.columnsCount || 2;
-      const gridClass = cols === 3 ? 'grid grid-cols-1 md:grid-cols-3 gap-4' : 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    case 'staff-directory':
+      return <StaffDirectoryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-500">
-                <Newspaper className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'اخبار دانشگاه'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-bold">
-              ماژول اخبار
-            </span>
-          </div>
-
-          <div className={gridClass}>
-            {newsList.map(news => (
-              <div
-                key={news.id}
-                className="group rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden shadow-xs hover:border-indigo-500/40 transition-all flex flex-col"
-              >
-                <div className="h-36 overflow-hidden relative">
-                  <img
-                    src={news.featuredImage}
-                    alt={news.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-md">
-                    {news.category}
-                  </div>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
-                  <h4 className="text-xs font-black text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    {news.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                    {news.summary}
-                  </p>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-gray-100 dark:border-slate-800/60">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {news.publishDate}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      {news.views}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case 'image-gallery': {
-      let gallery = [...MOCK_GALLERY];
-      if (binding.limit) {
-        gallery = gallery.slice(0, binding.limit);
-      }
-
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-500">
-                <ImageIcon className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'گالری تصاویر'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold">
-              آلبوم تصاویر
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {gallery.map(img => (
-              <div
-                key={img.id}
-                className="group relative h-32 rounded-xl overflow-hidden bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs"
-              >
-                <img
-                  src={img.url}
-                  alt={img.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white">
-                  <span className="text-[11px] font-bold truncate">{img.title}</span>
-                  <span className="text-[9px] text-amber-300 font-mono">{img.album}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case 'achievements-timeline': {
-      let achs = [...MOCK_ACHIEVEMENTS];
-      if (binding.limit) achs = achs.slice(0, binding.limit);
-
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-yellow-500/20 text-yellow-500">
-                <Award className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'افتخارات دانشگاه'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 font-bold">
-              ماژول افتخارات
-            </span>
-          </div>
-
-          <div className="space-y-3 relative before:absolute before:right-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-yellow-500/30">
-            {achs.map(ach => (
-              <div key={ach.id} className="relative pr-9 flex flex-col gap-1">
-                <div className="absolute right-2 top-1 w-5 h-5 rounded-full bg-yellow-500 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-md">
-                  {ach.badgeLogo}
-                </div>
-                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-1 shadow-xs">
-                  <div className="flex items-center justify-between text-xs font-black text-slate-900 dark:text-white">
-                    <span>{ach.title}</span>
-                    <span className="font-mono text-[10px] text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10">{ach.year}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">{ach.issuingOrganization}</div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{ach.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case 'staff-directory': {
-      let staffList = [...MOCK_STAFF];
-      if (binding.limit) staffList = staffList.slice(0, binding.limit);
-
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-teal-500/20 text-teal-500">
-                <UserCheck className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'هیئت علمی و اساتید'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-bold">
-              سامانه پرسنلی
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {staffList.map(st => (
-              <div
-                key={st.id}
-                className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
-              >
-                <img src={st.photo} alt={st.fullName} className="w-12 h-12 rounded-full object-cover border border-teal-500/30" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black text-slate-900 dark:text-white truncate">{st.fullName}</div>
-                  <div className="text-[11px] text-teal-600 dark:text-teal-400 font-bold truncate">{st.titlePosition}</div>
-                  <div className="text-[10px] text-slate-400 font-mono truncate">{st.email}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case 'file-manager': {
-      let files = [...MOCK_FILES];
-      if (binding.limit) files = files.slice(0, binding.limit);
-
-      return (
-        <div style={containerStyle} className="space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-blue-500/20 text-blue-500">
-                <FileText className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'مخزن فایل‌ها و فرم‌ها'}</h3>
-            </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold">
-              مدیریت فایل
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {files.map(file => (
-              <div
-                key={file.id}
-                className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-blue-500/30 transition-all"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black text-xs uppercase">
-                    {file.fileType}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{file.fileName}</div>
-                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
-                      <span>حجم: {file.size}</span>
-                      <span>•</span>
-                      <span>دانلودها: {file.downloadCount}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <a
-                  href={file.downloadUrl}
-                  className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
-                  title="دانلود فایل"
-                >
-                  <Download className="w-4 h-4" />
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+    case 'file-manager':
+      return <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     default:
       return (

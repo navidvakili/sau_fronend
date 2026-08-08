@@ -66,7 +66,7 @@ export const moduleToAppMap: Record<string, string> = {
   // Academic Fields App (رشته‌های تحصیلی)
   'fields': 'fields',
 
-  // Smart Page Builder App (سازنده صفحه هوشمند)
+  // Smart Page Builder App (صفحه ساز هوشمند)
   'page-builder': 'page-builder',
   'smart-page-builder': 'page-builder',
 
