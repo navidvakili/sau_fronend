@@ -74,7 +74,7 @@ export default function SmartPage() {
     ${pageSchema.sections
       .map(
         (sec) => `
-    <section style="background-color: ${sec.backgroundColor || '#ffffff'}; padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
+    <section id="${sec.bookmark || sec.id}" style="background-color: ${sec.backgroundColor || '#ffffff'}; ${sec.backgroundImage ? `background-image: url(&quot;${sec.backgroundImage}&quot;); background-position: ${sec.backgroundPosition || 'center'}; background-size: ${sec.backgroundSize || 'cover'}; background-repeat: ${sec.backgroundRepeat || 'no-repeat'};` : sec.backgroundGradient ? `background-image: ${sec.backgroundGradient};` : ''} padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
       <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
         <div class="grid grid-cols-12 gap-6">
           ${sec.columns

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, cloneElement, type ReactElement, type ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
   WidgetInstance,
   WidgetStyle,
@@ -581,6 +582,41 @@ const parseLines = (content: string, separators = '|،,;'): string[][] =>
     .filter(Boolean)
     .map((line) => line.split(new RegExp(`[${separators}]`)).map((p) => p.trim()));
 
+// ────────────────────────────────────────────────
+// رندر آیکون‌های درج‌شده در متن (توکن [icon:name])
+// ────────────────────────────────────────────────
+const ICON_TOKEN_RE = /\[icon:([a-zA-Z-]+)\]/g;
+
+/** اندازه آیکون داخل متن */
+const inlineIconClass = 'inline-block w-4 h-4 align-middle mx-1 shrink-0';
+
+/** جایگزینی توکن‌های [icon:name] در متن ساده با کامپوننت آیکون */
+const renderTextWithIcons = (content: string): ReactNode => {
+  const parts = (content || '').split(ICON_TOKEN_RE);
+  // split با گروه ضبط‌شده: [متن, نام, متن, نام, ...]
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      const el = iconMap[part];
+      if (!el) return `[icon:${part}]`;
+      return cloneElement(el as ReactElement<any, any>, { className: inlineIconClass, key: `ic-${i}` });
+    }
+    return part;
+  });
+};
+
+/** جایگزینی توکن‌های [icon:name] در HTML (ریش‌تکست) با SVG درون‌خطی */
+const renderHtmlWithIcons = (html: string): string => {
+  return (html || '').replace(ICON_TOKEN_RE, (match, name: string) => {
+    const el = iconMap[name];
+    if (!el) return match;
+    try {
+      return renderToStaticMarkup(cloneElement(el as ReactElement<any, any>, { className: inlineIconClass }));
+    } catch {
+      return match;
+    }
+  });
+};
+
 /** بلوک متن غنی WYSIWYG (محتوای HTML) */
 const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => (
   <div
@@ -588,8 +624,10 @@ const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CS
     className="prose-sm max-w-none transition-all leading-relaxed richtext-content"
     dangerouslySetInnerHTML={{
       __html:
-        widget.content ||
-        '<p>متن غنی خود را اینجا بنویسید — از HTML برای تیتر، پاراگراف، لینک و آیکون استفاده کنید.</p>'
+        renderHtmlWithIcons(
+          widget.content ||
+            '<p>متن غنی خود را اینجا بنویسید — از HTML برای تیتر، پاراگراف، لینک و آیکون استفاده کنید.</p>'
+        )
     }}
   />
 );
@@ -1058,7 +1096,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       return (
         <div style={containerStyle} className="transition-all">
           <h2 className="text-2xl font-black tracking-tight leading-tight">
-            {widget.content || widget.title}
+            {renderTextWithIcons(widget.content || widget.title)}
           </h2>
         </div>
       );
@@ -1067,7 +1105,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       return (
         <div style={containerStyle} className="transition-all leading-relaxed">
           <p className="whitespace-pre-line text-sm md:text-base">
-            {widget.content || 'متن نمونه برای این ویجت قرار داده شده است.'}
+            {renderTextWithIcons(widget.content || 'متن نمونه برای این ویجت قرار داده شده است.')}
           </p>
         </div>
       );
@@ -1115,8 +1153,15 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
               textTransform: style.textTransform
             }}
           >
+            {widget.iconName && iconMap[widget.iconName] ? (
+              cloneElement(iconMap[widget.iconName] as ReactElement<any, any>, {
+                className: 'w-4 h-4 shrink-0',
+                key: 'btn-icon'
+              })
+            ) : (
+              <ExternalLink className="w-4 h-4" />
+            )}
             <span>{widget.buttonText || widget.content || 'دکمه اقدام'}</span>
-            <ExternalLink className="w-4 h-4" />
           </a>
         </div>
       );

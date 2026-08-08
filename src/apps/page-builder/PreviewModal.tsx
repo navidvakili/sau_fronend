@@ -107,9 +107,15 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
             return (
               <div
                 key={sec.id}
+                id={sec.bookmark || sec.id}
                 style={{
                   backgroundColor: sec.backgroundColor || undefined,
-                  backgroundImage: sec.backgroundGradient || undefined,
+                  backgroundImage: sec.backgroundImage
+                    ? `url("${sec.backgroundImage}")`
+                    : sec.backgroundGradient || undefined,
+                  backgroundPosition: sec.backgroundPosition || undefined,
+                  backgroundSize: sec.backgroundSize || undefined,
+                  backgroundRepeat: sec.backgroundRepeat || undefined,
                   paddingTop: `${sec.paddingTop}px`,
                   paddingBottom: `${sec.paddingBottom}px`,
                   // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL

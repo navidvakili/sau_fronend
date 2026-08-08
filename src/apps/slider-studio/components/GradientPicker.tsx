@@ -185,7 +185,7 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               type="text"
               value={stop.color}
               onChange={(e) => handleStopColor(index, e.target.value)}
-              className="w-24 p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[10px]"
+              className="w-16 min-w-0 p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[10px]"
             />
             {/* Position slider */}
             <input
@@ -194,10 +194,10 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               max={100}
               value={stop.position}
               onChange={(e) => handleStopPosition(index, parseInt(e.target.value))}
-              className="flex-1 h-1 accent-teal-500 cursor-pointer"
+              className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
               dir="ltr"
             />
-            <span className="text-[10px] text-slate-500 w-8 text-right font-mono">
+            <span className="text-[10px] text-slate-500 w-8 shrink-0 text-right font-mono">
               {stop.position}%
             </span>
             {/* Remove button */}
@@ -226,10 +226,10 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               const val = `${e.target.value}deg`;
               emit(val, stops);
             }}
-            className="flex-1 h-1 accent-teal-500 cursor-pointer"
+            className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
             dir="ltr"
           />
-          <span className="text-[10px] text-slate-500 w-12 text-right font-mono">
+          <span className="text-[10px] text-slate-500 w-10 shrink-0 text-right font-mono">
             {angle}
           </span>
         </div>

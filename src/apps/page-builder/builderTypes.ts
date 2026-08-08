@@ -168,7 +168,13 @@ export interface SectionInstance {
   layout: 'full-width' | 'boxed';
   backgroundColor?: string;
   backgroundGradient?: string;
+  /** تصویر پس‌زمینه سکشن (به همراه موقعیت/اندازه/تکرار) */
   backgroundImage?: string;
+  backgroundPosition?: string;
+  backgroundSize?: string;
+  backgroundRepeat?: string;
+  /** نشانک (Bookmark) — شناسه دلخواه برای لینک‌های #anchor */
+  bookmark?: string;
   paddingTop: number;
   paddingBottom: number;
   /** شعاع گوشه‌ها به‌صورت جداگانه (مانند فتوشاپ) — TL/TR/BL/BR */

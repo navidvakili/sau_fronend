@@ -42,6 +42,15 @@
     direction: rtl;
   }
 
+  /* فیلدهای عددی و اسلایدرها همیشه چپ‌به‌راست */
+  input[type='number'],
+  input[type='range'] {
+    direction: ltr;
+  }
+  input[type='number'] {
+    text-align: left;
+  }
+
   /* Sophisticated Dark Palette */
   .dark {
     --color-slate-900: #fafafc;

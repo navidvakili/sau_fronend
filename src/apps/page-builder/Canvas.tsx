@@ -174,13 +174,19 @@ export const Canvas: React.FC<CanvasProps> = ({
               return (
                 <React.Fragment key={sec.id}>
                   <div
+                    id={sec.bookmark || sec.id}
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectSection(sec.id);
                     }}
                     style={{
                       backgroundColor: sec.backgroundColor || undefined,
-                      backgroundImage: sec.backgroundGradient || undefined,
+                      backgroundImage: sec.backgroundImage
+                        ? `url("${sec.backgroundImage}")`
+                        : sec.backgroundGradient || undefined,
+                      backgroundPosition: sec.backgroundPosition || undefined,
+                      backgroundSize: sec.backgroundSize || undefined,
+                      backgroundRepeat: sec.backgroundRepeat || undefined,
                       paddingTop: `${sec.paddingTop}px`,
                       paddingBottom: `${sec.paddingBottom}px`,
                       // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL

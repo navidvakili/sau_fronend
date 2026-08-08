@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   WidgetInstance,
   SectionInstance,
@@ -17,6 +17,8 @@ import {
   fetchDataSourceMediaFolders
 } from './api';
 import GradientPicker from '../slider-studio/components/GradientPicker';
+import MediaManager from '@/src/shared-components/MediaManager';
+import IconPicker, { ICON_CHOICES } from './components/IconPicker';
 import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
 import {
@@ -39,7 +41,9 @@ import {
   AlignLeft,
   Grid,
   List,
-  Layers
+  Layers,
+  Image as ImageIcon,
+  Bookmark as BookmarkIcon
 } from 'lucide-react';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
@@ -76,6 +80,48 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 }) => {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
   const [colBp, setColBp] = useState<Breakpoint>('desktop');
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<'sectionBg' | 'widgetImage' | 'videoPoster' | null>(null);
+
+  // ── انتخابگر آیکون برای متن / دکمه ──
+  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' }>({ open: false, mode: 'text' });
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [cursorRange, setCursorRange] = useState<{ start: number; end: number } | null>(null);
+
+  /** درج توکن آیکون در محتوای متنی (heading / text / richtext) */
+  const insertIconToken = (iconName: string) => {
+    if (!iconName) {
+      setIconPickerState({ open: false, mode: 'text' });
+      return;
+    }
+    const token = `[icon:${iconName}]`;
+    const content = selectedWidget?.content || '';
+    if (cursorRange && textareaRef.current) {
+      const start = Math.min(cursorRange.start, content.length);
+      const end = Math.min(cursorRange.end, content.length);
+      const next = content.slice(0, start) + token + content.slice(end);
+      onUpdateWidget({ ...selectedWidget!, content: next });
+      // پس از رندر، مکان‌نما را بعد از توکن بگذار
+      setTimeout(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          const pos = start + token.length;
+          ta.setSelectionRange(pos, pos);
+        }
+      }, 0);
+    } else {
+      onUpdateWidget({ ...selectedWidget!, content: content + (content ? ' ' : '') + token });
+    }
+    setIconPickerState({ open: false, mode: 'text' });
+  };
+
+  /** انتخاب آیکون برای دکمه */
+  const selectButtonIcon = (iconName: string) => {
+    if (selectedWidget) {
+      onUpdateWidget({ ...selectedWidget, iconName: iconName || undefined });
+    }
+    setIconPickerState({ open: false, mode: 'button' });
+  };
 
   // ── Data-source option lists (گروه‌ها و دسته‌بندی‌ها از وب‌سرویس) ──
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
@@ -189,14 +235,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
     const customProps = selectedWidget.settings.customProps || {};
 
-    // ── آیکون‌های قابل انتخاب برای باکس آیکون / کال‌اوت / آیکون ──
-    const ICON_CHOICES = [
-      'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
-      'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
-      'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar'
-    ];
-
     return (
+      <>
       <div className="w-80 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col h-full select-none rtl text-right">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950">
@@ -281,25 +321,53 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
               {(selectedWidget.type === 'heading' || selectedWidget.type === 'text' || selectedWidget.type === 'accordion') && (
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">محتوای متنی</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">محتوای متنی</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ta = textareaRef.current;
+                        setCursorRange(ta ? { start: ta.selectionStart, end: ta.selectionEnd } : null);
+                        setIconPickerState({ open: true, mode: 'text' });
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                      title="درج آیکون در متن (توکن [icon:name])"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      درج آیکون
+                    </button>
+                  </div>
                   <textarea
+                    ref={textareaRef}
                     rows={4}
                     value={selectedWidget.content}
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
                     className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                   />
+                  <p className="text-[10px] text-slate-400">برای درج آیکون در دل متن، از دکمه «درج آیکون» استفاده کنید.</p>
                 </div>
               )}
 
               {selectedWidget.type === 'image' && (
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آدرس اینترنتی تصویر (URL)</label>
-                  <input
-                    type="text"
-                    value={selectedWidget.imageUrl || ''}
-                    onChange={(e) => onUpdateWidget({ ...selectedWidget, imageUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={selectedWidget.imageUrl || ''}
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, imageUrl: e.target.value })}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMediaPickerTarget('widgetImage')}
+                      className="shrink-0 p-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all cursor-pointer"
+                      title="انتخاب از مدیریت رسانه"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -313,6 +381,43 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       onChange={(e) => onUpdateWidget({ ...selectedWidget, buttonText: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیکون دکمه (اختیاری)</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIconPickerState({ open: true, mode: 'button' })}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          selectedWidget.iconName
+                            ? 'bg-teal-500/15 border-teal-500/50 text-teal-600 dark:text-teal-400'
+                            : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 hover:text-teal-600 dark:hover:text-teal-400'
+                        }`}
+                      >
+                        {selectedWidget.iconName ? (
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4" />
+                            {selectedWidget.iconName}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4" />
+                            انتخاب آیکون
+                          </span>
+                        )}
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      {selectedWidget.iconName && (
+                        <button
+                          type="button"
+                          onClick={() => onUpdateWidget({ ...selectedWidget, iconName: undefined })}
+                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                          title="حذف آیکون"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لینک مقصد دکمه (HREF)</label>
@@ -383,13 +488,24 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تصویر پوستر (Poster) — اختیاری</label>
-                    <input
-                      type="text"
-                      value={selectedWidget.settings.style.videoPoster || ''}
-                      onChange={(e) => handleStyleChange('videoPoster', e.target.value)}
-                      placeholder="https://... تصویر قبل از پخش"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        dir="ltr"
+                        value={selectedWidget.settings.style.videoPoster || ''}
+                        onChange={(e) => handleStyleChange('videoPoster', e.target.value)}
+                        placeholder="https://... تصویر قبل از پخش"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setMediaPickerTarget('videoPoster')}
+                        className="shrink-0 p-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all cursor-pointer"
+                        title="انتخاب از مدیریت رسانه"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -401,10 +517,26 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* ریش‌تکست / بلاک متن WYSIWYG */}
               {selectedWidget.type === 'richtext' && (
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                    محتوای HTML (ویرایشگر غنی)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      محتوای HTML (ویرایشگر غنی)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ta = textareaRef.current;
+                        setCursorRange(ta ? { start: ta.selectionStart, end: ta.selectionEnd } : null);
+                        setIconPickerState({ open: true, mode: 'text' });
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                      title="درج آیکون در متن (توکن [icon:name])"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      درج آیکون
+                    </button>
+                  </div>
                   <textarea
+                    ref={textareaRef}
                     rows={7}
                     value={selectedWidget.content}
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
@@ -1509,6 +1641,38 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* انتخاب تصویر از مدیریت رسانه — ویجت تصویر و پوستر ویدیو */}
+      <MediaManager
+        open={mediaPickerTarget === 'widgetImage'}
+        onClose={() => setMediaPickerTarget(null)}
+        filter="image"
+        title="انتخاب تصویر"
+        onSelect={(url) => {
+          onUpdateWidget({ ...selectedWidget, imageUrl: url });
+          setMediaPickerTarget(null);
+        }}
+      />
+      <MediaManager
+        open={mediaPickerTarget === 'videoPoster'}
+        onClose={() => setMediaPickerTarget(null)}
+        filter="image"
+        title="انتخاب تصویر پوستر ویدیو"
+        onSelect={(url) => {
+          handleStyleChange('videoPoster', url);
+          setMediaPickerTarget(null);
+        }}
+      />
+
+      {/* انتخابگر آیکون — متن و دکمه */}
+      <IconPicker
+        open={iconPickerState.open}
+        onClose={() => setIconPickerState({ open: false, mode: iconPickerState.mode })}
+        title={iconPickerState.mode === 'button' ? 'انتخاب آیکون دکمه' : 'انتخاب آیکون متن'}
+        value={iconPickerState.mode === 'button' ? selectedWidget.iconName : undefined}
+        onSelect={iconPickerState.mode === 'button' ? selectButtonIcon : insertIconToken}
+      />
+      </>
     );
   }
 
@@ -1746,6 +1910,129 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             )}
           </div>
 
+          {/* تصویر پس‌زمینه سکشن (به همراه position/size/repeat) */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              تصویر پس‌زمینه سکشن (اختیاری)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                dir="ltr"
+                placeholder="https://... یا انتخاب از رسانه"
+                value={selectedSection.backgroundImage || ''}
+                onChange={(e) => onUpdateSection({ ...selectedSection, backgroundImage: e.target.value || undefined })}
+                className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+              />
+              <button
+                type="button"
+                onClick={() => setMediaPickerTarget('sectionBg')}
+                className="shrink-0 p-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all cursor-pointer"
+                title="انتخاب از مدیریت رسانه"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+              {selectedSection.backgroundImage && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      backgroundImage: undefined,
+                      backgroundPosition: undefined,
+                      backgroundSize: undefined,
+                      backgroundRepeat: undefined
+                    })
+                  }
+                  className="shrink-0 p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                  title="حذف تصویر پس‌زمینه"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {selectedSection.backgroundImage && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block">موقعیت (Position)</label>
+                  <select
+                    value={selectedSection.backgroundPosition || 'center'}
+                    onChange={(e) => onUpdateSection({ ...selectedSection, backgroundPosition: e.target.value })}
+                    className="w-full px-2 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="center">وسط (center)</option>
+                    <option value="top">بالا (top)</option>
+                    <option value="bottom">پایین (bottom)</option>
+                    <option value="left">چپ (left)</option>
+                    <option value="right">راست (right)</option>
+                    <option value="top left">بالا چپ</option>
+                    <option value="top right">بالا راست</option>
+                    <option value="bottom left">پایین چپ</option>
+                    <option value="bottom right">پایین راست</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block">اندازه (Size)</label>
+                  <select
+                    value={selectedSection.backgroundSize || 'cover'}
+                    onChange={(e) => onUpdateSection({ ...selectedSection, backgroundSize: e.target.value })}
+                    className="w-full px-2 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="cover">پوشش کامل (cover)</option>
+                    <option value="contain">درون قاب (contain)</option>
+                    <option value="auto">خودکار (auto)</option>
+                    <option value="100% 100%">کشیدن کامل (100% 100%)</option>
+                    <option value="50%">نصف عرض (50%)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block">تکرار (Repeat)</label>
+                  <select
+                    value={selectedSection.backgroundRepeat || 'no-repeat'}
+                    onChange={(e) => onUpdateSection({ ...selectedSection, backgroundRepeat: e.target.value })}
+                    className="w-full px-2 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="no-repeat">بدون تکرار</option>
+                    <option value="repeat">تکرار کامل</option>
+                    <option value="repeat-x">تکرار افقی</option>
+                    <option value="repeat-y">تکرار عمودی</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پیش‌نمایش</label>
+                  <div
+                    className="w-full h-10 rounded-xl border border-gray-200 dark:border-slate-800"
+                    style={{
+                      backgroundImage: `url("${selectedSection.backgroundImage}")`,
+                      backgroundPosition: selectedSection.backgroundPosition || 'center',
+                      backgroundSize: selectedSection.backgroundSize || 'cover',
+                      backgroundRepeat: selectedSection.backgroundRepeat || 'no-repeat'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* نشانک سکشن (Bookmark) — برای لینک‌های #anchor */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <BookmarkIcon className="w-3.5 h-3.5" />
+              نشانک سکشن (Bookmark)
+            </label>
+            <input
+              type="text"
+              dir="ltr"
+              placeholder="services — بدون # (برای لینک #services)"
+              value={selectedSection.bookmark || ''}
+              onChange={(e) => onUpdateSection({ ...selectedSection, bookmark: e.target.value || undefined })}
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+            />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+              با تعیین نشانک، دکمه‌ها و لینک‌های دارای <span dir="ltr">href="#نشانک"</span> به این سکشن اسکرول می‌کنند.
+            </p>
+          </div>
+
           {/* شعاع گوشه‌های سکشن — مانند فتوشاپ (TL/TR/BL/BR) */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
@@ -1847,6 +2134,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               />
             </div>
           </div>
+
+          <MediaManager
+            open={mediaPickerTarget === 'sectionBg'}
+            onClose={() => setMediaPickerTarget(null)}
+            filter="image"
+            title="انتخاب تصویر پس‌زمینه سکشن"
+            onSelect={(url) => {
+              onUpdateSection({ ...selectedSection, backgroundImage: url });
+              setMediaPickerTarget(null);
+            }}
+          />
         </div>
       </div>
     );
