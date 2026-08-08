@@ -2156,6 +2156,50 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             </div>
           </div>
 
+          {/* موقعیت و لایهٔ سکشن — fixed/sticky/relative + z-index */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">موقعیت سکشن</label>
+              <select
+                value={selectedSection.position || 'static'}
+                onChange={(e) =>
+                  onUpdateSection({
+                    ...selectedSection,
+                    position: (e.target.value || 'static') as SectionInstance['position']
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+              >
+                <option value="static">معمولی (static)</option>
+                <option value="relative">نسبی (relative)</option>
+                <option value="sticky">چسبان (sticky)</option>
+                <option value="fixed">ثابت (fixed)</option>
+              </select>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                چسبان/ثابت: سکشن هنگام اسکرول بالای صفحه می‌ماند (مانند نوار راهبری).
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لایه (z-index)</label>
+              <input
+                type="number"
+                min={0}
+                value={selectedSection.zIndex ?? ''}
+                placeholder="خودکار"
+                onChange={(e) =>
+                  onUpdateSection({
+                    ...selectedSection,
+                    zIndex: e.target.value === '' ? undefined : parseInt(e.target.value) || 0
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                مقدار بالاتر = روی سکشن‌های دیگر قرار می‌گیرد.
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>

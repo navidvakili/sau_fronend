@@ -68,6 +68,12 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   /** ستون زیر نشانگر ماوس را پیدا می‌کند (برای رهاسازی روی هر نقطه از سکشن) */
   const resolveColumnIdAt = (e: React.DragEvent): string | undefined => {
+    // ۱) اول از target خود رویداد — قابل‌اطمینان‌ترین منبع، حتی وقتی pointer خارج viewport است
+    const t = e.target as Element | null;
+    const fromTarget =
+      t && typeof t.closest === 'function' ? (t.closest('[data-col-id]') as HTMLElement | null) : null;
+    if (fromTarget?.dataset?.colId) return fromTarget.dataset.colId;
+    // ۲) سپس elementFromPoint به‌عنوان پشتیبان (مثلاً وقتی target لایهٔ دیگر است)
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const colEl =
       el && typeof (el as Element).closest === 'function' ? (el as Element).closest('[data-col-id]') : null;
@@ -353,6 +359,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                       setDragWidgetId(null);
                     }}
                     style={{
+                      // موقعیت و لایهٔ سکشن (fixed/sticky/relative + z-index)
+                      position: sec.position || undefined,
+                      zIndex: sec.zIndex || undefined,
+                      // برای fixed/sticky معمولاً چسبیدن به بالای صفحه کافی است
+                      top: sec.position === 'fixed' || sec.position === 'sticky' ? 0 : undefined,
                       backgroundColor:
                         sec.backgroundImage || sec.backgroundGradient
                           ? undefined
@@ -360,9 +371,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                             ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
                             : undefined,
                       backgroundImage: buildSectionBackgroundImage(sec),
-                      backgroundPosition: sec.backgroundPosition || undefined,
-                      backgroundSize: sec.backgroundSize || undefined,
-                      backgroundRepeat: sec.backgroundRepeat || undefined,
+                      // وقتی تصویر پس‌زمینه هست، پیش‌فرض cover/center/no-repeat — نه auto (وگرنه تصویر با اندازهٔ طبیعی کوچک دیده می‌شود)
+                      backgroundPosition: sec.backgroundImage
+                        ? sec.backgroundPosition || 'center'
+                        : undefined,
+                      backgroundSize: sec.backgroundImage
+                        ? sec.backgroundSize || 'cover'
+                        : undefined,
+                      backgroundRepeat: sec.backgroundImage
+                        ? sec.backgroundRepeat || 'no-repeat'
+                        : undefined,
                       paddingTop: `${sec.paddingTop}px`,
                       paddingBottom: `${sec.paddingBottom}px`,
                       // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL

@@ -168,6 +168,10 @@ export interface SectionInstance {
   id: string;
   name: string;
   layout: 'full-width' | 'boxed';
+  /** موقعیت سکشن در صفحه — مانند فتوشاپ: ثابت (fixed)، چسبان (sticky)، نسبی (relative) یا معمولی */
+  position?: 'static' | 'relative' | 'sticky' | 'fixed';
+  /** لایهٔ سکشن (z-index) — برای قرارگیری روی سایر سکشن‌ها */
+  zIndex?: number;
   backgroundColor?: string;
   backgroundGradient?: string;
   /** شفافیت پس‌زمینه سکشن (رنگ یا گرادیان) — 0 تا 100 */

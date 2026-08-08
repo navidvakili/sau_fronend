@@ -35,7 +35,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose })
     const bgPos = sec.backgroundImage
       ? `background-position: ${sec.backgroundPosition || 'center'}; background-size: ${sec.backgroundSize || 'cover'}; background-repeat: ${sec.backgroundRepeat || 'no-repeat'};`
       : '';
-    return `${bgColor} ${bgImage} ${bgPos}`;
+    const pos =
+      sec.position && sec.position !== 'static'
+        ? `position: ${sec.position}; z-index: ${sec.zIndex || 1}; top: 0;`
+        : '';
+    return `${bgColor} ${bgImage} ${bgPos} ${pos}`;
   };
 
   const generateReactCode = () => {

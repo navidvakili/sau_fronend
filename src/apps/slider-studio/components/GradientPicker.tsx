@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from 'react';
-import { Plus, Trash2, RotateCw } from 'lucide-react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 
 // ---- Types ----
 interface ColorStop {
@@ -88,6 +88,141 @@ function buildGradient(angle: string, stops: ColorStop[]): string {
     .join(', ');
   return `linear-gradient(${angle}, ${stopStr})`;
 }
+
+// ---- Circular angle dial (مانند فتوشاپ) ----
+// CSS gradient angle semantics: 0deg = به بالا، 90deg = راست، 180deg = پایین، 270deg = چپ (ساعت‌گرد)
+
+const DIAL_SIZE = 64;
+const DIAL_CENTER = DIAL_SIZE / 2;
+const DIAL_RADIUS = DIAL_SIZE / 2 - 6;
+
+/** تبدیل زاویهٔ گرادیان (درجه) به مختصات نقطهٔ روی دایره (x,y با مبدأ بالا-چپ) */
+const angleToPoint = (deg: number): { x: number; y: number } => {
+  const rad = (deg * Math.PI) / 180;
+  return {
+    x: DIAL_CENTER + DIAL_RADIUS * Math.sin(rad),
+    y: DIAL_CENTER - DIAL_RADIUS * Math.cos(rad)
+  };
+};
+
+/** تبدیل موقعیت اشاره‌گر (نسبت به مرکز دایره) به زاویهٔ گرادیان ۰ تا ۳۶۰ درجه */
+const pointToAngle = (px: number, py: number): number => {
+  const dx = px - DIAL_CENTER;
+  const dy = py - DIAL_CENTER;
+  let deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+  if (deg < 0) deg += 360;
+  return Math.round(deg) % 360;
+};
+
+interface AngleDialProps {
+  angle: number;
+  onAngleChange: (deg: number) => void;
+}
+
+/** دایرهٔ زاویهٔ گرادیان — با خط جهت‌نما از مرکز به لبه که قابل کشیدن است */
+const AngleDial: React.FC<AngleDialProps> = ({ angle, onAngleChange }) => {
+  const dialRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const updateFromPointer = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = dialRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      onAngleChange(pointToAngle(px, py));
+    },
+    [onAngleChange]
+  );
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    setDragging(true);
+    updateFromPointer(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    updateFromPointer(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setDragging(false);
+    try {
+      (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const tip = angleToPoint(angle);
+
+  return (
+    <div
+      ref={dialRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className={`relative shrink-0 touch-none select-none rounded-full cursor-pointer ${
+        dragging ? 'ring-2 ring-teal-400/50' : ''
+      }`}
+      style={{ width: DIAL_SIZE, height: DIAL_SIZE }}
+      title="زاویهٔ گرادیان — روی دایره بکشید"
+    >
+      <svg width={DIAL_SIZE} height={DIAL_SIZE} viewBox={`0 0 ${DIAL_SIZE} ${DIAL_SIZE}`} className="block">
+        {/* حلقهٔ بیرونی */}
+        <circle
+          cx={DIAL_CENTER}
+          cy={DIAL_CENTER}
+          r={DIAL_RADIUS}
+          fill="none"
+          strokeWidth={1.5}
+          className="stroke-slate-300 dark:stroke-slate-600"
+        />
+        {/* نشانگرهای زاویه (هر ۳۰ درجه) */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          const deg = i * 30;
+          const pOuter = angleToPoint(deg);
+          const innerR = DIAL_RADIUS - (deg % 90 === 0 ? 7 : 3.5);
+          const rad = (deg * Math.PI) / 180;
+          const x2 = DIAL_CENTER + innerR * Math.sin(rad);
+          const y2 = DIAL_CENTER - innerR * Math.cos(rad);
+          return (
+            <line
+              key={i}
+              x1={pOuter.x}
+              y1={pOuter.y}
+              x2={x2}
+              y2={y2}
+              strokeWidth={deg % 90 === 0 ? 1.5 : 1}
+              className={deg % 90 === 0 ? 'stroke-slate-500 dark:stroke-slate-400' : 'stroke-slate-300 dark:stroke-slate-600'}
+            />
+          );
+        })}
+        {/* خط جهت‌نما از مرکز به لبه */}
+        <line
+          x1={DIAL_CENTER}
+          y1={DIAL_CENTER}
+          x2={tip.x}
+          y2={tip.y}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          className="stroke-teal-500 dark:stroke-teal-400"
+        />
+        {/* نقطهٔ مرکز */}
+        <circle cx={DIAL_CENTER} cy={DIAL_CENTER} r={3} className="fill-teal-500 dark:fill-teal-400" />
+        {/* نقطهٔ انتهای خط */}
+        <circle cx={tip.x} cy={tip.y} r={3.5} className="fill-teal-500 dark:fill-teal-400" />
+      </svg>
+      {/* برچسب زاویه داخل دایره */}
+      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-bold text-slate-500 dark:text-slate-400 pointer-events-none">
+        {angle}°
+      </span>
+    </div>
+  );
+};
 
 // ---- Component ----
 
@@ -213,10 +348,23 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
         ))}
       </div>
 
-      {/* Gradient direction / angle */}
+      {/* Gradient direction / angle — دایرهٔ زاویه مانند فتوشاپ */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 flex-1">
-          <RotateCw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+        <AngleDial
+          angle={angleNum}
+          onAngleChange={(deg) => emit(`${deg}deg`, stops)}
+        />
+
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              زاویه گرادیان
+            </label>
+            <span className="text-[10px] text-slate-500 w-10 shrink-0 text-left font-mono" dir="ltr">
+              {angle}
+            </span>
+          </div>
+          {/* اسلایدر دقیق‌تر به‌عنوان گزینهٔ دوم (اختیاری — کنترل ظریف) */}
           <input
             type="range"
             min={0}
@@ -226,12 +374,9 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               const val = `${e.target.value}deg`;
               emit(val, stops);
             }}
-            className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
+            className="w-full h-1 accent-teal-500 cursor-pointer"
             dir="ltr"
           />
-          <span className="text-[10px] text-slate-500 w-10 shrink-0 text-right font-mono">
-            {angle}
-          </span>
         </div>
 
         {/* Add stop button */}
