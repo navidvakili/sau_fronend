@@ -121,13 +121,13 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
             <div>
               <label className={labelCls}>لینک (Slug) *</label>
               <div className="flex items-center gap-1">
-                <span className="text-sm text-slate-400 font-mono shrink-0">/</span>
+                <span className="text-sm text-slate-400 shrink-0">/</span>
                 <input
                   type="text"
                   value={slug}
                   onChange={(e) => handleSlugChange(e.target.value)}
                   placeholder="home-portal"
-                  className={`${inputCls} font-mono`}
+                  className={inputCls}
                   dir="ltr"
                 />
               </div>
@@ -203,7 +203,7 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
                   value={seoOgImage}
                   onChange={(e) => setSeoOgImage(e.target.value)}
                   placeholder="https://..."
-                  className={`${inputCls} font-mono`}
+                  className={inputCls}
                   dir="ltr"
                 />
               </div>

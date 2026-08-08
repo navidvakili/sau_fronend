@@ -192,7 +192,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-teal-500" />
               <span>ویرایش ویجت</span>
             </div>
-            <div className="text-[10px] text-slate-400 font-mono truncate">{selectedWidget.title || selectedWidget.type}</div>
+            <div className="text-[10px] text-slate-400 truncate">{selectedWidget.title || selectedWidget.type}</div>
           </div>
 
           <div className="flex items-center gap-1">
@@ -285,7 +285,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     type="text"
                     value={selectedWidget.imageUrl || ''}
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, imageUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500"
                   />
                 </div>
               )}
@@ -307,7 +307,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       type="text"
                       value={selectedWidget.buttonUrl || ''}
                       onChange={(e) => onUpdateWidget({ ...selectedWidget, buttonUrl: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
                 </>
@@ -328,7 +328,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     value={selectedWidget.content}
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
                     placeholder="<h3>تیتر</h3><p>متن پاراگراف با <b>قلم ضخیم</b> و لینک...</p>"
-                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                   />
                   <p className="text-[10px] text-slate-400">می‌توانید تگ‌های HTML (تیتر، پاراگراف، لینک و آیکون) بنویسید.</p>
                 </div>
@@ -373,7 +373,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       type="text"
                       value={customProps.buttonUrl || ''}
                       onChange={(e) => updateCustomProps({ buttonUrl: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
                 </>
@@ -390,7 +390,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       max={60}
                       value={customProps.gap ?? 16}
                       onChange={(e) => updateCustomProps({ gap: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -434,7 +434,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       updateCustomProps({ images: urls });
                     }}
                     placeholder={'https://example.com/1.jpg\nhttps://example.com/2.jpg'}
-                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                   />
                 </div>
               )}
@@ -449,7 +449,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       min={0}
                       value={customProps.target ?? 100}
                       onChange={(e) => updateCustomProps({ target: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -511,7 +511,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         updateCustomProps({ items });
                       }}
                       placeholder={'صفحه اصلی|/\nدرباره ما|/about'}
-                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                     />
                   </div>
                 </>
@@ -527,7 +527,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       value={customProps.embedUrl || ''}
                       onChange={(e) => updateCustomProps({ embedUrl: e.target.value })}
                       placeholder="https://www.google.com/maps?q=Yazd&output=embed"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -575,7 +575,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     value={selectedWidget.content}
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
                     placeholder={'<div>کد دلخواه شما...</div>'}
-                    className="w-full p-3 rounded-xl bg-slate-950 text-xs font-mono text-emerald-400 border border-gray-800 focus:outline-none focus:border-teal-500 leading-relaxed"
+                    className="w-full p-3 rounded-xl bg-slate-950 text-xs text-emerald-400 border border-gray-800 focus:outline-none focus:border-teal-500 leading-relaxed"
                     dir="ltr"
                   />
                 </div>
@@ -605,7 +605,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         }
                         placeholder="https://..."
                         dir="ltr"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                       />
                     </div>
                   ))}
@@ -624,7 +624,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     onChange={(e) => updateCustomProps({ pageUrl: e.target.value })}
                     dir="ltr"
                     placeholder="https://sau.ac.ir/page"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-indigo-500 focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                   />
                 </div>
               )}
@@ -655,7 +655,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       updateCustomProps({ plans });
                     }}
                     placeholder={'پایه|رایگان|۱ نوشته\nحرفه‌ای|۱۵۰۰۰۰۰|۱۰ نوشته،پشتیبانی|yes'}
-                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                   />
                 </div>
               )}
@@ -757,7 +757,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         max={20}
                         value={selectedWidget.settings.binding.limit || 4}
                         onChange={(e) => handleBindingChange('limit', parseInt(e.target.value) || 4)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                       />
                     </div>
 
@@ -928,6 +928,46 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               </div>
 
+              {/* Widget Background Gradient */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  گرادیان پس‌زمینه ویجت (اختیاری)
+                </label>
+                <input
+                  type="text"
+                  placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
+                  value={selectedWidget.settings.style.backgroundGradient || ''}
+                  onChange={(e) => handleStyleChange('backgroundGradient', e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+                    { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+                    { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
+                    { label: 'نقره‌ای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => handleStyleChange('backgroundGradient', preset.value)}
+                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  {selectedWidget.settings.style.backgroundGradient && (
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange('backgroundGradient', undefined)}
+                      className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                    >
+                      حذف گرادیان
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Font Size & Weight */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
@@ -937,7 +977,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     placeholder="e.g. 18px"
                     value={selectedWidget.settings.style.fontSize || ''}
                     onChange={(e) => handleStyleChange('fontSize', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -994,7 +1034,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     type="number"
                     value={selectedWidget.settings.style.borderRadius || 0}
                     onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -1007,7 +1047,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       handleStyleChange('paddingTop', val);
                       handleStyleChange('paddingBottom', val);
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -1107,7 +1147,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               <Layers className="w-3.5 h-3.5 text-teal-500" />
               <span>تنظیمات سکشن</span>
             </div>
-            <div className="text-[10px] text-slate-400 font-mono truncate">{selectedSection.name}</div>
+            <div className="text-[10px] text-slate-400 truncate">{selectedSection.name}</div>
           </div>
 
           <button
@@ -1233,6 +1273,45 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              گرادیان پس‌زمینه (اختیاری — جایگزین رنگ ساده می‌شود)
+            </label>
+            <input
+              type="text"
+              placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
+              value={selectedSection.backgroundGradient || ''}
+              onChange={(e) => onUpdateSection({ ...selectedSection, backgroundGradient: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+            />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+                { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+                { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
+                { label: 'نقرهای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: preset.value })}
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+                >
+                  {preset.label}
+                </button>
+              ))}
+              {selectedSection.backgroundGradient && (
+                <button
+                  type="button"
+                  onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: undefined })}
+                  className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                >
+                  حذف گرادیان
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
@@ -1240,7 +1319,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 type="number"
                 value={selectedSection.paddingTop}
                 onChange={(e) => onUpdateSection({ ...selectedSection, paddingTop: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>
             <div className="space-y-1.5">
@@ -1249,7 +1328,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 type="number"
                 value={selectedSection.paddingBottom}
                 onChange={(e) => onUpdateSection({ ...selectedSection, paddingBottom: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>
           </div>

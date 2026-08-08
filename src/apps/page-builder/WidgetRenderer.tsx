@@ -156,7 +156,7 @@ const SmartHeader: React.FC<{
       <div className={`p-2 rounded-xl ${badgeColor}`}>{icon}</div>
       <h3 className="text-base font-black text-slate-900 dark:text-white">{title}</h3>
     </div>
-    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md font-bold border flex items-center gap-1">
+    <span className="text-[11px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1">
       <Tag className="w-3 h-3" />
       {badge}
     </span>
@@ -274,7 +274,7 @@ const AnnouncementsFeedWidget: React.FC<{
                   )}
                   {item.title}
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1 shrink-0">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 shrink-0">
                   <Clock className="w-3 h-3" />
                   {formatFaDate(item.published_at || item.date)}
                 </span>
@@ -282,7 +282,7 @@ const AnnouncementsFeedWidget: React.FC<{
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed truncate">
                 {item.summary || item.content}
               </p>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-teal-600 dark:text-teal-400">
+              <div className="flex items-center gap-2 text-[10px] text-teal-600 dark:text-teal-400">
                 {item.group && (
                   <span className="px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/20">
                     {item.group}
@@ -369,7 +369,7 @@ const NewsFeedWidget: React.FC<{
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                   {news.summary}
                 </p>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-2 border-t border-gray-100 dark:border-slate-800/60">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-gray-100 dark:border-slate-800/60">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {formatFaDate(news.published_at || news.created_at)}
@@ -431,7 +431,7 @@ const ImageGalleryWidget: React.FC<{
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white">
                 <span className="text-[11px] font-bold truncate">{img.name}</span>
-                <span className="text-[9px] text-amber-300 font-mono">{formatFileSize(img.size)}</span>
+                <span className="text-[9px] text-amber-300">{formatFileSize(img.size)}</span>
               </div>
             </div>
           ))}
@@ -480,7 +480,7 @@ const AchievementsWidget: React.FC<{
               <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-1 shadow-xs">
                 <div className="flex items-center justify-between text-xs font-black text-slate-900 dark:text-white">
                   <span>{ach.title}</span>
-                  <span className="font-mono text-[10px] text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10">
+                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10">
                     {ach.published_at ? formatFaDate(ach.published_at) : ''}
                   </span>
                 </div>
@@ -548,7 +548,7 @@ const StaffDirectoryWidget: React.FC<{
                 <div className="text-[11px] text-teal-600 dark:text-teal-400 font-bold truncate">
                   {st.rank || st.position || st.specialization}
                 </div>
-                {st.email && <div className="text-[10px] text-slate-400 font-mono truncate">{st.email}</div>}
+                {st.email && <div className="text-[10px] text-slate-400 truncate">{st.email}</div>}
               </div>
             </div>
           ))}
@@ -600,12 +600,12 @@ const FileManagerWidget: React.FC<{
               className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-blue-500/30 transition-all"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black text-xs uppercase shrink-0">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-black text-xs uppercase shrink-0">
                   {getExt(file.name)}
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{file.name}</div>
-                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                  <div className="text-[10px] text-slate-400 flex items-center gap-2">
                     <span>حجم: {formatFileSize(file.size)}</span>
                   </div>
                 </div>
@@ -830,7 +830,7 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
 
   return (
     <div style={containerStyle} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 text-center flex flex-col items-center gap-1.5">
-      <div className="text-4xl font-black font-mono text-slate-900 dark:text-white">
+      <div className="text-4xl font-black text-slate-900 dark:text-white">
         {prefix}{value.toLocaleString('fa-IR')}{suffix}
       </div>
       <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{widget.title || 'شمارنده آماری'}</span>
@@ -851,7 +851,7 @@ const NavigatorBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.C
       <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center gap-2">
         <Compass className="w-4 h-4 text-indigo-500" />
         <span className="text-xs font-black text-slate-900 dark:text-white">{widget.title || 'پیمایش سریع'}</span>
-        <span className="mr-auto text-[10px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">{postType}</span>
+        <span className="mr-auto text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">{postType}</span>
       </div>
       <div className="divide-y divide-gray-100 dark:divide-slate-800">
         {(items.length ? items : [{ label: 'نمونه نوشته ۱', url: '#' }, { label: 'نمونه برگه ۲', url: '#' }]).map((item, i) => (
@@ -1095,7 +1095,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     if (cond.userRole && cond.userRole !== 'all') {
       if (currentUserRole !== 'all' && currentUserRole !== cond.userRole) {
         return (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs text-center font-mono">
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs text-center">
             [محتوا بر اساس نقش کاربر «{cond.userRole}» فیلتر شده است]
           </div>
         );
@@ -1236,7 +1236,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       return (
         <div style={containerStyle} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 text-right flex flex-col gap-1">
           <div className="text-xs text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider">{widget.title}</div>
-          <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">{widget.content || '1,420+'}</div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white">{widget.content || '1,420+'}</div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400">آمار به‌روزرسانی شده لحظه‌ای</span>
         </div>
       );

@@ -106,6 +106,27 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         ) : (
           <div className="space-y-0">
+            {/* Divider button before the first section */}
+            <div className="relative my-2 group/divider py-2 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onOpenComponentPicker) {
+                    onOpenComponentPicker(0);
+                  } else {
+                    onAddSection('1col');
+                  }
+                }}
+                className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>افزودن بلوک جدید به ابتدا</span>
+              </button>
+            </div>
             {pageSchema.sections.map((sec, secIdx) => {
               const isSecSelected = selectedSectionId === sec.id;
 
@@ -121,7 +142,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                         <EyeOff className="w-4 h-4" />
                         سکشن «{sec.name}» در حالت {activeBreakpoint} مخفی می‌باشد
                       </span>
-                      <span className="text-[10px] font-mono">کلیک برای تنظیمات</span>
+                      <span className="text-[10px]">کلیک برای تنظیمات</span>
                     </div>
 
                     {/* Divider line after hidden section */}

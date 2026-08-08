@@ -180,7 +180,7 @@ export default function SmartPage() {
             readOnly
             rows={14}
             value={currentCode}
-            className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-teal-700 dark:text-teal-300 focus:outline-none"
+            className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-700 dark:text-teal-300 focus:outline-none"
           />
         </div>
       </motion.div>

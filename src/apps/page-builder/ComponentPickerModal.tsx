@@ -227,7 +227,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
                         <span className="text-xs font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                           {sec.name}
                         </span>
-                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
                           {sec.columns}
                         </span>
                       </div>
@@ -289,7 +289,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
                     ماژول‌ها و ویجت‌های هوشمند (Smart Connected Modules)
                   </h4>
                 </div>
-                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md font-bold border border-amber-500/20">
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md font-bold border border-amber-500/20">
                   اتصال خودکار به پایگاه داده
                 </span>
               </div>

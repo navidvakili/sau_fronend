@@ -50,7 +50,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-black text-slate-900 dark:text-white">{pageSchema.title} - پیش‌نمایش زنده</h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               صفحه با شناسه /{pageSchema.slug} (وضعیت: {pageSchema.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'})
             </p>
           </div>

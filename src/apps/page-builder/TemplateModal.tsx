@@ -154,7 +154,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                 readOnly
                 rows={12}
                 value={JSON.stringify(currentSchema, null, 2)}
-                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-teal-700 dark:text-teal-400 focus:outline-none"
+                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-700 dark:text-teal-400 focus:outline-none"
               />
 
               <div className="flex items-center justify-end gap-3">
@@ -193,7 +193,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                 value={importJsonText}
                 onChange={(e) => setImportJsonText(e.target.value)}
                 placeholder='{"id": "custom-page", "title": "My Page", "sections": [...]}'
-                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-teal-500"
               />
 
               <div className="flex items-center justify-end gap-3">

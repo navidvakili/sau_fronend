@@ -137,7 +137,7 @@ export const GlobalStyleModal: React.FC<GlobalStyleModalProps> = ({
                     type="number"
                     value={styles.containerMaxWidth}
                     onChange={(e) => setStyles({ ...styles, containerMaxWidth: parseInt(e.target.value) || 1200 })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -148,7 +148,7 @@ export const GlobalStyleModal: React.FC<GlobalStyleModalProps> = ({
                 readOnly
                 rows={8}
                 value={generateCssVariables()}
-                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-teal-600 dark:text-teal-400 focus:outline-none"
+                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-600 dark:text-teal-400 focus:outline-none"
               />
               <button
                 onClick={handleCopyCss}

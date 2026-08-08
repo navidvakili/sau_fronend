@@ -923,7 +923,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
                 onChange={(e) => setPageSchema({ ...pageSchema, title: e.target.value })}
                 className="text-sm font-black bg-transparent text-slate-900 dark:text-white border-b border-transparent hover:border-gray-300 dark:hover:border-slate-700 focus:border-teal-500 focus:outline-none px-1"
               />
-              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+              <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border border-teal-500/20">
                   Intelligent Layout Engine
                 </span>
@@ -1035,7 +1035,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
                       >
                         <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
                           <span className="truncate">{ver.title}</span>
-                          <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 shrink-0">{ver.timestamp}</span>
+                          <span className="text-[10px] text-teal-600 dark:text-teal-400 shrink-0">{ver.timestamp}</span>
                         </div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400">{ver.note}</p>
                         <button
@@ -1079,15 +1079,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             title="تولید کد خروجی"
           >
             <Code className="w-4 h-4 text-amber-500" />
-          </button>
-
-          <button
-            onClick={() => handleOpenComponentPicker(pageSchema.sections.length)}
-            className="px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500 hover:text-white text-teal-600 dark:text-teal-400 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-teal-500/20 shadow-xs"
-            title="افزودن بلوک یا کامپوننت جدید"
-          >
-            <Plus className="w-4 h-4" />
-            <span>افزودن بلوک</span>
           </button>
 
           <button
