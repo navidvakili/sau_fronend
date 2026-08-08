@@ -62,17 +62,39 @@ export interface WidgetStyle {
   fontSize?: string; // e.g., '18px', '1.25rem'
   fontWeight?: string;
   textAlign?: 'right' | 'center' | 'left' | 'justify';
+  lineHeight?: string | number;
+  letterSpacing?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   paddingTop?: number;
   paddingBottom?: number;
   paddingLeft?: number;
   paddingRight?: number;
   marginTop?: number;
   marginBottom?: number;
+  // Legacy single radius (all corners) — newer builds use per-corner fields below
   borderRadius?: number;
+  borderRadiusTopLeft?: number;
+  borderRadiusTopRight?: number;
+  borderRadiusBottomLeft?: number;
+  borderRadiusBottomRight?: number;
   borderWidth?: number;
   borderColor?: string;
-  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+  // 'none' | 'sm' | 'md' | 'lg' | 'xl' presets OR raw CSS box-shadow string
+  shadow?: string;
   opacity?: number;
+  backgroundOpacity?: number; // 0-100
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  maxWidth?: number; // px — caps widget width
+  fullWidth?: boolean; // button stretches to full column width
+  alignVertical?: 'top' | 'center' | 'bottom'; // vertical alignment inside the widget box
+  // Video layer settings (slider-studio parity)
+  videoAutoplay?: boolean;
+  videoLoop?: boolean;
+  videoMuted?: boolean;
+  videoControls?: boolean;
+  videoPoster?: string;
+  aspectRatio?: '16 / 9' | '4 / 3' | '1 / 1' | 'auto';
   customCss?: string;
 }
 
@@ -149,6 +171,13 @@ export interface SectionInstance {
   backgroundImage?: string;
   paddingTop: number;
   paddingBottom: number;
+  /** شعاع گوشه‌ها به‌صورت جداگانه (مانند فتوشاپ) — TL/TR/BL/BR */
+  borderRadius?: {
+    topLeft?: number;
+    topRight?: number;
+    bottomLeft?: number;
+    bottomRight?: number;
+  };
   columns: ColumnInstance[];
   visibility: {
     desktop: boolean;

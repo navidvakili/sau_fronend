@@ -91,10 +91,10 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
         </div>
       </div>
 
-      {/* Preview Content Canvas */}
-      <div className="flex-1 overflow-y-auto flex justify-center p-4 bg-slate-200 dark:bg-slate-950/80">
+      {/* Preview Content Canvas — قاب خودش اسکرول می‌خورد تا محتوای بلند قابل مشاهده باشد */}
+      <div className="flex-1 overflow-hidden flex justify-center p-4 bg-slate-200 dark:bg-slate-950/80">
         <div
-          className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden ${getContainerWidth()}`}
+          className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-y-auto ${getContainerWidth()}`}
           style={{
             fontFamily: globalStyles.fontFamily,
             color: globalStyles.textColor
@@ -111,7 +111,13 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                   backgroundColor: sec.backgroundColor || undefined,
                   backgroundImage: sec.backgroundGradient || undefined,
                   paddingTop: `${sec.paddingTop}px`,
-                  paddingBottom: `${sec.paddingBottom}px`
+                  paddingBottom: `${sec.paddingBottom}px`,
+                  // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
+                  borderRadius: sec.borderRadius
+                    ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
+                        .map((v) => (v ? `${v}px` : '0px'))
+                        .join(' ')
+                    : undefined
                 }}
               >
                 <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>

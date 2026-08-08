@@ -935,7 +935,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDeletePage={(page) => handleDeleteRequest(page)}
         />
       ) : (
-      <div className="flex flex-col h-[calc(100dvh-10rem)] min-h-[560px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
+      <div className="flex flex-col h-[calc(100dvh_-_13rem)] min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
       {/* ============================================================== */}
       {/* TOP APPLICATION BAR & WORKSPACE TOOLBAR */}
       {/* ============================================================== */}

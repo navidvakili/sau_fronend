@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   WidgetInstance,
+  WidgetStyle,
   UserRoleCondition,
   WidgetDataBinding
 } from './builderTypes';
@@ -70,6 +71,56 @@ const formatFaDate = (iso?: string | null): string => {
   } catch {
     return '';
   }
+};
+
+// ── لایه‌سازی (هم‌سطح slider-studio): شعاع گوشه، سایه، پس‌زمینه با شفافیت ──
+
+/** سایه‌های آماده — یا رشتهٔ CSS سفارشی */
+const SHADOW_PRESETS: Record<string, string> = {
+  sm: '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)',
+  md: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)',
+  lg: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+  xl: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'
+};
+
+/** تبدیل فیلد shadow به مقدار CSS (پریست یا رشتهٔ خام) */
+const resolveBoxShadow = (shadow?: string): string | undefined => {
+  if (!shadow || shadow === 'none') return undefined;
+  if (shadow in SHADOW_PRESETS) return SHADOW_PRESETS[shadow];
+  return shadow;
+};
+
+/** شعاع گوشه‌ها — اولویت با گوشه‌های جداگانه (مانند فتوشاپ)، وگرنه مقدار قدیمی واحد */
+const resolveBorderRadius = (s: WidgetStyle): string | undefined => {
+  const tl = s.borderRadiusTopLeft;
+  const tr = s.borderRadiusTopRight;
+  const br = s.borderRadiusBottomLeft;
+  const bl = s.borderRadiusBottomRight;
+  if (tl !== undefined || tr !== undefined || br !== undefined || bl !== undefined) {
+    return [tl ?? 0, tr ?? 0, br ?? 0, bl ?? 0].map((v) => `${v}px`).join(' ');
+  }
+  return s.borderRadius !== undefined ? `${s.borderRadius}px` : undefined;
+};
+
+/** رنگ پس‌زمینهٔ ساده با اعمال شفافیت (backgroundOpacity) — فقط برای رنگ ثابت */
+const resolveBackgroundColor = (s: WidgetStyle): string | undefined => {
+  if (!s.backgroundColor) return undefined;
+  const opacity = s.backgroundOpacity;
+  if (opacity === undefined || opacity >= 100) return s.backgroundColor;
+  const hex = s.backgroundColor.replace('#', '');
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(100, opacity)) / 100})`;
+  }
+  return s.backgroundColor;
+};
+
+/** آیا URL ویدیو مستقیم است (فایل رسانه) یا جاساز (iframe)؟ */
+const isDirectVideo = (url?: string): boolean => {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg|ogv)(\?.*)?$/i.test(url);
 };
 
 /** فرمت حجم فایل (بایت → KB/MB) */
@@ -968,26 +1019,31 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   const style = widget.settings.style || {};
   const binding = widget.settings.binding || { dataSource: 'none' };
 
-  // Calculate container inline style
+  // Calculate container inline style (تنظیمات لایه — هم‌سطح slider-studio)
   const containerStyle: React.CSSProperties = {
     color: style.textColor,
-    backgroundColor: style.backgroundColor,
+    backgroundColor: resolveBackgroundColor(style),
     backgroundImage: style.backgroundGradient ? style.backgroundGradient : undefined,
     fontFamily: style.fontFamily,
     fontSize: style.fontSize,
     fontWeight: style.fontWeight,
     textAlign: style.textAlign,
+    lineHeight: style.lineHeight !== undefined ? style.lineHeight : undefined,
+    letterSpacing: style.letterSpacing !== undefined ? `${style.letterSpacing}px` : undefined,
+    textTransform: style.textTransform,
     paddingTop: style.paddingTop !== undefined ? `${style.paddingTop}px` : undefined,
     paddingBottom: style.paddingBottom !== undefined ? `${style.paddingBottom}px` : undefined,
     paddingLeft: style.paddingLeft !== undefined ? `${style.paddingLeft}px` : undefined,
     paddingRight: style.paddingRight !== undefined ? `${style.paddingRight}px` : undefined,
     marginTop: style.marginTop !== undefined ? `${style.marginTop}px` : undefined,
     marginBottom: style.marginBottom !== undefined ? `${style.marginBottom}px` : undefined,
-    borderRadius: style.borderRadius !== undefined ? `${style.borderRadius}px` : undefined,
+    borderRadius: resolveBorderRadius(style),
     borderWidth: style.borderWidth !== undefined ? `${style.borderWidth}px` : undefined,
     borderColor: style.borderColor,
-    borderStyle: style.borderWidth ? 'solid' : undefined,
-    opacity: style.opacity
+    borderStyle: style.borderWidth ? (style.borderStyle || 'solid') : undefined,
+    boxShadow: resolveBoxShadow(style.shadow),
+    opacity: style.opacity,
+    maxWidth: style.maxWidth !== undefined ? `${style.maxWidth}px` : undefined
   };
 
   // State for accordions
@@ -1022,21 +1078,41 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           <img
             src={widget.imageUrl || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
             alt={widget.title}
-            className="w-full h-auto object-cover rounded-inherit transition-transform duration-300 hover:scale-[1.02]"
+            className="w-full h-auto transition-transform duration-300 hover:scale-[1.02]"
+            style={{
+              objectFit: style.objectFit || 'cover',
+              borderRadius: resolveBorderRadius(style)
+            }}
           />
         </div>
       );
 
     case 'button':
       return (
-        <div style={containerStyle} className="inline-block transition-all">
+        <div style={containerStyle} className={`transition-all ${style.fullWidth ? 'w-full' : 'inline-block'}`}>
           <a
             href={widget.buttonUrl || '#'}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-sm transition-all shadow-md hover:shadow-lg"
+            className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-black text-sm transition-all shadow-md hover:shadow-lg ${
+              style.fullWidth ? 'w-full' : ''
+            }`}
             style={{
-              backgroundColor: style.backgroundColor || undefined,
+              backgroundColor: resolveBackgroundColor(style),
+              backgroundImage: style.backgroundGradient ? style.backgroundGradient : undefined,
               color: style.textColor || undefined,
-              borderRadius: style.borderRadius ? `${style.borderRadius}px` : undefined
+              borderRadius: resolveBorderRadius(style),
+              borderWidth: style.borderWidth !== undefined ? `${style.borderWidth}px` : undefined,
+              borderColor: style.borderColor,
+              borderStyle: style.borderWidth ? (style.borderStyle || 'solid') : undefined,
+              boxShadow: resolveBoxShadow(style.shadow),
+              paddingTop: style.paddingTop !== undefined ? `${style.paddingTop}px` : undefined,
+              paddingBottom: style.paddingBottom !== undefined ? `${style.paddingBottom}px` : undefined,
+              paddingLeft: style.paddingLeft !== undefined ? `${style.paddingLeft}px` : undefined,
+              paddingRight: style.paddingRight !== undefined ? `${style.paddingRight}px` : undefined,
+              fontFamily: style.fontFamily,
+              fontSize: style.fontSize,
+              fontWeight: style.fontWeight,
+              letterSpacing: style.letterSpacing !== undefined ? `${style.letterSpacing}px` : undefined,
+              textTransform: style.textTransform
             }}
           >
             <span>{widget.buttonText || widget.content || 'دکمه اقدام'}</span>
@@ -1047,14 +1123,38 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'video':
       return (
-        <div style={containerStyle} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 border border-slate-700 flex items-center justify-center">
+        <div
+          style={{
+            ...containerStyle,
+            aspectRatio: style.aspectRatio || '16 / 9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          className="relative overflow-hidden bg-slate-900"
+        >
           {widget.videoUrl ? (
-            <iframe
-              src={widget.videoUrl}
-              title={widget.title}
-              className="w-full h-full border-0"
-              allowFullScreen
-            />
+            isDirectVideo(widget.videoUrl) ? (
+              <video
+                src={widget.videoUrl}
+                poster={style.videoPoster || undefined}
+                autoPlay={style.videoAutoplay}
+                loop={style.videoLoop}
+                muted={style.videoMuted}
+                controls={style.videoControls !== false}
+                playsInline
+                className="w-full h-full object-cover"
+                style={{ objectFit: style.objectFit || 'cover' }}
+              />
+            ) : (
+              <iframe
+                src={widget.videoUrl}
+                title={widget.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )
           ) : (
             <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
               <div className="p-4 rounded-full bg-teal-500/20 text-teal-400">

@@ -16,6 +16,7 @@ import {
   fetchDataSourceAnnouncementCategories,
   fetchDataSourceMediaFolders
 } from './api';
+import GradientPicker from '../slider-studio/components/GradientPicker';
 import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
 import {
@@ -40,6 +41,11 @@ import {
   List,
   Layers
 } from 'lucide-react';
+
+// ── سایه‌های آماده (هم‌سطح slider-studio) ──
+const SHADOW_SM = '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)';
+const SHADOW_MD = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)';
+const SHADOW_LG = '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)';
 
 interface InspectorPanelProps {
   selectedWidget: WidgetInstance | null;
@@ -315,6 +321,74 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       value={selectedWidget.buttonUrl || ''}
                       onChange={(e) => onUpdateWidget({ ...selectedWidget, buttonUrl: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {selectedWidget.type === 'video' && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آدرس اینترنتی ویدیو (URL)</label>
+                    <input
+                      type="text"
+                      value={selectedWidget.videoUrl || ''}
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, videoUrl: e.target.value })}
+                      placeholder="https://... (لینک جاسازی یا فایل mp4)"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-teal-600 dark:text-teal-400 focus:outline-none focus:border-teal-500"
+                    />
+                    <p className="text-[10px] text-slate-400">لینک جاسازی (iframe) یا فایل مستقیم mp4/webm/ogg</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ابعاد قاب (Aspect Ratio)</label>
+                    <select
+                      value={selectedWidget.settings.style.aspectRatio || '16 / 9'}
+                      onChange={(e) => handleStyleChange('aspectRatio', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="16 / 9">۱۶ به ۹ (سینمایی)</option>
+                      <option value="4 / 3">۴ به ۳</option>
+                      <option value="1 / 1">۱ به ۱ (مربعی)</option>
+                      <option value="auto">خودکار</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: 'videoAutoplay', label: 'پخش خودکار' },
+                      { key: 'videoLoop', label: 'حلقه تکرار' },
+                      { key: 'videoMuted', label: 'بی‌صدا' }
+                    ] as const).map(({ key, label }) => (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedWidget.settings.style[key] === true}
+                          onChange={(e) => handleStyleChange(key, e.target.checked)}
+                          className="accent-teal-600 w-4 h-4"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                    <label className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedWidget.settings.style.videoControls !== false}
+                        onChange={(e) => handleStyleChange('videoControls', e.target.checked)}
+                        className="accent-teal-600 w-4 h-4"
+                      />
+                      نمایش کنترل‌ها
+                    </label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تصویر پوستر (Poster) — اختیاری</label>
+                    <input
+                      type="text"
+                      value={selectedWidget.settings.style.videoPoster || ''}
+                      onChange={(e) => handleStyleChange('videoPoster', e.target.value)}
+                      placeholder="https://... تصویر قبل از پخش"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
                   </div>
                 </>
@@ -935,44 +1009,46 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               </div>
 
-              {/* Widget Background Gradient */}
+              {/* Widget Background Gradient — colorpicker with stops + angle */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                   گرادیان پس‌زمینه ویجت (اختیاری)
                 </label>
-                <input
-                  type="text"
-                  placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
-                  value={selectedWidget.settings.style.backgroundGradient || ''}
-                  onChange={(e) => handleStyleChange('backgroundGradient', e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
-                />
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
-                    { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
-                    { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
-                    { label: 'نقره‌ای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => handleStyleChange('backgroundGradient', preset.value)}
-                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                  {selectedWidget.settings.style.backgroundGradient && (
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange('backgroundGradient', undefined)}
-                      className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-                    >
-                      حذف گرادیان
-                    </button>
-                  )}
-                </div>
+                {selectedWidget.settings.style.backgroundGradient ? (
+                  <>
+                    <GradientPicker
+                      value={selectedWidget.settings.style.backgroundGradient}
+                      onChange={(css) => handleStyleChange('backgroundGradient', css)}
+                    />
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleStyleChange('backgroundGradient', undefined)}
+                        className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                      >
+                        حذف گرادیان
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+                      { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+                      { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
+                      { label: 'نقره‌ای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => handleStyleChange('backgroundGradient', preset.value)}
+                        className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Font Size & Weight */}
@@ -1033,30 +1109,324 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               </div>
 
-              {/* Padding & Border Radius */}
+              {/* ── تنظیمات لایه (هم‌سطح slider-studio) ── */}
+
+              {/* Typography extras for text-like widgets */}
+              {(selectedWidget.type === 'text' || selectedWidget.type === 'heading' || selectedWidget.type === 'richtext' || selectedWidget.type === 'button') && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نام فونت</label>
+                    <select
+                      value={selectedWidget.settings.style.fontFamily || 'Vazirmatn, sans-serif'}
+                      onChange={(e) => handleStyleChange('fontFamily', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="Vazirmatn, sans-serif">وزیرمتن (فارسی)</option>
+                      <option value="Poppins, sans-serif">Poppins</option>
+                      <option value="Inter, sans-serif">Inter</option>
+                      <option value="Impact, sans-serif">Impact (برجسته)</option>
+                      <option value="Allemand, serif">Allemand</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خط (Line Height)</label>
+                      <input
+                        type="number"
+                        step={0.1}
+                        min={0.5}
+                        max={3}
+                        value={typeof selectedWidget.settings.style.lineHeight === 'number' ? selectedWidget.settings.style.lineHeight : 1.6}
+                        onChange={(e) => handleStyleChange('lineHeight', parseFloat(e.target.value) || 1.6)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله حروف (px)</label>
+                      <input
+                        type="number"
+                        value={selectedWidget.settings.style.letterSpacing || 0}
+                        onChange={(e) => handleStyleChange('letterSpacing', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت حروف</label>
+                    <select
+                      value={selectedWidget.settings.style.textTransform || 'none'}
+                      onChange={(e) => handleStyleChange('textTransform', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="none">عادی</option>
+                      <option value="uppercase">بزرگ (UPPERCASE)</option>
+                      <option value="lowercase">کوچک (lowercase)</option>
+                      <option value="capitalize">اول حرف بزرگ</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Padding — all sides */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">شعاع انحنا (Radius)</label>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
                   <input
                     type="number"
-                    value={selectedWidget.settings.style.borderRadius || 0}
-                    onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value) || 0)}
+                    min={0}
+                    value={selectedWidget.settings.style.paddingTop || 0}
+                    onChange={(e) => handleStyleChange('paddingTop', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ عمودی (px)</label>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ پایین (px)</label>
                   <input
                     type="number"
-                    value={selectedWidget.settings.style.paddingTop || 0}
+                    min={0}
+                    value={selectedWidget.settings.style.paddingBottom || 0}
+                    onChange={(e) => handleStyleChange('paddingBottom', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ راست (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedWidget.settings.style.paddingRight || 0}
+                    onChange={(e) => handleStyleChange('paddingRight', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ چپ (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedWidget.settings.style.paddingLeft || 0}
+                    onChange={(e) => handleStyleChange('paddingLeft', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              {/* Per-corner border radius — Photoshop style */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">شعاع گوشه‌ها (px) — مانند فتوشاپ</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا راست</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={selectedWidget.settings.style.borderRadiusTopRight || 0}
+                      onChange={(e) => handleStyleChange('borderRadiusTopRight', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا چپ</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={selectedWidget.settings.style.borderRadiusTopLeft || 0}
+                      onChange={(e) => handleStyleChange('borderRadiusTopLeft', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین راست</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={selectedWidget.settings.style.borderRadiusBottomRight || 0}
+                      onChange={(e) => handleStyleChange('borderRadiusBottomRight', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین چپ</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={selectedWidget.settings.style.borderRadiusBottomLeft || 0}
+                      onChange={(e) => handleStyleChange('borderRadiusBottomLeft', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0">همه گوشه‌ها (قدیمی):</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedWidget.settings.style.borderRadius || 0}
+                    onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              {/* Border — width / style / color */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ضخامت خط دور (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedWidget.settings.style.borderWidth || 0}
                     onChange={(e) => {
                       const val = parseInt(e.target.value) || 0;
-                      handleStyleChange('paddingTop', val);
-                      handleStyleChange('paddingBottom', val);
+                      const updates: Partial<WidgetStyle> = { borderWidth: val };
+                      if (val > 0 && (!selectedWidget.settings.style.borderColor || selectedWidget.settings.style.borderColor === 'transparent')) {
+                        updates.borderColor = '#ffffff';
+                      }
+                      handleStyleChange('borderWidth', updates.borderWidth);
+                      if (updates.borderColor) handleStyleChange('borderColor', updates.borderColor);
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نوع خط</label>
+                  <select
+                    value={selectedWidget.settings.style.borderStyle || 'solid'}
+                    onChange={(e) => handleStyleChange('borderStyle', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="solid">توپر (Solid)</option>
+                    <option value="dashed">خط‌چین (Dashed)</option>
+                    <option value="dotted">نقطه‌چین (Dotted)</option>
+                    <option value="none">بدون خط</option>
+                  </select>
+                </div>
+              </div>
+              {(selectedWidget.settings.style.borderWidth || 0) > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ خط دور</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={!selectedWidget.settings.style.borderColor || selectedWidget.settings.style.borderColor === 'transparent' ? '#0f172a' : selectedWidget.settings.style.borderColor}
+                      onChange={(e) => handleStyleChange('borderColor', e.target.value)}
+                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={selectedWidget.settings.style.borderColor ?? 'transparent'}
+                      onChange={(e) => handleStyleChange('borderColor', e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Shadow */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">سایه</label>
+                <select
+                  value={(() => {
+                    const s = selectedWidget.settings.style.shadow;
+                    if (!s || s === 'none') return 'none';
+                    if (s === SHADOW_SM) return 'soft';
+                    if (s === SHADOW_MD) return 'medium';
+                    if (s === SHADOW_LG) return 'hard';
+                    return 'custom';
+                  })()}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'none') handleStyleChange('shadow', 'none');
+                    else if (val === 'soft') handleStyleChange('shadow', SHADOW_SM);
+                    else if (val === 'medium') handleStyleChange('shadow', SHADOW_MD);
+                    else if (val === 'hard') handleStyleChange('shadow', SHADOW_LG);
+                    else if (val === 'custom') handleStyleChange('shadow', '0 0 15px rgba(59,130,246,0.5)');
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  <option value="none">بدون سایه</option>
+                  <option value="soft">نرم (Soft)</option>
+                  <option value="medium">متوسط (Medium)</option>
+                  <option value="hard">سخت (Hard)</option>
+                  <option value="custom">سفارشی</option>
+                </select>
+                {selectedWidget.settings.style.shadow && selectedWidget.settings.style.shadow !== 'none' && (
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={selectedWidget.settings.style.shadow}
+                    onChange={(e) => handleStyleChange('shadow', e.target.value || 'none')}
+                    placeholder="مثال: 0 0 15px rgba(59,130,246,0.5)"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500"
+                  />
+                )}
+              </div>
+
+              {/* Background opacity + preview swatch */}
+              {(selectedWidget.settings.style.backgroundColor || selectedWidget.settings.style.backgroundGradient) && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    شفافیت پس‌زمینه: {selectedWidget.settings.style.backgroundOpacity ?? 100}%
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={selectedWidget.settings.style.backgroundOpacity ?? 100}
+                    onChange={(e) => handleStyleChange('backgroundOpacity', Number(e.target.value))}
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-teal-600"
+                  />
+                  <div
+                    className="w-full h-8 rounded-xl border border-gray-300 dark:border-slate-700"
+                    style={{
+                      background: selectedWidget.settings.style.backgroundGradient || selectedWidget.settings.style.backgroundColor || 'transparent',
+                      opacity: (selectedWidget.settings.style.backgroundOpacity ?? 100) / 100
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Object fit — image only */}
+              {selectedWidget.type === 'image' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت نمایش تصویر (Object Fit)</label>
+                  <select
+                    value={selectedWidget.settings.style.objectFit || 'cover'}
+                    onChange={(e) => handleStyleChange('objectFit', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="cover">پوشش کامل (Cover)</option>
+                    <option value="contain">درون قاب (Contain)</option>
+                    <option value="fill">کشیده (Fill)</option>
+                    <option value="none">حجم اصلی (None)</option>
+                    <option value="scale-down">کوچک‌تر (Scale-down)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Button — full width */}
+              {selectedWidget.type === 'button' && (
+                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedWidget.settings.style.fullWidth === true}
+                    onChange={(e) => handleStyleChange('fullWidth', e.target.checked)}
+                    className="accent-teal-600 w-4 h-4"
+                  />
+                  تمام‌عرض (کشیدن دکمه به کل ستون)
+                </label>
+              )}
+
+              {/* Max width */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حداکثر عرض ویجت (px) — خالی = خودکار</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedWidget.settings.style.maxWidth || ''}
+                  onChange={(e) => handleStyleChange('maxWidth', e.target.value ? parseInt(e.target.value) : undefined)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
               </div>
             </div>
           )}
@@ -1339,38 +1709,121 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
               گرادیان پس‌زمینه (اختیاری — جایگزین رنگ ساده می‌شود)
             </label>
-            <input
-              type="text"
-              placeholder="linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)"
-              value={selectedSection.backgroundGradient || ''}
-              onChange={(e) => onUpdateSection({ ...selectedSection, backgroundGradient: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
-            />
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
-                { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
-                { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
-                { label: 'نقرهای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
-              ].map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: preset.value })}
-                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
-                >
-                  {preset.label}
-                </button>
-              ))}
-              {selectedSection.backgroundGradient && (
-                <button
-                  type="button"
-                  onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: undefined })}
-                  className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-                >
-                  حذف گرادیان
-                </button>
-              )}
+            {selectedSection.backgroundGradient ? (
+              <>
+                <GradientPicker
+                  value={selectedSection.backgroundGradient}
+                  onChange={(css) => onUpdateSection({ ...selectedSection, backgroundGradient: css })}
+                />
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: undefined })}
+                    className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                  >
+                    حذف گرادیان
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+                  { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+                  { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
+                  { label: 'نقرهای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => onUpdateSection({ ...selectedSection, backgroundGradient: preset.value })}
+                    className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* شعاع گوشه‌های سکشن — مانند فتوشاپ (TL/TR/BL/BR) */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              شعاع گوشه‌های سکشن (px)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا راست</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedSection.borderRadius?.topRight ?? 0}
+                  onChange={(e) =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      borderRadius: {
+                        ...selectedSection.borderRadius,
+                        topRight: parseInt(e.target.value) || 0
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا چپ</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedSection.borderRadius?.topLeft ?? 0}
+                  onChange={(e) =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      borderRadius: {
+                        ...selectedSection.borderRadius,
+                        topLeft: parseInt(e.target.value) || 0
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین راست</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedSection.borderRadius?.bottomRight ?? 0}
+                  onChange={(e) =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      borderRadius: {
+                        ...selectedSection.borderRadius,
+                        bottomRight: parseInt(e.target.value) || 0
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین چپ</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedSection.borderRadius?.bottomLeft ?? 0}
+                  onChange={(e) =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      borderRadius: {
+                        ...selectedSection.borderRadius,
+                        bottomLeft: parseInt(e.target.value) || 0
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              </div>
             </div>
           </div>
 

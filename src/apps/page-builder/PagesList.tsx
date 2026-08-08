@@ -178,7 +178,7 @@ export const PagesList: React.FC<PagesListProps> = ({
   onDeletePage
 }) => {
   return (
-    <div className="h-[calc(100dvh-10rem)] min-h-[560px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-y-auto rtl text-right transition-colors">
+    <div className="h-[calc(100dvh_-_13rem)] min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-y-auto rtl text-right transition-colors">
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-6">

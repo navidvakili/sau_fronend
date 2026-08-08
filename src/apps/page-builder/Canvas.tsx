@@ -182,7 +182,13 @@ export const Canvas: React.FC<CanvasProps> = ({
                       backgroundColor: sec.backgroundColor || undefined,
                       backgroundImage: sec.backgroundGradient || undefined,
                       paddingTop: `${sec.paddingTop}px`,
-                      paddingBottom: `${sec.paddingBottom}px`
+                      paddingBottom: `${sec.paddingBottom}px`,
+                      // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
+                      borderRadius: sec.borderRadius
+                        ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
+                            .map((v) => (v ? `${v}px` : '0px'))
+                            .join(' ')
+                        : undefined
                     }}
                     className={`relative group transition-all border-2 ${
                       isSecSelected
