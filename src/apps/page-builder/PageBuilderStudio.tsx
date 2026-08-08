@@ -13,14 +13,14 @@ import {
 } from './builderTypes';
 import { INITIAL_SMART_PAGE } from './mockData';
 import { Canvas } from './Canvas';
-import { SidebarPanels } from './SidebarPanels';
 import { InspectorPanel } from './InspectorPanel';
 import { GlobalStyleModal } from './GlobalStyleModal';
 import { TemplateModal } from './TemplateModal';
 import { PreviewModal } from './PreviewModal';
 import { ExportModal } from './ExportModal';
 import { ComponentPickerModal } from './ComponentPickerModal';
-import { PageManagerModal } from './PageManagerModal';
+import { PagesList } from './PagesList';
+import { ConfirmDialog } from './ConfirmDialog';
 import { PageSettingsModal } from './PageSettingsModal';
 import {
   fetchSmartPages,
@@ -42,13 +42,15 @@ import {
   Tablet,
   Smartphone,
   CheckCircle2,
+  CheckCircle,
   Clock,
+  History,
+  LayoutGrid,
   Sparkles,
   Layers,
   FileCode,
   ArrowRight,
   Plus,
-  Globe,
   Settings2,
   Loader2
 } from 'lucide-react';
@@ -66,10 +68,19 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [activePageId, setActivePageId] = useState<number | null>(null);
   const [isLoadingPages, setIsLoadingPages] = useState(true);
   const [isSavingPage, setIsSavingPage] = useState(false);
-  const [showPageManagerModal, setShowPageManagerModal] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
 
-  // Load saved pages from backend on mount
+  // View mode: card-list of pages (default) OR the builder editor
+  const [viewMode, setViewMode] = useState<'list' | 'editor'>('list');
+
+  // Version history dropdown (moved from the removed right sidebar into the top bar)
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+  // Delete confirmation dialog state
+  const [pageToDelete, setPageToDelete] = useState<SmartPageDto | null>(null);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
+
+  // Load saved pages from backend on mount (card list is shown first)
   useEffect(() => {
     let cancelled = false;
     fetchSmartPages({ per_page: 100 })
@@ -77,9 +88,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         if (cancelled) return;
         setPages(res.data);
         setIsLoadingPages(false);
-        if (res.data.length > 0 && res.data[0].id) {
-          loadPage(res.data[0].id);
-        }
       })
       .catch(() => {
         if (!cancelled) setIsLoadingPages(false);
@@ -89,6 +97,13 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Open the editor for a saved page
+  const openEditor = (id: number) => {
+    loadPage(id);
+    setViewMode('editor');
+    setShowVersionHistory(false);
+  };
 
   // Load a saved page (full schema) and make it active
   const loadPage = async (id: number) => {
@@ -135,27 +150,39 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setSelectedSectionId(null);
     setSelectedColumnId(null);
     setSelectedWidgetId(null);
-    setShowPageManagerModal(false);
+    setViewMode('editor');
+    setShowVersionHistory(false);
     // Prompt user to fill title/slug/SEO right away
     setShowPageSettingsModal(true);
   };
 
-  // Delete a saved page; switch away if it was active
-  const handleDeletePage = async (id: number) => {
-    if (!window.confirm('این صفحه برای همیشه حذف شود؟')) return;
+  // Open the delete confirmation dialog for a page
+  const handleDeleteRequest = (page: SmartPageDto) => {
+    setPageToDelete(page);
+  };
+
+  // Actually delete after dialog confirmation
+  const handleConfirmDeletePage = async () => {
+    const id = pageToDelete?.id;
+    if (!id) return;
+    setIsDeletingPage(true);
     try {
       await deleteSmartPage(id);
       const remaining = pages.filter((p) => p.id !== id);
       setPages(remaining);
       if (activePageId === id) {
-        if (remaining.length > 0 && remaining[0].id) {
-          loadPage(remaining[0].id);
-        } else {
-          handleCreatePage();
-        }
+        // Deleted page was active in the editor → reset and return to the list
+        setActivePageId(null);
+        setPageSchema(JSON.parse(JSON.stringify(INITIAL_SMART_PAGE)));
+        setUndoStack([]);
+        setRedoStack([]);
+        setViewMode('list');
       }
+      setPageToDelete(null);
     } catch {
-      // ignore
+      // keep dialog open on failure
+    } finally {
+      setIsDeletingPage(false);
     }
   };
 
@@ -796,7 +823,22 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-10rem)] min-h-[560px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
+    <>
+      {viewMode === 'list' ? (
+        <PagesList
+          pages={pages}
+          isLoading={isLoadingPages}
+          onBackToPortal={onBackToPortal}
+          onCreatePage={handleCreatePage}
+          onEditPage={(id) => openEditor(id)}
+          onOpenSettings={(id) => {
+            openEditor(id);
+            setShowPageSettingsModal(true);
+          }}
+          onDeletePage={(page) => handleDeleteRequest(page)}
+        />
+      ) : (
+      <div className="flex flex-col h-[calc(100dvh-10rem)] min-h-[560px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
       {/* ============================================================== */}
       {/* TOP APPLICATION BAR & WORKSPACE TOOLBAR */}
       {/* ============================================================== */}
@@ -813,6 +855,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             </button>
           )}
 
+          {/* Back to the pages card list */}
+          <button
+            onClick={() => setViewMode('list')}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+            title="بازگشت به فهرست صفحات"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-gradient-to-tr from-teal-500 to-indigo-600 text-white shadow-md">
               <Sparkles className="w-5 h-5" />
@@ -825,25 +876,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
                 className="text-sm font-black bg-transparent text-slate-900 dark:text-white border-b border-transparent hover:border-gray-300 dark:hover:border-slate-700 focus:border-teal-500 focus:outline-none px-1"
               />
               <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                <span>شناسه: /{pageSchema.slug}</span>
-                <span>•</span>
                 <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border border-teal-500/20">
                   Intelligent Layout Engine
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Page switcher — create/select pages */}
-          <button
-            onClick={() => setShowPageManagerModal(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-            title="مدیریت صفحات (ساخت / انتخاب / حذف)"
-          >
-            <Globe className="w-4 h-4 text-teal-500" />
-            <span className="text-xs font-bold">{isLoadingPages ? '...' : pages.length}</span>
-            <span className="text-[10px] text-slate-400 hidden lg:inline">صفحه</span>
-          </button>
 
           {/* Page settings (title / slug / SEO) */}
           <button
@@ -913,6 +951,63 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
         {/* Left Section: Actions Bar */}
         <div className="flex items-center gap-2">
+          {/* Version history dropdown (moved from the removed right sidebar) */}
+          <div className="relative">
+            <button
+              onClick={() => setShowVersionHistory((v) => !v)}
+              className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              title="تاریخچه نسخه‌ها"
+            >
+              <History className="w-4 h-4 text-purple-500" />
+            </button>
+            {showVersionHistory && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowVersionHistory(false)} />
+                <div className="absolute top-full left-0 mt-2 z-50 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">پیش‌نویس‌ها و تاریخچه</span>
+                    <button
+                      onClick={handleSaveDraftVersion}
+                      className="px-2.5 py-1.5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-bold text-[10px] cursor-pointer flex items-center gap-1 shadow-xs shrink-0"
+                    >
+                      <Clock className="w-3 h-3" />
+                      <span>ثبت نسخه</span>
+                    </button>
+                  </div>
+
+                  {pageSchema.versionHistory.length === 0 ? (
+                    <div className="text-center text-xs text-slate-400 py-6">
+                      هنوز نسخه‌ای ثبت نشده است
+                    </div>
+                  ) : (
+                    pageSchema.versionHistory.map((ver) => (
+                      <div
+                        key={ver.id}
+                        className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                          <span className="truncate">{ver.title}</span>
+                          <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 shrink-0">{ver.timestamp}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{ver.note}</p>
+                        <button
+                          onClick={() => {
+                            handleRestoreVersion(ver);
+                            setShowVersionHistory(false);
+                          }}
+                          className="w-full py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-teal-500" />
+                          <span>بازگردانی به این نسخه</span>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => setShowTemplateModal(true)}
             className="px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-indigo-500/20 shadow-xs"
@@ -984,16 +1079,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       {/* MAIN WORKSPACE BODY (Sidebars + Center Canvas) */}
       {/* ============================================================== */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Right Panel: Sidebar Elements & Widgets Palette */}
-        <SidebarPanels
-          pageSchema={pageSchema}
-          onOpenComponentPicker={handleOpenComponentPicker}
-          onOpenGlobalStyles={() => setShowGlobalStylesModal(true)}
-          onOpenTemplatesModal={() => setShowTemplateModal(true)}
-          onRestoreVersion={handleRestoreVersion}
-          onSaveDraftVersion={handleSaveDraftVersion}
-        />
-
         {/* Center Panel: Interactive Drag & Drop Canvas */}
         <Canvas
           pageSchema={pageSchema}
@@ -1079,26 +1164,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         />
       )}
 
-      {showPageManagerModal && (
-        <PageManagerModal
-          pages={pages}
-          activePageId={activePageId}
-          isLoading={isLoadingPages}
-          onCreatePage={handleCreatePage}
-          onSelectPage={(id) => {
-            loadPage(id);
-            setShowPageManagerModal(false);
-          }}
-          onOpenSettings={(id) => {
-            if (activePageId !== id) loadPage(id);
-            setShowPageManagerModal(false);
-            setShowPageSettingsModal(true);
-          }}
-          onDeletePage={handleDeletePage}
-          onClose={() => setShowPageManagerModal(false)}
-        />
-      )}
-
       {showPageSettingsModal && (
         <PageSettingsModal
           page={{
@@ -1114,6 +1179,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onClose={() => setShowPageSettingsModal(false)}
         />
       )}
-    </div>
+      </div>
+      )}
+
+      {/* Delete confirmation dialog (replaces window.confirm) */}
+      {pageToDelete && (
+        <ConfirmDialog
+          title="حذف صفحه"
+          message={`آیا از حذف صفحه «${pageToDelete.title}» (/${pageToDelete.slug}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.`}
+          confirmLabel="حذف صفحه"
+          isBusy={isDeletingPage}
+          onConfirm={handleConfirmDeletePage}
+          onCancel={() => setPageToDelete(null)}
+        />
+      )}
+    </>
   );
 };

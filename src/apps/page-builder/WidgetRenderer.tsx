@@ -33,7 +33,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Clock,
-  FolderOpen
+  FolderOpen,
+  Layers
 } from 'lucide-react';
 
 interface WidgetRendererProps {
@@ -140,6 +141,60 @@ const SmartHeader: React.FC<{
 // ==============================================================
 // SMART WIDGETS — اتصال به وب‌سرویس‌های واقعی
 // ==============================================================
+
+/**
+ * حالت ویرایش: فقط ساختار بلوک نمایش داده می‌شود (بدون دریافت داده از وب‌سرویس).
+ * داده‌های واقعی فقط در پیش‌نمایش زنده (isEditorPreview=false) دریافت و نمایش داده می‌شوند.
+ */
+const SmartEditorPlaceholder: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const isGrid = binding.displayMode === 'grid' || binding.displayMode === 'masonry';
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <SmartHeader
+        icon={<Sparkles className="w-4 h-4" />}
+        title={widget.title || 'ویجت هوشمند'}
+        badge="حالت ویرایش"
+        badgeColor="bg-sky-500/20 text-sky-500"
+      />
+
+      <div className="rounded-xl bg-sky-500/5 border border-dashed border-sky-400/40 px-3 py-2 text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+        <span>
+          در حالت ویرایش داده‌ها از وب‌سرویس دریافت نمی‌شوند — ساختار این بلوک در پیش‌نمایش زنده با داده واقعی نمایش داده می‌شود.
+        </span>
+      </div>
+
+      {isGrid ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-24 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-600"
+            >
+              <ImageIcon className="w-6 h-6" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-600"
+            >
+              <Layers className="w-4 h-4" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** ویجت اطلاعیه‌ها — اتصال به وب‌سرویس اطلاعیه‌ها + فیلتر گروه */
 const AnnouncementsFeedWidget: React.FC<{
@@ -707,24 +762,49 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     // -------------------------------------------------------------
     // SMART DYNAMIC WIDGETS — اتصال به وب‌سرویس‌های واقعی
+    // (در حالت ویرایش فقط ساختار بلوک نمایش داده می‌شود؛ داده‌ها در پیش‌نمایش)
     // -------------------------------------------------------------
     case 'announcements-feed':
-      return <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     case 'news-feed':
-      return <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     case 'image-gallery':
-      return <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     case 'achievements-timeline':
-      return <AchievementsWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <AchievementsWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     case 'staff-directory':
-      return <StaffDirectoryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <StaffDirectoryWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     case 'file-manager':
-      return <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
+      ) : (
+        <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />
+      );
 
     default:
       return (
