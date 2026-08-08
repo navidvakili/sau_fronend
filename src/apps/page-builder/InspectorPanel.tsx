@@ -6,7 +6,9 @@ import {
   WidgetStyle,
   WidgetDataBinding,
   ConditionalDisplayRule,
-  UserRoleCondition
+  UserRoleCondition,
+  Breakpoint,
+  getColumnWidth
 } from './builderTypes';
 import {
   fetchDataSourceNewsCategories,
@@ -43,9 +45,11 @@ interface InspectorPanelProps {
   selectedWidget: WidgetInstance | null;
   selectedColumn: ColumnInstance | null;
   selectedSection: SectionInstance | null;
+  activeBreakpoint?: Breakpoint;
   onUpdateWidget: (updated: WidgetInstance) => void;
   onUpdateSection: (updated: SectionInstance) => void;
   onUpdateSectionColumnLayout?: (sectionId: string, preset: '1col' | '2col' | '3col' | '4col' | '7-5' | '8-4') => void;
+  onUpdateColumnWidth?: (sectionId: string, columnId: string, bp: Breakpoint, value: number) => void;
   onDeleteWidget: (widgetId: string) => void;
   onDeleteSection: (sectionId: string) => void;
   onDuplicateWidget: (widget: WidgetInstance) => void;
@@ -55,14 +59,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedWidget,
   selectedColumn,
   selectedSection,
+  activeBreakpoint = 'desktop',
   onUpdateWidget,
   onUpdateSection,
   onUpdateSectionColumnLayout,
+  onUpdateColumnWidth,
   onDeleteWidget,
   onDeleteSection,
   onDuplicateWidget
 }) => {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
+  const [colBp, setColBp] = useState<Breakpoint>('desktop');
 
   // ── Data-source option lists (گروه‌ها و دسته‌بندی‌ها از وب‌سرویس) ──
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
@@ -1185,7 +1192,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           {onUpdateSectionColumnLayout && (
             <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-slate-800">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                الگوی چیدمان ستون‌ها (Column Layout)
+                الگوی چیدمان ستون‌ها ({activeBreakpoint === 'mobile' ? 'موبایل' : activeBreakpoint === 'tablet' ? 'تبلت' : 'دسکتاپ'})
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -1260,6 +1267,61 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <span className="text-[10px]">۸ به ۴</span>
                 </button>
               </div>
+
+              {onUpdateColumnWidth && (
+                <>
+                  <div className="pt-2 mt-2 border-t border-gray-100 dark:border-slate-800/60">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        عرض ستون‌ها در هر دستگاه (Responsive)
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {([
+                          { bp: 'desktop' as Breakpoint, label: 'دسکتاپ', Icon: Monitor },
+                          { bp: 'tablet' as Breakpoint, label: 'تبلت', Icon: Tablet },
+                          { bp: 'mobile' as Breakpoint, label: 'موبایل', Icon: Smartphone }
+                        ]).map(({ bp, label, Icon }) => (
+                          <button
+                            key={bp}
+                            type="button"
+                            onClick={() => setColBp(bp)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                              colBp === bp
+                                ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/40'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent'
+                            }`}
+                          >
+                            <Icon className="w-3 h-3" />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    {selectedSection.columns.map((col, idx) => {
+                      const current = getColumnWidth(col, colBp);
+                      return (
+                        <div key={col.id} className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-500 w-14 shrink-0">ستون {idx + 1}</span>
+                          <input
+                            type="range"
+                            min={1}
+                            max={12}
+                            value={current}
+                            onChange={(e) => onUpdateColumnWidth(selectedSection.id, col.id, colBp, Number(e.target.value))}
+                            className="flex-1 accent-teal-600 cursor-pointer"
+                          />
+                          <span className="text-[10px] font-black text-teal-600 dark:text-teal-400 w-8 text-center">{current}</span>
+                        </div>
+                      );
+                    })}
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                      در موبایل به‌صورت پیش‌فرض همه ستون‌ها تمام‌عرض (تک‌ستونه) می‌شوند؛ این مقدار را می‌توانید تغییر دهید.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

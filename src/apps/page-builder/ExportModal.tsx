@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { SmartPageSchema } from './builderTypes';
+import { SmartPageSchema, getColumnWidth } from './builderTypes';
 import { X, Code, Copy, Check, Download } from 'lucide-react';
 
 interface ExportModalProps {
@@ -31,7 +31,7 @@ export default function SmartPage() {
             ${sec.columns
               .map(
                 (col) => `
-            <div className="col-span-12 md:col-span-${col.width}">
+            <div className="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
               ${col.widgets
                 .map(
                   (w) => `
@@ -80,12 +80,11 @@ export default function SmartPage() {
           ${sec.columns
             .map(
               (col) => `
-          <div class="col-span-12 md:col-span-${col.width}">
+          <div class="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
             ${col.widgets
               .map(
                 (w) => `
             <div class="mb-4">
-              <h3 class="font-bold text-lg">${w.title}</h3>
               <p class="text-xs text-slate-600">${w.content}</p>
             </div>`
               )

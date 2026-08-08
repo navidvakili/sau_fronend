@@ -1,18 +1,12 @@
 import React, { useState } from 'react';
-import { SmartPageSchema, Breakpoint, UserRoleCondition } from './builderTypes';
+import { SmartPageSchema, Breakpoint, getColumnWidth } from './builderTypes';
 import { WidgetRenderer } from './WidgetRenderer';
 import {
   X,
   Monitor,
   Tablet,
   Smartphone,
-  UserCheck,
-  Eye,
-  Sparkles,
-  ShieldCheck,
-  User,
-  GraduationCap,
-  ShieldAlert
+  Sparkles
 } from 'lucide-react';
 
 interface PreviewModalProps {
@@ -25,7 +19,6 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
   onClose
 }) => {
   const [deviceSize, setDeviceSize] = useState<Breakpoint>('desktop');
-  const [simulatedRole, setSimulatedRole] = useState<UserRoleCondition>('all');
 
   const getContainerWidth = () => {
     switch (deviceSize) {
@@ -51,7 +44,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           <div>
             <h2 className="text-sm font-black text-slate-900 dark:text-white">{pageSchema.title} - پیش‌نمایش زنده</h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              صفحه با شناسه /{pageSchema.slug} (وضعیت: {pageSchema.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'})
+              صفحه با شناسه /page/{pageSchema.slug} (وضعیت: {pageSchema.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'})
             </p>
           </div>
         </div>
@@ -87,24 +80,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           </button>
         </div>
 
-        {/* User Role Simulation Selector */}
+        {/* Close Button */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-            <UserCheck className="w-3.5 h-3.5 text-teal-500" />
-            <span>شبیه‌سازی نقش کاربر:</span>
-          </span>
-          <select
-            value={simulatedRole}
-            onChange={(e) => setSimulatedRole(e.target.value as UserRoleCondition)}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white cursor-pointer focus:outline-none"
-          >
-            <option value="all">همه کاربران (عمومی)</option>
-            <option value="student">دانشجو (Student)</option>
-            <option value="professor">استاد (Professor)</option>
-            <option value="admin">مدیر (Admin)</option>
-            <option value="guest">کاربر مهمان (Guest)</option>
-          </select>
-
           <button
             onClick={onClose}
             className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
@@ -127,14 +104,6 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
             // Check responsiveness visibility
             if (!sec.visibility[deviceSize]) return null;
 
-            // Check conditional role visibility
-            const secCond = sec.conditionalDisplay;
-            if (secCond && secCond.enabled && secCond.userRole && secCond.userRole !== 'all') {
-              if (simulatedRole !== 'all' && simulatedRole !== secCond.userRole) {
-                return null;
-              }
-            }
-
             return (
               <div
                 key={sec.id}
@@ -151,7 +120,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                       <div
                         key={col.id}
                         style={{
-                          gridColumn: `span ${col.width} / span ${col.width}`
+                          gridColumn: `span ${getColumnWidth(col, deviceSize)} / span ${getColumnWidth(col, deviceSize)}`
                         }}
                         className="space-y-4"
                       >
@@ -162,7 +131,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                             <WidgetRenderer
                               key={widget.id}
                               widget={widget}
-                              currentUserRole={simulatedRole}
+                              currentUserRole="all"
                               isEditorPreview={false}
                             />
                           );

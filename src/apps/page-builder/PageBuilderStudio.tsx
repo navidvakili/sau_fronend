@@ -3,6 +3,7 @@ import {
   SmartPageSchema,
   SectionInstance,
   ColumnInstance,
+  ColumnResponsiveWidths,
   WidgetInstance,
   WidgetType,
   GlobalStyles,
@@ -312,6 +313,13 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   }
 
   // Adding new Section
+  /** عرض‌های واکنش‌گرای پیش‌فرض برای یک ستون — موبایل تک‌ستونه (تمام‌عرض) */
+  const withWidths = (width: number): ColumnResponsiveWidths => ({
+    desktop: width,
+    tablet: width,
+    mobile: 12
+  });
+
   const handleAddSection = (layoutPreset: '1col' | '2col' | '3col' | '7-5' | '8-4') => {
     const newSecId = `section-${Date.now()}`;
     let columns: ColumnInstance[] = [];
@@ -346,6 +354,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         ];
         break;
     }
+
+    // responsive widths: mobile defaults to single column
+    columns = columns.map((c) => ({ ...c, widths: withWidths(c.width) }));
 
     const newSec: SectionInstance = {
       id: newSecId,
@@ -418,6 +429,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         ];
         break;
     }
+
+    // responsive widths: mobile defaults to single column
+    columns = columns.map((c) => ({ ...c, widths: withWidths(c.width) }));
 
     const newSec: SectionInstance = {
       id: newSecId,
@@ -510,6 +524,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         {
           id: newColId,
           width: 12,
+          widths: withWidths(12),
           widgets: [newWidget]
         }
       ],
@@ -551,18 +566,31 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       let newCols: ColumnInstance[] = [];
 
       if (currentCols.length === newColsCount) {
-        newCols = currentCols.map((col, idx) => ({ ...col, width: targetWidths[idx] }));
+        newCols = currentCols.map((col, idx) => ({
+          ...col,
+          width: targetWidths[idx],
+          widths: { ...col.widths, desktop: targetWidths[idx] }
+        }));
       } else if (currentCols.length < newColsCount) {
-        newCols = currentCols.map((col, idx) => ({ ...col, width: targetWidths[idx] }));
+        newCols = currentCols.map((col, idx) => ({
+          ...col,
+          width: targetWidths[idx],
+          widths: { ...col.widths, desktop: targetWidths[idx] }
+        }));
         for (let i = currentCols.length; i < newColsCount; i++) {
           newCols.push({
             id: `col-${secId}-${Date.now()}-${i}`,
             width: targetWidths[i],
+            widths: { desktop: targetWidths[i] },
             widgets: []
           });
         }
       } else {
-        const retainedCols = currentCols.slice(0, newColsCount).map((col, idx) => ({ ...col, width: targetWidths[idx] }));
+        const retainedCols = currentCols.slice(0, newColsCount).map((col, idx) => ({
+          ...col,
+          width: targetWidths[idx],
+          widths: { ...col.widths, desktop: targetWidths[idx] }
+        }));
         const overflowCols = currentCols.slice(newColsCount);
         const overflowWidgets = overflowCols.flatMap(c => c.widgets);
 
@@ -576,6 +604,27 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       return { ...sec, columns: newCols };
     });
 
+    pushState({ ...pageSchema, sections: updatedSections });
+  };
+
+  // Update single column width for a specific breakpoint (responsive layout)
+  const handleUpdateColumnWidth = (secId: string, colId: string, bp: Breakpoint, value: number) => {
+    const updatedSections = pageSchema.sections.map(sec => {
+      if (sec.id !== secId) return sec;
+      return {
+        ...sec,
+        columns: sec.columns.map(col => {
+          if (col.id !== colId) return col;
+          const widths: ColumnResponsiveWidths = {
+            desktop: col.widths?.desktop ?? col.width,
+            tablet: col.widths?.tablet,
+            mobile: col.widths?.mobile
+          };
+          widths[bp] = value;
+          return { ...col, widths, width: bp === 'desktop' ? value : col.width };
+        })
+      };
+    });
     pushState({ ...pageSchema, sections: updatedSections });
   };
 
@@ -1157,9 +1206,11 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           selectedWidget={currentWidget}
           selectedColumn={currentColumn}
           selectedSection={currentSection}
+          activeBreakpoint={activeBreakpoint}
           onUpdateWidget={handleUpdateWidget}
           onUpdateSection={handleUpdateSection}
           onUpdateSectionColumnLayout={handleUpdateSectionColumnLayout}
+          onUpdateColumnWidth={handleUpdateColumnWidth}
           onDeleteWidget={handleDeleteWidget}
           onDeleteSection={handleDeleteSection}
           onDuplicateWidget={handleDuplicateWidget}
@@ -1240,7 +1291,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       {pageToDelete && (
         <ConfirmDialog
           title="حذف صفحه"
-          message={`آیا از حذف صفحه «${pageToDelete.title}» (/${pageToDelete.slug}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.`}
+          message={`آیا از حذف صفحه «${pageToDelete.title}» (/page/${pageToDelete.slug}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.`}
           confirmLabel="حذف صفحه"
           isBusy={isDeletingPage}
           onConfirm={handleConfirmDeletePage}

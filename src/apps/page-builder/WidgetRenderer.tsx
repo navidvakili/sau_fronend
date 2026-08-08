@@ -14,11 +14,6 @@ import {
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import {
-  Bell,
-  Newspaper,
-  Image as ImageIcon,
-  Award,
-  UserCheck,
   FileText,
   Download,
   Calendar,
@@ -28,12 +23,9 @@ import {
   ChevronUp,
   Play,
   Sparkles,
-  Tag,
-  Loader2,
   AlertTriangle,
   RefreshCw,
   Clock,
-  FolderOpen,
   Layers,
   MapPin,
   Phone,
@@ -117,22 +109,14 @@ function useSmartData<T>(
   return { data, error, retry: () => setRetryKey((k) => k + 1) };
 }
 
-/** حالت بارگذاری ویجت هوشمند */
-const SmartLoading: React.FC = () => (
-  <div className="flex items-center justify-center gap-2 py-8 text-slate-400 text-xs">
-    <Loader2 className="w-4 h-4 animate-spin" />
-    <span>در حال دریافت داده از وب‌سرویس...</span>
-  </div>
-);
-
-/** حالت خطا / داده خالی ویجت هوشمند */
+/** حالت خطا / داده خالی ویجت هوشمند — فقط در صورت خطا نمایش داده می‌شود */
 const SmartEmpty: React.FC<{ error?: string | null; onRetry?: () => void }> = ({ error, onRetry }) => (
   <div className="py-6 text-center space-y-2">
-    <div className={`flex items-center justify-center gap-2 text-xs font-bold ${error ? 'text-rose-500' : 'text-slate-400'}`}>
-      {error ? <AlertTriangle className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
+    <div className="flex items-center justify-center gap-2 text-xs font-bold text-rose-500">
+      <AlertTriangle className="w-4 h-4" />
       <span>{error || 'داده‌ای برای نمایش یافت نشد'}</span>
     </div>
-    {error && onRetry && (
+    {onRetry && (
       <button
         onClick={onRetry}
         className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-bold flex items-center gap-1.5 mx-auto cursor-pointer"
@@ -144,82 +128,14 @@ const SmartEmpty: React.FC<{ error?: string | null; onRetry?: () => void }> = ({
   </div>
 );
 
-/** سربرگ مشترک ویجت‌های هوشمند */
-const SmartHeader: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  badge: string;
-  badgeColor: string;
-}> = ({ icon, title, badge, badgeColor }) => (
-  <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-3">
-    <div className="flex items-center gap-2">
-      <div className={`p-2 rounded-xl ${badgeColor}`}>{icon}</div>
-      <h3 className="text-base font-black text-slate-900 dark:text-white">{title}</h3>
-    </div>
-    <span className="text-[11px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1">
-      <Tag className="w-3 h-3" />
-      {badge}
-    </span>
-  </div>
-);
-
 // ==============================================================
 // SMART WIDGETS — اتصال به وب‌سرویس‌های واقعی
 // ==============================================================
 
 /**
- * حالت ویرایش: فقط ساختار بلوک نمایش داده می‌شود (بدون دریافت داده از وب‌سرویس).
+ * حالت ویرایش: هیچ نمایشی رندر نمی‌شود (بدون دریافت داده از وب‌سرویس).
  * داده‌های واقعی فقط در پیش‌نمایش زنده (isEditorPreview=false) دریافت و نمایش داده می‌شوند.
  */
-const SmartEditorPlaceholder: React.FC<{
-  widget: WidgetInstance;
-  binding: WidgetDataBinding;
-  containerStyle: React.CSSProperties;
-}> = ({ widget, binding, containerStyle }) => {
-  const isGrid = binding.displayMode === 'grid' || binding.displayMode === 'masonry';
-
-  return (
-    <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<Sparkles className="w-4 h-4" />}
-        title={widget.title || 'ویجت هوشمند'}
-        badge="حالت ویرایش"
-        badgeColor="bg-sky-500/20 text-sky-500"
-      />
-
-      <div className="rounded-xl bg-sky-500/5 border border-dashed border-sky-400/40 px-3 py-2 text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
-        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-        <span>
-          در حالت ویرایش داده‌ها از وب‌سرویس دریافت نمی‌شوند — ساختار این بلوک در پیش‌نمایش زنده با داده واقعی نمایش داده می‌شود.
-        </span>
-      </div>
-
-      {isGrid ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-24 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-600"
-            >
-              <ImageIcon className="w-6 h-6" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-600"
-            >
-              <Layers className="w-4 h-4" />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 /** ویجت اطلاعیه‌ها — اتصال به وب‌سرویس اطلاعیه‌ها + فیلتر گروه */
 const AnnouncementsFeedWidget: React.FC<{
@@ -249,18 +165,9 @@ const AnnouncementsFeedWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<Bell className="w-4 h-4" />}
-        title={widget.title || 'اطلاعیه‌های متصل'}
-        badge="ماژول اطلاعیه‌ها"
-        badgeColor="bg-teal-500/20 text-teal-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || items.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || items.length === 0 ? null : (
         <div className="space-y-2.5">
           {items.map((item) => (
             <div
@@ -333,18 +240,9 @@ const NewsFeedWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<Newspaper className="w-4 h-4" />}
-        title={widget.title || 'اخبار دانشگاه'}
-        badge="ماژول اخبار"
-        badgeColor="bg-indigo-500/20 text-indigo-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || newsList.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || newsList.length === 0 ? null : (
         <div className={gridClass}>
           {newsList.map((news) => (
             <div
@@ -406,18 +304,9 @@ const ImageGalleryWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<ImageIcon className="w-4 h-4" />}
-        title={widget.title || 'گالری تصاویر'}
-        badge="آلبوم تصاویر"
-        badgeColor="bg-amber-500/20 text-amber-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || gallery.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || gallery.length === 0 ? null : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {gallery.map((img) => (
             <div
@@ -459,18 +348,9 @@ const AchievementsWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<Award className="w-4 h-4" />}
-        title={widget.title || 'افتخارات دانشگاه'}
-        badge="ماژول افتخارات"
-        badgeColor="bg-yellow-500/20 text-yellow-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || achs.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || achs.length === 0 ? null : (
         <div className="space-y-3 relative before:absolute before:right-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-yellow-500/30">
           {achs.map((ach) => (
             <div key={ach.id} className="relative pr-9 flex flex-col gap-1">
@@ -518,18 +398,9 @@ const StaffDirectoryWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<UserCheck className="w-4 h-4" />}
-        title={widget.title || 'هیئت علمی و اساتید'}
-        badge="سامانه پرسنلی"
-        badgeColor="bg-teal-500/20 text-teal-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || staffList.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || staffList.length === 0 ? null : (
         <div className="space-y-3">
           {staffList.map((st) => (
             <div
@@ -581,18 +452,9 @@ const FileManagerWidget: React.FC<{
 
   return (
     <div style={containerStyle} className="space-y-4">
-      <SmartHeader
-        icon={<FileText className="w-4 h-4" />}
-        title={widget.title || 'مخزن فایل‌ها و فرم‌ها'}
-        badge="مدیریت فایل"
-        badgeColor="bg-blue-500/20 text-blue-500"
-      />
-
-      {!data && !error ? (
-        <SmartLoading />
-      ) : error || files.length === 0 ? (
+      {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : (
+      ) : !data || files.length === 0 ? null : (
         <div className="space-y-2">
           {files.map((file) => (
             <div
@@ -1332,46 +1194,22 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     // (در حالت ویرایش فقط ساختار بلوک نمایش داده می‌شود؛ داده‌ها در پیش‌نمایش)
     // -------------------------------------------------------------
     case 'announcements-feed':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'news-feed':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'image-gallery':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'achievements-timeline':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <AchievementsWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <AchievementsWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'staff-directory':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <StaffDirectoryWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <StaffDirectoryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'file-manager':
-      return isEditorPreview ? (
-        <SmartEditorPlaceholder widget={widget} binding={binding} containerStyle={containerStyle} />
-      ) : (
-        <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />
-      );
+      return isEditorPreview ? null : <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     default:
       return (

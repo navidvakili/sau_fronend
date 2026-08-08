@@ -112,9 +112,16 @@ export interface WidgetInstance {
   };
 }
 
+export interface ColumnResponsiveWidths {
+  desktop: number;
+  tablet?: number;
+  mobile?: number;
+}
+
 export interface ColumnInstance {
   id: string;
-  width: number; // 1 to 12 in a 12-column grid
+  width: number; // 1 to 12 in a 12-column grid (fallback / desktop)
+  widths?: ColumnResponsiveWidths; // per-device widths (mobile defaults to 12 = single column)
   widgets: WidgetInstance[];
   style?: {
     backgroundColor?: string;
@@ -124,6 +131,14 @@ export interface ColumnInstance {
     borderColor?: string;
   };
 }
+
+/** عرض ستون در یک دستگاه خاص — پیش‌فرض: موبایل تک‌ستونه، تبلت/دسکتاپ = width */
+export const getColumnWidth = (col: ColumnInstance, bp: Breakpoint): number => {
+  const w = col.widths?.[bp];
+  if (w && w >= 1 && w <= 12) return w;
+  if (bp === 'mobile') return 12;
+  return col.width || 12;
+};
 
 export interface SectionInstance {
   id: string;

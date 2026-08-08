@@ -91,7 +91,7 @@ const PageCard: React.FC<{
         <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
         <span className="flex-1 mx-2 h-4 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[9px] text-slate-400 flex items-center px-2 truncate" dir="ltr">
-          sau.ac.ir/{page.slug}
+          sau.ac.ir/page/{page.slug}
         </span>
       </div>
 
@@ -107,7 +107,7 @@ const PageCard: React.FC<{
           <StatusBadge status={page.status} />
         </div>
         <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-          <span dir="ltr">/{page.slug}</span>
+          <span dir="ltr">/page/{page.slug}</span>
           {updated && (
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />

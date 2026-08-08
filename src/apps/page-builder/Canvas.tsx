@@ -5,7 +5,8 @@ import {
   ColumnInstance,
   WidgetInstance,
   Breakpoint,
-  UserRoleCondition
+  UserRoleCondition,
+  getColumnWidth
 } from './builderTypes';
 import { WidgetRenderer } from './WidgetRenderer';
 import {
@@ -228,7 +229,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                             <div
                               key={col.id}
                               style={{
-                                gridColumn: `span ${col.width} / span ${col.width}`
+                                gridColumn: `span ${getColumnWidth(col, activeBreakpoint)} / span ${getColumnWidth(col, activeBreakpoint)}`
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
