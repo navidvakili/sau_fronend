@@ -294,6 +294,14 @@ export default function App() {
     setSelectedMainCat(null);
   }, [activeTabId, tabs, menuCategories]);
 
+  // Page-builder uses a full-bleed canvas — main padding removed so the studio fills the whole area
+  const isPageBuilderActive = useMemo(() => {
+    if (!activeTabId) return false;
+    const tab = tabs.find(t => t.id === activeTabId);
+    const moduleType = tab?.moduleType || activeTabId;
+    return moduleType === 'page-builder' || moduleType === 'smart-page-builder';
+  }, [activeTabId, tabs]);
+
   // Tab management
   const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false) => {
     if (!forceNewInstance && tabs.some(t => t.id === id)) {
@@ -418,8 +426,8 @@ export default function App() {
           />
 
           {/* Canvas — all tabs kept alive, only active one visible */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
-            <div>
+          <main className={`flex-1 overflow-y-auto custom-scrollbar ${isPageBuilderActive ? 'flex flex-col' : 'p-4 sm:p-6 pb-20'}`}>
+            <div className={isPageBuilderActive ? 'flex-1 min-h-0 flex flex-col' : ''}>
               {/* Dashboard — only when no active tab */}
               {activeTabId === null && (
                 <ModuleRenderer
@@ -443,7 +451,11 @@ export default function App() {
               {tabs.map(tab => (
                 <div
                   key={`${tab.id}_${tabRefreshKeys[tab.id] || 0}`}
-                  className={activeTabId === tab.id ? '' : 'hidden'}
+                  className={
+                    activeTabId === tab.id
+                      ? (isPageBuilderActive ? 'flex-1 min-h-0 flex flex-col' : '')
+                      : 'hidden'
+                  }
                 >
                   <ModuleRenderer
                     tabId={tab.id}

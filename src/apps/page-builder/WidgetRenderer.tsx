@@ -764,11 +764,11 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   const target = Number(props.target ?? (parseFloat(widget.content) || 100));
   const prefix = props.prefix || '';
   const suffix = props.suffix || '+';
+  const duration = Number(props.duration) || 1200;
   const [value, setValue] = useState(0);
 
   useEffect(() => {
     let raf: number;
-    const duration = 1200;
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);

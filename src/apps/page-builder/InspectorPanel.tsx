@@ -665,6 +665,18 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">مدت زمان انیمیشن (میلی‌ثانیه)</label>
+                    <input
+                      type="number"
+                      min={300}
+                      max={5000}
+                      step={100}
+                      value={customProps.duration ?? 1200}
+                      onChange={(e) => updateCustomProps({ duration: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پیشوند</label>
@@ -1387,16 +1399,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
                   </div>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0">همه گوشه‌ها (قدیمی):</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={selectedWidget.settings.style.borderRadius || 0}
-                    onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
                 </div>
               </div>
 
