@@ -118,6 +118,30 @@ const resolveBackgroundColor = (s: WidgetStyle): string | undefined => {
   return s.backgroundColor;
 };
 
+/** اعمال شفافیت روی هر مقدار CSS پس‌زمینه (رنگ ثابت یا گرادیان) — رنگ‌های hex داخل گرادیان هم به rgba تبدیل می‌شوند */
+export const applyBackgroundOpacity = (value?: string, opacity?: number): string | undefined => {
+  if (!value) return undefined;
+  if (opacity === undefined || opacity >= 100) return value;
+  const alpha = Math.max(0, Math.min(100, opacity)) / 100;
+  const hexToRgba = (hex: string): string => {
+    const h = hex.replace('#', '');
+    if (/^[0-9a-fA-F]{6}$/.test(h)) {
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return hex;
+  };
+  // گرادیان → همه رنگ‌های hex داخل را شفاف کن (بقیه ساختار دست‌نخورده می‌ماند)
+  if (/gradient\(/i.test(value)) {
+    return value.replace(/#[0-9a-fA-F]{3,8}\b/g, hexToRgba);
+  }
+  // رنگ ثابت
+  if (/^#[0-9a-fA-F]{3,8}$/.test(value.trim())) return hexToRgba(value.trim());
+  return value;
+};
+
 /** آیا URL ویدیو مستقیم است (فایل رسانه) یا جاساز (iframe)؟ */
 const isDirectVideo = (url?: string): boolean => {
   if (!url) return false;
@@ -1110,20 +1134,34 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
-    case 'image':
+    case 'image': {
+      const frame = style.imageFrame;
+      const framed = frame === 'square' || frame === 'circle';
       return (
-        <div style={containerStyle} className="overflow-hidden transition-all">
+        <div
+          style={containerStyle}
+          className={`overflow-hidden transition-all ${
+            frame === 'circle'
+              ? 'aspect-square rounded-full'
+              : frame === 'square'
+                ? 'aspect-square'
+                : ''
+          }`}
+        >
           <img
             src={widget.imageUrl || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
             alt={widget.title}
-            className="w-full h-auto transition-transform duration-300 hover:scale-[1.02]"
+            className={`transition-transform duration-300 hover:scale-[1.02] ${
+              framed ? 'w-full h-full' : 'w-full h-auto'
+            }`}
             style={{
               objectFit: style.objectFit || 'cover',
-              borderRadius: resolveBorderRadius(style)
+              borderRadius: frame === 'circle' ? '9999px' : resolveBorderRadius(style)
             }}
           />
         </div>
       );
+    }
 
     case 'button':
       return (

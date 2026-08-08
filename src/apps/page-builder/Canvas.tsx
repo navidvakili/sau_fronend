@@ -8,7 +8,7 @@ import {
   UserRoleCondition,
   getColumnWidth
 } from './builderTypes';
-import { WidgetRenderer } from './WidgetRenderer';
+import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
   Plus,
   Trash2,
@@ -180,10 +180,14 @@ export const Canvas: React.FC<CanvasProps> = ({
                       onSelectSection(sec.id);
                     }}
                     style={{
-                      backgroundColor: sec.backgroundColor || undefined,
+                      backgroundColor: sec.backgroundColor
+                        ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                        : undefined,
                       backgroundImage: sec.backgroundImage
                         ? `url("${sec.backgroundImage}")`
-                        : sec.backgroundGradient || undefined,
+                        : sec.backgroundGradient
+                          ? applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity)
+                          : undefined,
                       backgroundPosition: sec.backgroundPosition || undefined,
                       backgroundSize: sec.backgroundSize || undefined,
                       backgroundRepeat: sec.backgroundRepeat || undefined,

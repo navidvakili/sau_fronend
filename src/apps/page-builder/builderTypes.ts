@@ -85,6 +85,8 @@ export interface WidgetStyle {
   opacity?: number;
   backgroundOpacity?: number; // 0-100
   objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  /** کادر تصویر — خودکار/مستطیل | مربع | دایره */
+  imageFrame?: 'square' | 'circle';
   maxWidth?: number; // px — caps widget width
   fullWidth?: boolean; // button stretches to full column width
   alignVertical?: 'top' | 'center' | 'bottom'; // vertical alignment inside the widget box
@@ -168,6 +170,8 @@ export interface SectionInstance {
   layout: 'full-width' | 'boxed';
   backgroundColor?: string;
   backgroundGradient?: string;
+  /** شفافیت پس‌زمینه سکشن (رنگ یا گرادیان) — 0 تا 100 */
+  backgroundOpacity?: number;
   /** تصویر پس‌زمینه سکشن (به همراه موقعیت/اندازه/تکرار) */
   backgroundImage?: string;
   backgroundPosition?: string;

@@ -1522,20 +1522,36 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
               {/* Object fit — image only */}
               {selectedWidget.type === 'image' && (
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت نمایش تصویر (Object Fit)</label>
-                  <select
-                    value={selectedWidget.settings.style.objectFit || 'cover'}
-                    onChange={(e) => handleStyleChange('objectFit', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="cover">پوشش کامل (Cover)</option>
-                    <option value="contain">درون قاب (Contain)</option>
-                    <option value="fill">کشیده (Fill)</option>
-                    <option value="none">حجم اصلی (None)</option>
-                    <option value="scale-down">کوچک‌تر (Scale-down)</option>
-                  </select>
-                </div>
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت نمایش تصویر (Object Fit)</label>
+                    <select
+                      value={selectedWidget.settings.style.objectFit || 'cover'}
+                      onChange={(e) => handleStyleChange('objectFit', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="cover">پوشش کامل (Cover)</option>
+                      <option value="contain">درون قاب (Contain)</option>
+                      <option value="fill">کشیده (Fill)</option>
+                      <option value="none">حجم اصلی (None)</option>
+                      <option value="scale-down">کوچک‌تر (Scale-down)</option>
+                    </select>
+                  </div>
+
+                  {/* کادر تصویر — مستطیل/مربع/دایره */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">کادر تصویر (شکل قاب)</label>
+                    <select
+                      value={selectedWidget.settings.style.imageFrame || ''}
+                      onChange={(e) => handleStyleChange('imageFrame', e.target.value || undefined)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="">خودکار / مستطیل</option>
+                      <option value="square">مربع</option>
+                      <option value="circle">دایره</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               {/* Button — full width */}
@@ -1911,6 +1927,30 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               </div>
             )}
           </div>
+
+          {/* شفافیت پس‌زمینه سکشن (رنگ یا گرادیان) */}
+          {(selectedSection.backgroundColor || selectedSection.backgroundGradient) && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                شفافیت پس‌زمینه سکشن: {selectedSection.backgroundOpacity ?? 100}%
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={selectedSection.backgroundOpacity ?? 100}
+                onChange={(e) => onUpdateSection({ ...selectedSection, backgroundOpacity: Number(e.target.value) })}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-teal-600"
+              />
+              <div
+                className="w-full h-8 rounded-xl border border-gray-300 dark:border-slate-700"
+                style={{
+                  background: selectedSection.backgroundGradient || selectedSection.backgroundColor || 'transparent',
+                  opacity: (selectedSection.backgroundOpacity ?? 100) / 100
+                }}
+              />
+            </div>
+          )}
 
           {/* تصویر پس‌زمینه سکشن (به همراه position/size/repeat) */}
           <div className="space-y-1.5">
