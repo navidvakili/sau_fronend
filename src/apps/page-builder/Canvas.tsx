@@ -63,6 +63,36 @@ export const Canvas: React.FC<CanvasProps> = ({
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
   const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  // Divider (بین سکشن‌ها) که هم‌اکنون نشانهٔ رهاسازی روی آن است — مقدار: 'before' یا 'after:<secId>'
+  const [dragOverDividerId, setDragOverDividerId] = useState<string | null>(null);
+
+  /** ستون زیر نشانگر ماوس را پیدا می‌کند (برای رهاسازی روی هر نقطه از سکشن) */
+  const resolveColumnIdAt = (e: React.DragEvent): string | undefined => {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const colEl =
+      el && typeof (el as Element).closest === 'function' ? (el as Element).closest('[data-col-id]') : null;
+    return (colEl as HTMLElement | null)?.dataset?.colId;
+  };
+
+  /**
+   * پس‌زمینهٔ لایه‌ای سکشن:
+   * - گرادیان (یا رنگ ساده به‌صورت لایهٔ گرادیان یکنواخت) همیشه روی تصویر قرار می‌گیرد (اولین لایه = روی همه)
+   * - تصویر پس‌زمینه پایین‌ترین لایه است
+   * - شفافیت (backgroundOpacity) روی لایهٔ رنگی/گرادیان اعمال می‌شود تا تصویر از زیر آن دیده شود
+   */
+  const buildSectionBackgroundImage = (sec: SectionInstance): string | undefined => {
+    const layers: string[] = [];
+    if (sec.backgroundGradient) {
+      layers.push(applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity));
+    } else if (sec.backgroundColor) {
+      const c = applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity) || sec.backgroundColor;
+      layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
+    }
+    if (sec.backgroundImage) {
+      layers.push(`url("${sec.backgroundImage}")`);
+    }
+    return layers.length ? layers.join(', ') : undefined;
+  };
 
   // Breakpoint container width calculator
   const getCanvasWidthClass = () => {
@@ -79,13 +109,55 @@ export const Canvas: React.FC<CanvasProps> = ({
   const globalStyles = pageSchema.globalStyles;
 
   return (
-    <div className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all">
+    <div
+      className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all"
+      onDragOver={(e) => {
+        // رهاسازی روی فضای خالی بوم (خارج از سکشن‌ها) مجاز باشد
+        if (dragWidgetId) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOverColumnId(null);
+        setDragOverDividerId(null);
+        if (dragWidgetId) {
+          const last = pageSchema.sections[pageSchema.sections.length - 1];
+          const targetColId = last ? last.columns[last.columns.length - 1]?.id : undefined;
+          if (targetColId) {
+            onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+          }
+        }
+        setDragWidgetId(null);
+      }}
+    >
       {/* Canvas Frame Container — shrink-0 keeps natural height so the overflow-auto canvas scrolls (x & y) when sections exceed viewport */}
       <div
         className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 ${getCanvasWidthClass()}`}
         style={{
           fontFamily: globalStyles.fontFamily,
           color: globalStyles.textColor
+        }}
+        onDragOver={(e) => {
+          if (dragWidgetId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverColumnId(null);
+          setDragOverDividerId(null);
+          if (dragWidgetId) {
+            const last = pageSchema.sections[pageSchema.sections.length - 1];
+            const targetColId = last ? last.columns[last.columns.length - 1]?.id : undefined;
+            if (targetColId) {
+              onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+            }
+          }
+          setDragWidgetId(null);
         }}
       >
         {pageSchema.sections.length === 0 ? (
@@ -108,7 +180,41 @@ export const Canvas: React.FC<CanvasProps> = ({
         ) : (
           <div className="space-y-0">
             {/* Divider button before the first section */}
-            <div className="relative my-2 group/divider py-2 flex items-center justify-center">
+            <div
+              className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
+                dragOverDividerId === 'before'
+                  ? 'bg-teal-500/20 ring-2 ring-teal-500'
+                  : ''
+              }`}
+              onDragOver={(e) => {
+                if (dragWidgetId) {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setDragOverDividerId('before');
+                  setDragOverColumnId(null);
+                }
+              }}
+              onDragLeave={(e) => {
+                const related = e.relatedTarget as Node | null;
+                if (dragOverDividerId === 'before' && (!related || !e.currentTarget.contains(related))) {
+                  setDragOverDividerId(null);
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverColumnId(null);
+                setDragOverDividerId(null);
+                if (dragWidgetId) {
+                  const first = pageSchema.sections[0];
+                  const targetColId = first ? first.columns[0]?.id : undefined;
+                  if (targetColId) {
+                    onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+                  }
+                }
+                setDragWidgetId(null);
+              }}
+            >
               <div className="absolute inset-0 flex items-center" aria-hidden="true">
                 <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
               </div>
@@ -147,7 +253,46 @@ export const Canvas: React.FC<CanvasProps> = ({
                     </div>
 
                     {/* Divider line after hidden section */}
-                    <div className="relative my-2 group/divider py-2 flex items-center justify-center">
+                    <div
+                      className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
+                        dragOverDividerId === 'after:' + sec.id
+                          ? 'bg-teal-500/20 ring-2 ring-teal-500'
+                          : ''
+                      }`}
+                      onDragOver={(e) => {
+                        if (dragWidgetId) {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverDividerId('after:' + sec.id);
+                          setDragOverColumnId(null);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        const related = e.relatedTarget as Node | null;
+                        if (
+                          dragOverDividerId === 'after:' + sec.id &&
+                          (!related || !e.currentTarget.contains(related))
+                        ) {
+                          setDragOverDividerId(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverColumnId(null);
+                        setDragOverDividerId(null);
+                        if (dragWidgetId) {
+                          const next = pageSchema.sections[secIdx + 1];
+                          const targetColId = next
+                            ? next.columns[0]?.id
+                            : sec.columns[sec.columns.length - 1]?.id;
+                          if (targetColId) {
+                            onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+                          }
+                        }
+                        setDragWidgetId(null);
+                      }}
+                    >
                       <div className="absolute inset-0 flex items-center" aria-hidden="true">
                         <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
                       </div>
@@ -179,15 +324,42 @@ export const Canvas: React.FC<CanvasProps> = ({
                       e.stopPropagation();
                       onSelectSection(sec.id);
                     }}
+                    onDragOver={(e) => {
+                      // رهاسازی روی هر نقطهٔ سکشن (حتی حاشیه/پدینگ) — ستون زیر نشانگر، وگرنه اولین ستون
+                      if (dragWidgetId) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverColumnId(resolveColumnIdAt(e) ?? sec.columns[0]?.id ?? null);
+                        setDragOverDividerId(null);
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      const related = e.relatedTarget as Node | null;
+                      if (dragOverColumnId && (!related || !e.currentTarget.contains(related))) {
+                        setDragOverColumnId(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverColumnId(null);
+                      setDragOverDividerId(null);
+                      if (dragWidgetId) {
+                        const colId = resolveColumnIdAt(e) ?? sec.columns[0]?.id;
+                        if (colId) {
+                          onMoveWidgetToColumn?.(dragWidgetId, colId);
+                        }
+                      }
+                      setDragWidgetId(null);
+                    }}
                     style={{
-                      backgroundColor: sec.backgroundColor
-                        ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
-                        : undefined,
-                      backgroundImage: sec.backgroundImage
-                        ? `url("${sec.backgroundImage}")`
-                        : sec.backgroundGradient
-                          ? applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity)
-                          : undefined,
+                      backgroundColor:
+                        sec.backgroundImage || sec.backgroundGradient
+                          ? undefined
+                          : sec.backgroundColor
+                            ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                            : undefined,
+                      backgroundImage: buildSectionBackgroundImage(sec),
                       backgroundPosition: sec.backgroundPosition || undefined,
                       backgroundSize: sec.backgroundSize || undefined,
                       backgroundRepeat: sec.backgroundRepeat || undefined,
@@ -244,6 +416,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                           return (
                             <div
                               key={col.id}
+                              data-col-id={col.id}
                               style={{
                                 gridColumn: `span ${getColumnWidth(col, activeBreakpoint)} / span ${getColumnWidth(col, activeBreakpoint)}`
                               }}
@@ -258,6 +431,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                   e.preventDefault();
                                   e.dataTransfer.dropEffect = 'move';
                                   setDragOverColumnId(col.id);
+                                  setDragOverDividerId(null);
                                 }
                               }}
                               onDragLeave={() => {
@@ -269,6 +443,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setDragOverColumnId(null);
+                                setDragOverDividerId(null);
                                 if (dragWidgetId) {
                                   // Move the widget to this column (cross-section DnD)
                                   onMoveWidgetToColumn?.(dragWidgetId, col.id);
@@ -320,6 +495,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                         onDragEnd={() => {
                                           setDragWidgetId(null);
                                           setDragOverColumnId(null);
+                                          setDragOverDividerId(null);
                                         }}
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -431,7 +607,46 @@ export const Canvas: React.FC<CanvasProps> = ({
                   </div>
 
                   {/* Interactive Add Section Divider between blocks */}
-                  <div className="relative my-2 group/divider py-2 flex items-center justify-center">
+                  <div
+                    className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
+                      dragOverDividerId === 'after:' + sec.id
+                        ? 'bg-teal-500/20 ring-2 ring-teal-500'
+                        : ''
+                    }`}
+                    onDragOver={(e) => {
+                      if (dragWidgetId) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverDividerId('after:' + sec.id);
+                        setDragOverColumnId(null);
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      const related = e.relatedTarget as Node | null;
+                      if (
+                        dragOverDividerId === 'after:' + sec.id &&
+                        (!related || !e.currentTarget.contains(related))
+                      ) {
+                        setDragOverDividerId(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverColumnId(null);
+                      setDragOverDividerId(null);
+                      if (dragWidgetId) {
+                        const next = pageSchema.sections[secIdx + 1];
+                        const targetColId = next
+                          ? next.columns[0]?.id
+                          : sec.columns[sec.columns.length - 1]?.id;
+                        if (targetColId) {
+                          onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+                        }
+                      }
+                      setDragWidgetId(null);
+                    }}
+                  >
                     <div className="absolute inset-0 flex items-center" aria-hidden="true">
                       <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
                     </div>

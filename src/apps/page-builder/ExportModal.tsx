@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { SmartPageSchema, getColumnWidth } from './builderTypes';
+import { SmartPageSchema, SectionInstance, getColumnWidth } from './builderTypes';
+import { applyBackgroundOpacity } from './WidgetRenderer';
 import { X, Code, Copy, Check, Download } from 'lucide-react';
 
 interface ExportModalProps {
@@ -11,6 +12,31 @@ interface ExportModalProps {
 export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose }) => {
   const [exportFormat, setExportFormat] = useState<'react' | 'html' | 'json'>('react');
   const [copied, setCopied] = useState(false);
+
+  /**
+   * استایل CSS پس‌زمینهٔ سکشن (لایه‌بندی: رنگ/گرادیان روی تصویر)
+   */
+  const sectionBackgroundStyle = (sec: SectionInstance): string => {
+    const layers: string[] = [];
+    if (sec.backgroundGradient) {
+      layers.push(applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity));
+    } else if (sec.backgroundColor) {
+      const c = applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity) || sec.backgroundColor;
+      layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
+    }
+    if (sec.backgroundImage) {
+      layers.push(`url(&quot;${sec.backgroundImage}&quot;)`);
+    }
+    const bgImage = layers.length ? `background-image: ${layers.join(', ')};` : '';
+    const bgColor =
+      sec.backgroundImage || sec.backgroundGradient
+        ? ''
+        : `background-color: ${sec.backgroundColor || '#ffffff'};`;
+    const bgPos = sec.backgroundImage
+      ? `background-position: ${sec.backgroundPosition || 'center'}; background-size: ${sec.backgroundSize || 'cover'}; background-repeat: ${sec.backgroundRepeat || 'no-repeat'};`
+      : '';
+    return `${bgColor} ${bgImage} ${bgPos}`;
+  };
 
   const generateReactCode = () => {
     return `import React from 'react';
@@ -74,7 +100,7 @@ export default function SmartPage() {
     ${pageSchema.sections
       .map(
         (sec) => `
-    <section id="${sec.bookmark || sec.id}" style="background-color: ${sec.backgroundColor || '#ffffff'}; ${sec.backgroundImage ? `background-image: url(&quot;${sec.backgroundImage}&quot;); background-position: ${sec.backgroundPosition || 'center'}; background-size: ${sec.backgroundSize || 'cover'}; background-repeat: ${sec.backgroundRepeat || 'no-repeat'};` : sec.backgroundGradient ? `background-image: ${sec.backgroundGradient};` : ''} padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
+    <section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
       <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
         <div class="grid grid-cols-12 gap-6">
           ${sec.columns
