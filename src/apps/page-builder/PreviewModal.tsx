@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth } from './builderTypes';
+import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth, resolveBoxShadow } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
   X,
@@ -77,6 +77,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
           marginTop: sec.marginTop !== undefined ? `${sec.marginTop}px` : undefined,
           marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined,
+          boxShadow: resolveBoxShadow(sec.boxShadow),
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BL BR

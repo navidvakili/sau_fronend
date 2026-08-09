@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { SmartPageSchema, SectionInstance, getColumnWidth } from './builderTypes';
+import { SmartPageSchema, SectionInstance, getColumnWidth, resolveBoxShadow } from './builderTypes';
 import { applyBackgroundOpacity } from './WidgetRenderer';
 import { X, Code, Copy, Check, Download } from 'lucide-react';
 
@@ -39,7 +39,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose })
       sec.position && sec.position !== 'static'
         ? `position: ${sec.position}; z-index: ${sec.zIndex || 1}; top: 0;`
         : '';
-    return `${bgColor} ${bgImage} ${bgPos} ${pos}`;
+    const shadow = resolveBoxShadow(sec.boxShadow)
+      ? `box-shadow: ${resolveBoxShadow(sec.boxShadow)};`
+      : '';
+    return `${bgColor} ${bgImage} ${bgPos} ${pos} ${shadow}`;
   };
 
     /** Recursive section -> JSX (nested sub-sections inside columns are emitted too) */

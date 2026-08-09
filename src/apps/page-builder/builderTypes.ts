@@ -212,6 +212,21 @@ export const getColumnWidth = (col: ColumnInstance, bp: Breakpoint): number => {
   return col.width || 12;
 };
 
+/** سایه‌های آمادهٔ بلوک (سکشن/ویجت) — یا رشتهٔ CSS سفارشی */
+export const SHADOW_PRESETS: Record<string, string> = {
+  sm: '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)',
+  md: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)',
+  lg: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+  xl: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'
+};
+
+/** تبدیل مقدار سایه به CSS — پریست (sm/md/lg/xl) یا رشتهٔ خام */
+export const resolveBoxShadow = (shadow?: string): string | undefined => {
+  if (!shadow || shadow === 'none') return undefined;
+  if (shadow in SHADOW_PRESETS) return SHADOW_PRESETS[shadow];
+  return shadow;
+};
+
 export interface SectionInstance {
   id: string;
   name: string;
@@ -236,6 +251,8 @@ export interface SectionInstance {
   /** فاصلهٔ خارجی سکشن (می‌تواند منفی باشد تا بلوک روی بلوک قبلی قرار بگیرد) */
   marginTop?: number;
   marginBottom?: number;
+  /** سایهٔ بلوک — 'none' | 'sm' | 'md' | 'lg' | 'xl' پریست یا رشتهٔ CSS سفارشی */
+  boxShadow?: string;
   /** شعاع گوشه‌ها به‌صورت جداگانه (مانند فتوشاپ) — TL/TR/BL/BR */
   borderRadius?: {
     topLeft?: number;

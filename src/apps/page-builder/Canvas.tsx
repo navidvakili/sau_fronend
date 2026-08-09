@@ -7,7 +7,8 @@ import {
   Breakpoint,
   UserRoleCondition,
   getColumnWidth,
-  getWidgetTypeLabel
+  getWidgetTypeLabel,
+  resolveBoxShadow
 } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
@@ -192,6 +193,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
           marginTop: sec.marginTop !== undefined ? `${sec.marginTop}px` : undefined,
           marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined,
+          boxShadow: resolveBoxShadow(sec.boxShadow),
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL

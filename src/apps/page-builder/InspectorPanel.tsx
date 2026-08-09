@@ -2497,6 +2497,46 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             </div>
           </div>
 
+          {/* سایهٔ بلوک — پریست یا سفارشی */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">سایه بلوک</label>
+            <select
+              value={(() => {
+                const s = selectedSection.boxShadow;
+                if (!s || s === 'none') return 'none';
+                if (s === SHADOW_SM) return 'soft';
+                if (s === SHADOW_MD) return 'medium';
+                if (s === SHADOW_LG) return 'hard';
+                return 'custom';
+              })()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'none') onUpdateSection({ ...selectedSection, boxShadow: 'none' });
+                else if (val === 'soft') onUpdateSection({ ...selectedSection, boxShadow: SHADOW_SM });
+                else if (val === 'medium') onUpdateSection({ ...selectedSection, boxShadow: SHADOW_MD });
+                else if (val === 'hard') onUpdateSection({ ...selectedSection, boxShadow: SHADOW_LG });
+                else if (val === 'custom') onUpdateSection({ ...selectedSection, boxShadow: '0 0 15px rgba(59,130,246,0.5)' });
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+            >
+              <option value="none">بدون سایه</option>
+              <option value="soft">نرم (Soft)</option>
+              <option value="medium">متوسط (Medium)</option>
+              <option value="hard">سخت (Hard)</option>
+              <option value="custom">سفارشی</option>
+            </select>
+            {selectedSection.boxShadow && selectedSection.boxShadow !== 'none' && (
+              <input
+                type="text"
+                dir="ltr"
+                value={selectedSection.boxShadow}
+                onChange={(e) => onUpdateSection({ ...selectedSection, boxShadow: e.target.value || 'none' })}
+                placeholder="مثال: 0 0 15px rgba(59,130,246,0.5)"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500"
+              />
+            )}
+          </div>
+
           <MediaManager
             open={mediaPickerTarget === 'sectionBg'}
             onClose={() => setMediaPickerTarget(null)}
