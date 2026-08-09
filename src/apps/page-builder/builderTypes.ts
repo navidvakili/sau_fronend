@@ -56,6 +56,48 @@ export type SmartWidgetType =
 
 export type WidgetType = StaticWidgetType | SmartWidgetType;
 
+/** برچسب فارسی نوع ویجت — برای نمایش روی بوم و پنل تنظیمات تا نوع هر ویجت قابل‌تشخیص باشد */
+export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
+  // ویجت‌های عمومی
+  heading: 'عنوان',
+  text: 'متن',
+  richtext: 'متن غنی',
+  image: 'تصویر',
+  button: 'دکمه',
+  video: 'ویدیو',
+  icon: 'آیکون',
+  'icon-box': 'باکس آیکون',
+  divider: 'خط جداکننده',
+  spacer: 'فاصله‌گذار',
+  'stat-card': 'کارت آمار',
+  counter: 'شمارنده',
+  accordion: 'آکاردئون',
+  callout: 'یادآوری / هشدار',
+  'vertical-container': 'دربرگیرنده عمودی',
+  'horizontal-container': 'دربرگیرنده افقی',
+  'image-slider': 'اسلایدر تصویر',
+  navigator: 'پیمایشگر محتوا',
+  'nav-menu': 'نوار راهبری',
+  'child-pages': 'لیست زیرصفحه‌ها',
+  map: 'نقشه',
+  'contact-info': 'اطلاعات تماس',
+  'custom-html': 'HTML دلخواه',
+  'social-links': 'لینک‌های اجتماعی',
+  'share-buttons': 'دکمه‌های اشتراک',
+  'pricing-table': 'جدول قیمت',
+  testimonial: 'نظر کاربر',
+  // ویجت‌های هوشمند (ماژول‌ها)
+  'announcements-feed': 'خوراک اطلاعیه‌ها',
+  'news-feed': 'خوراک اخبار',
+  'image-gallery': 'آلبوم گالری',
+  'achievements-timeline': 'تایم‌لاین افتخارات',
+  'staff-directory': 'کادر علمی و اساتید',
+  'file-manager': 'مخزن اسناد'
+};
+
+/** برچسب فارسی نوع ویجت با فالبک به خودِ type */
+export const getWidgetTypeLabel = (type: WidgetType): string => WIDGET_TYPE_LABELS[type] ?? type;
+
 export interface WidgetStyle {
   textColor?: string;
   backgroundColor?: string;

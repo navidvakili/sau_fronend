@@ -6,7 +6,8 @@ import {
   WidgetInstance,
   Breakpoint,
   UserRoleCondition,
-  getColumnWidth
+  getColumnWidth,
+  getWidgetTypeLabel
 } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
@@ -437,6 +438,17 @@ export const Canvas: React.FC<CanvasProps> = ({
                               {dragInsertIndex?.colId === col.id && dragInsertIndex.index === wIdx && (
                                 <div className="absolute -top-[9px] right-2 left-2 h-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_2px_rgba(20,184,166,0.45)] z-40 pointer-events-none" />
                               )}
+                              {/* برچسب نوع ویجت — همیشه نمایان تا نوع هر ویجت قابل‌تشخیص باشد */}
+                              <div
+                                className={`absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-md bg-amber-500 text-white text-[9px] font-black shadow-md whitespace-nowrap pointer-events-none transition-opacity ${
+                                  isWidgetSel
+                                    ? 'opacity-100'
+                                    : 'opacity-60 group-hover/widget:opacity-100'
+                                }`}
+                                title={`نوع ویجت: ${getWidgetTypeLabel(widget.type)}`}
+                              >
+                                {getWidgetTypeLabel(widget.type)}
+                              </div>
                               {/* Drag handle indicator on hover */}
                               <div
                                 className={`absolute top-2 right-2 z-30 p-1 rounded-lg bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md transition-opacity ${

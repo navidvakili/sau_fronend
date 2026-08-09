@@ -8,7 +8,8 @@ import {
   ConditionalDisplayRule,
   UserRoleCondition,
   Breakpoint,
-  getColumnWidth
+  getColumnWidth,
+  getWidgetTypeLabel
 } from './builderTypes';
 import {
   fetchDataSourceNewsCategories,
@@ -342,7 +343,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             <div className="space-y-4">
               {/* Common Title & Content Inputs */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان ویجت</label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان ویجت</label>
+                  <span
+                    className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black whitespace-nowrap"
+                    title={`نوع ویجت: ${getWidgetTypeLabel(selectedWidget.type)}`}
+                  >
+                    {getWidgetTypeLabel(selectedWidget.type)}
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={selectedWidget.title}
