@@ -27,11 +27,12 @@ import { ChildPagesManagerModal } from './ChildPagesManagerModal';
 import {
   fetchSmartPages,
   fetchSmartPage,
-  fetchSmartPageChildren,
+  fetchSmartPageChildrenTree,
   createSmartPage,
   updateSmartPage,
   deleteSmartPage,
-  SmartPageDto
+  SmartPageDto,
+  SmartPageTreeNode
 } from './api';
 import {
   Save,
@@ -87,7 +88,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
   // Child-pages manager (زیرصفحه‌ها فقط از داخل استودیوی صفحهٔ والد مدیریت می‌شوند)
   const [showChildPagesModal, setShowChildPagesModal] = useState(false);
-  const [childPages, setChildPages] = useState<SmartPageDto[]>([]);
+  const [childPagesTree, setChildPagesTree] = useState<SmartPageTreeNode[]>([]);
   const [isLoadingChildPages, setIsLoadingChildPages] = useState(false);
   const [isCreatingChild, setIsCreatingChild] = useState(false);
   const [childCreateError, setChildCreateError] = useState<string | null>(null);
@@ -209,9 +210,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const loadChildPages = async (id: number) => {
     setIsLoadingChildPages(true);
     try {
-      setChildPages(await fetchSmartPageChildren(id));
+      setChildPagesTree(await fetchSmartPageChildrenTree(id));
     } catch {
-      setChildPages([]);
+      setChildPagesTree([]);
     } finally {
       setIsLoadingChildPages(false);
     }
@@ -221,16 +222,28 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const handleOpenChildPages = () => {
     setChildCreateError(null);
     if (activePageId) void loadChildPages(activePageId);
-    else setChildPages([]);
+    else setChildPagesTree([]);
     setShowChildPagesModal(true);
   };
 
   // ساخت زیرصفحهٔ جدید برای صفحهٔ فعلی — بلافاصله در ویرایشگر باز می‌شود
-  const handleCreateChild = async (data: { title: string; slug: string; status: 'published' | 'draft' }) => {
-    if (!activePageId) return;
+  const handleCreateChild = async (
+    data: { title: string; slug: string; status: 'published' | 'draft' },
+    parentId: number
+  ) => {
     setIsCreatingChild(true);
     setChildCreateError(null);
     try {
+      // sort_order = تعداد زیرصفحه‌های مستقیمِ همان والد (از روی درخت)
+      const directChildCount = (nodes: SmartPageTreeNode[], targetId: number): number | null => {
+        if (targetId === activePageId) return nodes.length;
+        for (const n of nodes) {
+          if (n.id === targetId) return n.children.length;
+          const found = directChildCount(n.children, targetId);
+          if (found !== null) return found;
+        }
+        return null;
+      };
       const fresh = JSON.parse(JSON.stringify(INITIAL_SMART_PAGE)) as SmartPageSchema;
       fresh.id = `page-new-${Date.now()}`;
       fresh.slug = data.slug;
@@ -244,8 +257,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       const res = await createSmartPage({
         title: data.title,
         slug: data.slug,
-        parent_id: activePageId,
-        sort_order: childPages.length,
+        parent_id: parentId,
+        sort_order: directChildCount(childPagesTree, parentId) ?? 0,
         status: data.status,
         seo: { title: '', description: '', keywords: '', og_image: '' },
         schema: fresh as unknown as Record<string, unknown>,
@@ -253,7 +266,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       // به‌روزرسانی فهرست‌ها و رفتن به طراحی زیرصفحهٔ تازه‌ساخته
       const list = await fetchSmartPages({ per_page: 100 });
       setPages(list.data);
-      void loadChildPages(activePageId);
+      void loadChildPages(activePageId!);
       setShowChildPagesModal(false);
       openEditor(res.data.id!);
     } catch (err) {
@@ -1624,14 +1637,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
       {showChildPagesModal && (
         <ChildPagesManagerModal
+          key={activePageId ?? 'new'}
           parentId={activePageId}
           parentTitle={pageSchema.title}
           parentSlug={pageSchema.slug}
-          children={childPages}
+          childrenTree={childPagesTree}
           isLoading={isLoadingChildPages}
           isCreating={isCreatingChild}
           createError={childCreateError}
-          onCreateChild={handleCreateChild}
+          onCreateChild={(data, parentId) => void handleCreateChild(data, parentId)}
           onOpenChild={(id) => {
             setShowChildPagesModal(false);
             openEditor(id);

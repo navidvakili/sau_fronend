@@ -76,6 +76,16 @@ export const fetchSmartPageChildren = async (parentId: number): Promise<SmartPag
   return API<SmartPageDto[]>(`smart-pages/${parentId}/children`);
 };
 
+/** A node of the recursive descendant tree of a page */
+export interface SmartPageTreeNode extends SmartPageDto {
+  children: SmartPageTreeNode[];
+}
+
+/** Admin TREE of ALL descendant pages (nested) — for the child-pages manager dialog */
+export const fetchSmartPageChildrenTree = async (parentId: number): Promise<SmartPageTreeNode[]> => {
+  return API<SmartPageTreeNode[]>(`smart-pages/${parentId}/children/tree`);
+};
+
 /** Create a new smart page */
 export const createSmartPage = async (data: {
   title: string;
