@@ -122,6 +122,10 @@ export default function MediaManager({
       const params = new URLSearchParams();
       params.set('per_page', String(perPage));
       params.set('page', String(requestedPage));
+      // فیلتر نوع فایل سمت سرور — تا صفحه‌بندی بر اساس همان نوع محاسبه شود
+      if (filter && filter !== 'all') {
+        params.set('type', filter);
+      }
       if (requestedSearch.trim() !== '') {
         params.set('search', requestedSearch.trim());
       }
@@ -145,7 +149,7 @@ export default function MediaManager({
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [perPage]);
+  }, [perPage, filter]);
 
   useEffect(() => {
     if (open) {
