@@ -12,9 +12,9 @@ import {
   fetchDataSourceMedia,
   fetchDataSourceAchievements,
   fetchDataSourcePeople,
-  fetchSmartPageChildren
+  fetchSmartPageChildrenTree
 } from './api';
-import type { SmartPageDto } from './api';
+import type { SmartPageTreeNode } from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import {
@@ -884,7 +884,7 @@ const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   );
 };
 
-/** لیست زیرصفحه‌ها — زیرصفحه‌های صفحهٔ فعلی را از وب‌سرویس می‌خواند */
+/** لیست زیرصفحه‌ها — زیرصفحه‌های صفحهٔ فعلی (درختی، همهٔ نسل‌ها) را از وب‌سرویس می‌خواند */
 const ChildPagesBlock: React.FC<{
   widget: WidgetInstance;
   containerStyle: React.CSSProperties;
@@ -892,18 +892,40 @@ const ChildPagesBlock: React.FC<{
   pageSlug?: string | null;
 }> = ({ widget, containerStyle, pageId, pageSlug }) => {
   const props = widget.settings.customProps || {};
-  const mode = props.displayMode === 'grid' ? 'grid' : 'list';
   const limit = Number(props.limit) || 12;
-  const showDates = props.showDates !== false;
 
-  const { data, error, retry } = useSmartData<SmartPageDto>(() =>
-    pageId ? fetchSmartPageChildren(pageId) : Promise.resolve([]),
+  const { data, error, retry } = useSmartData<SmartPageTreeNode>(() =>
+    pageId ? fetchSmartPageChildrenTree(pageId) : Promise.resolve([]),
     [pageId]
   );
 
   const children = (data || []).slice(0, limit);
-  const linkFor = (child: SmartPageDto) =>
-    pageSlug ? `/page/${pageSlug}/${child.slug}` : `#`;
+
+  // ردیف بازگشتی — عنوان + نام زیرصفحه‌های آن (بدون تاریخ)
+  const renderRow = (node: SmartPageTreeNode, linkParentSlug: string, depth: number): React.ReactNode => {
+    const subs = node.children || [];
+    if (depth > 6) return null;
+    return (
+      <div key={node.id} className="min-w-0">
+        <a
+          href={pageSlug ? `/page/${linkParentSlug}/${node.slug}` : '#'}
+          className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+          style={depth > 0 ? { paddingRight: `${18 + depth * 20}px` } : undefined}
+        >
+          <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+            <FileText className={`${depth > 0 ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+          </span>
+          <span className="flex-1 font-bold truncate">{node.title}</span>
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+        </a>
+        {subs.length > 0 && (
+          <div className="border-r border-teal-500/10 mr-5">
+            {subs.map((sub) => renderRow(sub, node.slug, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // بدون pageId (صفحهٔ جدید هنوز ذخیره نشده) → ساختار نمونه نمایش داده می‌شود
   if (!pageId) {
@@ -941,45 +963,10 @@ const ChildPagesBlock: React.FC<{
         <div className="py-6 text-center text-xs text-slate-400">
           هنوز زیرصفحه‌ای برای این صفحه ساخته نشده است.
         </div>
-      ) : mode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {children.map((child) => (
-            <a
-              key={child.id}
-              href={linkFor(child)}
-              className="group p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-teal-500/50 hover:shadow-md transition-all flex flex-col gap-1.5 cursor-pointer"
-            >
-              <span className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                  <FileText className="w-3.5 h-3.5" />
-                </span>
-                {child.title}
-              </span>
-              {showDates && child.published_at && (
-                <span className="text-[10px] text-slate-400">{formatFaDate(child.published_at)}</span>
-              )}
-            </a>
-          ))}
-        </div>
       ) : (
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden">
           <div className="divide-y divide-gray-100 dark:divide-slate-800">
-            {children.map((child) => (
-              <a
-                key={child.id}
-                href={linkFor(child)}
-                className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
-              >
-                <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-                  <FileText className="w-3.5 h-3.5" />
-                </span>
-                <span className="flex-1 font-bold truncate">{child.title}</span>
-                {showDates && child.published_at && (
-                  <span className="text-[10px] text-slate-400 shrink-0">{formatFaDate(child.published_at)}</span>
-                )}
-                <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
-              </a>
-            ))}
+            {children.map((child) => renderRow(child, pageSlug || '', 0))}
           </div>
         </div>
       )}
