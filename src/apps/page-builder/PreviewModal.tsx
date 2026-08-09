@@ -75,6 +75,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
           backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
           backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
+          marginTop: sec.marginTop !== undefined ? `${sec.marginTop}px` : undefined,
+          marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined,
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BL BR

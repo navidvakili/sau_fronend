@@ -233,6 +233,9 @@ export interface SectionInstance {
   bookmark?: string;
   paddingTop: number;
   paddingBottom: number;
+  /** فاصلهٔ خارجی سکشن (می‌تواند منفی باشد تا بلوک روی بلوک قبلی قرار بگیرد) */
+  marginTop?: number;
+  marginBottom?: number;
   /** شعاع گوشه‌ها به‌صورت جداگانه (مانند فتوشاپ) — TL/TR/BL/BR */
   borderRadius?: {
     topLeft?: number;

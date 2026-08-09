@@ -2450,11 +2450,38 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی بالا (px)</label>
+              <input
+                type="number"
+                value={selectedSection.marginTop ?? ''}
+                placeholder="0"
+                onChange={(e) => onUpdateSection({ ...selectedSection, marginTop: e.target.value === '' ? undefined : parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                مقدار منفی، بلوک را روی بلوک قبلی می‌کشد (با z-index و موقعیت نسبی).
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی پایین (px)</label>
+              <input
+                type="number"
+                value={selectedSection.marginBottom ?? ''}
+                placeholder="0"
+                onChange={(e) => onUpdateSection({ ...selectedSection, marginBottom: e.target.value === '' ? undefined : parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
               <input
                 type="number"
+                min={0}
                 value={selectedSection.paddingTop}
-                onChange={(e) => onUpdateSection({ ...selectedSection, paddingTop: parseInt(e.target.value) || 0 })}
+                onChange={(e) => onUpdateSection({ ...selectedSection, paddingTop: Math.max(0, parseInt(e.target.value) || 0) })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>
@@ -2462,8 +2489,9 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ پایین (px)</label>
               <input
                 type="number"
+                min={0}
                 value={selectedSection.paddingBottom}
-                onChange={(e) => onUpdateSection({ ...selectedSection, paddingBottom: parseInt(e.target.value) || 0 })}
+                onChange={(e) => onUpdateSection({ ...selectedSection, paddingBottom: Math.max(0, parseInt(e.target.value) || 0) })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>
