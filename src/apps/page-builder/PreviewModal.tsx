@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { SmartPageSchema, Breakpoint, getColumnWidth } from './builderTypes';
-import { WidgetRenderer } from './WidgetRenderer';
+import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth } from './builderTypes';
+import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
   X,
   Monitor,
@@ -33,6 +33,25 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 
   const globalStyles = pageSchema.globalStyles;
 
+  /**
+   * پس‌زمینهٔ لایه‌ای سکشن — دقیقاً همان منطق Canvas (ویرایشگر) و سایت عمومی:
+   * گرادیان (یا رنگ ساده) روی تصویر قرار می‌گیرد و شفافیت روی لایهٔ رنگی اعمال می‌شود
+   */
+  const buildSectionBackgroundImage = (sec: SectionInstance): string | undefined => {
+    const layers: string[] = [];
+    if (sec.backgroundGradient) {
+      const g = applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity);
+      if (g) layers.push(g);
+    } else if (sec.backgroundColor) {
+      const c = applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity) || sec.backgroundColor;
+      layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
+    }
+    if (sec.backgroundImage) {
+      layers.push(`url("${sec.backgroundImage}")`);
+    }
+    return layers.length ? layers.join(', ') : undefined;
+  };
+
   /** رندر بازگشتی سکشن‌ها — سکشن‌های تو در تو (زیربلوک) داخل ستون‌ها هم رندر می‌شوند */
   const renderSection = (sec: (typeof pageSchema.sections)[number], depth = 0) => {
     if (depth >= 6) return null;
@@ -46,13 +65,16 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
         style={{
           position: sec.position || undefined,
           zIndex: sec.zIndex || undefined,
-          backgroundColor: sec.backgroundColor || undefined,
-          backgroundImage: sec.backgroundImage
-            ? `url("${sec.backgroundImage}")`
-            : sec.backgroundGradient || undefined,
-          backgroundPosition: sec.backgroundPosition || undefined,
-          backgroundSize: sec.backgroundSize || undefined,
-          backgroundRepeat: sec.backgroundRepeat || undefined,
+          backgroundColor:
+            sec.backgroundImage || sec.backgroundGradient
+              ? undefined
+              : sec.backgroundColor
+                ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                : undefined,
+          backgroundImage: buildSectionBackgroundImage(sec),
+          backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
+          backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
+          backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BL BR
