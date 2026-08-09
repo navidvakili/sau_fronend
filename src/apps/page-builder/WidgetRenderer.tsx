@@ -891,8 +891,7 @@ const ChildPagesBlock: React.FC<{
   widget: WidgetInstance;
   containerStyle: React.CSSProperties;
   pageId?: number | null;
-  pageSlug?: string | null;
-}> = ({ widget, containerStyle, pageId, pageSlug }) => {
+}> = ({ widget, containerStyle, pageId }) => {
   const props = widget.settings.customProps || {};
   const limit = Number(props.limit) || 12;
   const mode = props.mode === 'direct' ? 'direct' : 'tree';
@@ -905,14 +904,14 @@ const ChildPagesBlock: React.FC<{
   const children = (data || []).slice(0, limit);
 
   // ردیف بازگشتی — عنوان + نام زیرصفحه‌های آن (بدون تاریخ)
-  const renderRow = (node: SmartPageTreeNode, linkParentSlug: string, depth: number): React.ReactNode => {
+  // در محیط مدیریت، کلیک روی ردیف‌ها هیچ عملی انجام نمی‌دهد (فقط پیش‌نمایش بصری)
+  const renderRow = (node: SmartPageTreeNode, depth: number): React.ReactNode => {
     const subs = mode === 'tree' ? node.children || [] : [];
     if (depth > 6) return null;
     return (
       <div key={node.id} className="min-w-0">
-        <a
-          href={pageSlug ? `/page/${linkParentSlug}/${node.slug}` : '#'}
-          className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+        <div
+          className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-default select-none"
           style={depth > 0 ? { paddingRight: `${18 + depth * 20}px` } : undefined}
         >
           <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
@@ -920,10 +919,10 @@ const ChildPagesBlock: React.FC<{
           </span>
           <span className="flex-1 font-bold truncate">{node.title}</span>
           <ArrowLeft className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-        </a>
+        </div>
         {subs.length > 0 && (
           <div className="border-r border-teal-500/10 mr-5">
-            {subs.map((sub) => renderRow(sub, node.slug, depth + 1))}
+            {subs.map((sub) => renderRow(sub, depth + 1))}
           </div>
         )}
       </div>
@@ -969,7 +968,7 @@ const ChildPagesBlock: React.FC<{
       ) : (
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden">
           <div className="divide-y divide-gray-100 dark:divide-slate-800">
-            {children.map((child) => renderRow(child, pageSlug || '', 0))}
+            {children.map((child) => renderRow(child, 0))}
           </div>
         </div>
       )}
@@ -1468,7 +1467,6 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           widget={widget}
           containerStyle={containerStyle}
           pageId={pageId}
-          pageSlug={pageSlug}
         />
       );
 
