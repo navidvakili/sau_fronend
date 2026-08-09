@@ -884,7 +884,9 @@ const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   );
 };
 
-/** لیست زیرصفحه‌ها — زیرصفحه‌های صفحهٔ فعلی (درختی، همهٔ نسل‌ها) را از وب‌سرویس می‌خواند */
+/** لیست زیرصفحه‌ها — زیرصفحه‌های صفحهٔ فعلی را از وب‌سرویس می‌خواند
+ *  حالت «درختی» (tree): همهٔ نسل‌ها به‌صورت تودرتو.
+ *  حالت «مستقیم» (direct): فقط زیرصفحه‌های مستقیم همین صفحه (هر صفحه در خودش). */
 const ChildPagesBlock: React.FC<{
   widget: WidgetInstance;
   containerStyle: React.CSSProperties;
@@ -893,6 +895,7 @@ const ChildPagesBlock: React.FC<{
 }> = ({ widget, containerStyle, pageId, pageSlug }) => {
   const props = widget.settings.customProps || {};
   const limit = Number(props.limit) || 12;
+  const mode = props.mode === 'direct' ? 'direct' : 'tree';
 
   const { data, error, retry } = useSmartData<SmartPageTreeNode>(() =>
     pageId ? fetchSmartPageChildrenTree(pageId) : Promise.resolve([]),
@@ -903,7 +906,7 @@ const ChildPagesBlock: React.FC<{
 
   // ردیف بازگشتی — عنوان + نام زیرصفحه‌های آن (بدون تاریخ)
   const renderRow = (node: SmartPageTreeNode, linkParentSlug: string, depth: number): React.ReactNode => {
-    const subs = node.children || [];
+    const subs = mode === 'tree' ? node.children || [] : [];
     if (depth > 6) return null;
     return (
       <div key={node.id} className="min-w-0">

@@ -788,6 +788,35 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 <>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      نحوهٔ نمایش
+                    </label>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateCustomProps({ mode: 'tree' })}
+                        className={`text-right px-3 py-2 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                          (customProps.mode ?? 'tree') === 'tree'
+                            ? 'bg-teal-500/10 border-teal-500/40 text-teal-700 dark:text-teal-300'
+                            : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-teal-500/40'
+                        }`}
+                      >
+                        درختی — همهٔ زیرمجموعه‌ها زیر همین صفحه
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateCustomProps({ mode: 'direct' })}
+                        className={`text-right px-3 py-2 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                          customProps.mode === 'direct'
+                            ? 'bg-teal-500/10 border-teal-500/40 text-teal-700 dark:text-teal-300'
+                            : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-teal-500/40'
+                        }`}
+                      >
+                        هر صفحه فقط زیرصفحه‌های خودش
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                       حداکثر تعداد زیرصفحه‌ها (Limit)
                     </label>
                     <input
@@ -802,7 +831,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     />
                   </div>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                    این ویجت زیرصفحه‌ها را به‌صورت لیست نمایش می‌دهد — زیر هر زیرصفحه، نام زیرصفحه‌های آن نیز فهرست می‌شود.
+                    در حالت درختی، زیر هر زیرصفحه نام زیرصفحه‌های آن نیز به‌صورت تودرتو فهرست می‌شود؛ در حالت دوم، هر صفحه فقط زیرصفحه‌های مستقیم خودش را نشان می‌دهد.
                   </p>
                 </>
               )}
