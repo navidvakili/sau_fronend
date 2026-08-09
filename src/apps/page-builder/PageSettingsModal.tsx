@@ -5,10 +5,13 @@ import type { SmartPageDto } from './api';
 
 interface PageSettingsModalProps {
   page: SmartPageDto | null;
+  /** همهٔ صفحات برای انتخاب والد — خودِ صفحه از فهرست حذف می‌شود */
+  pages?: SmartPageDto[];
   isSaving?: boolean;
   onSave: (data: {
     title: string;
     slug: string;
+    parent_id?: number | null;
     status: 'published' | 'draft';
     seo: { title?: string; description?: string; keywords?: string; og_image?: string };
   }) => void;
@@ -17,12 +20,14 @@ interface PageSettingsModalProps {
 
 export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
   page,
+  pages,
   isSaving,
   onSave,
   onClose
 }) => {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
+  const [parentId, setParentId] = useState<number | ''>('');
   const [status, setStatus] = useState<'published' | 'draft'>('draft');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
@@ -30,11 +35,47 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
   const [seoOgImage, setSeoOgImage] = useState('');
   const [slugError, setSlugError] = useState<string | null>(null);
 
+  // فهرست والدهای مجاز: خودِ صفحه + همهٔ نوادگان آن حذف می‌شوند تا چرخه پیش نیاید
+  const parentOptions = React.useMemo(() => {
+    if (!pages) return [];
+    const currentId = page?.id;
+    const excluded = new Set<number>();
+    if (currentId) {
+      excluded.add(currentId);
+      // جمع‌آوری همهٔ نوادگان غیرمستقیم
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const p of pages) {
+          if (p.parent_id && excluded.has(p.parent_id) && !excluded.has(p.id!)) {
+            excluded.add(p.id!);
+            changed = true;
+          }
+        }
+      }
+    }
+    const byId = new Map(pages.filter((p) => p.id != null).map((p) => [p.id!, p]));
+    return pages
+      .filter((p) => p.id != null && !excluded.has(p.id))
+      .map((p) => ({ ...p, depth: 0 }))
+      .sort((a, b) => {
+        // والدها قبل از فرزندان، و هر گروه بر اساس عنوان
+        const aParent = byId.get(a.parent_id ?? -1);
+        const bParent = byId.get(b.parent_id ?? -1);
+        const aRoot = aParent ? aParent.parent_id ?? aParent.id : a.id;
+        const bRoot = bParent ? bParent.parent_id ?? bParent.id : b.id;
+        if (aRoot !== bRoot) return (aRoot ?? 0) - (bRoot ?? 0);
+        if (!!a.parent_id !== !!b.parent_id) return a.parent_id ? 1 : -1;
+        return a.title.localeCompare(b.title, 'fa');
+      });
+  }, [pages, page]);
+
   // Sync local state whenever the target page changes
   useEffect(() => {
     if (page) {
       setTitle(page.title || '');
       setSlug(page.slug || '');
+      setParentId(page.parent_id ?? '');
       setStatus(page.status || 'draft');
       setSeoTitle(page.seo?.title ?? '');
       setSeoDescription(page.seo?.description ?? '');
@@ -65,6 +106,7 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
     onSave({
       title: title.trim(),
       slug: slug,
+      parent_id: parentId === '' ? null : Number(parentId),
       status,
       seo: {
         title: seoTitle.trim(),
@@ -133,6 +175,30 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
               </div>
               {slugError && <p className="text-[11px] text-rose-500 mt-1">{slugError}</p>}
             </div>
+          </div>
+
+          {/* Parent page — صفحهٔ والد (زیرصفحه بودن اختیاری است) */}
+          <div>
+            <label className={labelCls}>صفحهٔ والد (اختیاری)</label>
+            <select
+              value={parentId}
+              onChange={(e) =>
+                setParentId(e.target.value === '' ? '' : Number(e.target.value))
+              }
+              className={inputCls}
+            >
+              <option value="">بدون والد — صفحهٔ مستقل</option>
+              {parentOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                  {p.parent_slug || p.parent_id ? ' (زیرصفحه)' : ''} — /page/{p.slug}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1">
+              با انتخاب والد، این صفحه به‌صورت زیرصفحه در آدرس{' '}
+              <span dir="ltr" className="font-mono">/page/والد/این‌صفحه</span> نمایش داده می‌شود.
+            </p>
           </div>
 
           {/* Status */}

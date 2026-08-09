@@ -10,9 +10,28 @@ import {
   LayoutGrid,
   Pencil,
   Monitor,
-  Loader2
+  Loader2,
+  FolderTree
 } from 'lucide-react';
 import type { SmartPageDto } from './api';
+
+/** مسیر کامل صفحه شامل والدها — /page/parent/child */
+export const buildPagePath = (
+  page: Pick<SmartPageDto, 'slug' | 'parent_id'>,
+  allPages: SmartPageDto[]
+): string => {
+  const byId = new Map(allPages.filter((p) => p.id != null).map((p) => [p.id!, p]));
+  const slugs: string[] = [page.slug];
+  let cur = page;
+  let guard = 0;
+  while (cur.parent_id && byId.has(cur.parent_id) && guard < 10) {
+    const parent = byId.get(cur.parent_id)!;
+    slugs.unshift(parent.slug);
+    cur = parent;
+    guard++;
+  }
+  return '/page/' + slugs.join('/');
+};
 
 interface PagesListProps {
   pages: SmartPageDto[];
@@ -70,11 +89,13 @@ const PageMockup: React.FC = () => (
 /** کارت یک صفحه ساخته‌شده */
 const PageCard: React.FC<{
   page: SmartPageDto;
+  path: string;
+  childrenCount?: number;
   onEdit: () => void;
   onSettings: () => void;
   onPreview?: () => void;
   onDelete: () => void;
-}> = ({ page, onEdit, onSettings, onPreview, onDelete }) => {
+}> = ({ page, path, childrenCount = 0, onEdit, onSettings, onPreview, onDelete }) => {
   const updated = page.updated_at
     ? new Date(page.updated_at).toLocaleDateString('fa-IR')
     : '';
@@ -91,7 +112,7 @@ const PageCard: React.FC<{
         <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
         <span className="flex-1 mx-2 h-4 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[9px] text-slate-400 flex items-center px-2 truncate" dir="ltr">
-          sau.ac.ir/page/{page.slug}
+          sau.ac.ir{path}
         </span>
       </div>
 
@@ -103,13 +124,35 @@ const PageCard: React.FC<{
       {/* Meta row */}
       <div className="px-3 py-2.5 border-t border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-black text-slate-900 dark:text-white truncate">{page.title}</span>
+          <span className="text-xs font-black text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+            {page.parent_id && (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[9px] font-bold shrink-0"
+                title="این صفحه زیرصفحه است"
+              >
+                <FolderTree className="w-3 h-3" />
+                زیرصفحه
+              </span>
+            )}
+            {page.title}
+          </span>
           <StatusBadge status={page.status} />
         </div>
         <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-          <span dir="ltr">/page/{page.slug}</span>
+          <span className="flex items-center gap-2 min-w-0">
+            <span dir="ltr" className="truncate">{path}</span>
+            {childrenCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[9px] font-bold shrink-0"
+                title="این صفحه زیرصفحه دارد — از داخل استودیوی همین صفحه مدیریت می‌شوند"
+              >
+                <FolderTree className="w-3 h-3" />
+                {childrenCount} زیرصفحه
+              </span>
+            )}
+          </span>
           {updated && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 shrink-0">
               <Clock className="w-3 h-3" />
               {updated}
             </span>
@@ -177,6 +220,12 @@ export const PagesList: React.FC<PagesListProps> = ({
   onPreviewPage,
   onDeletePage
 }) => {
+  // فقط صفحات ریشه (بدون والد) در فهرست نمایش داده می‌شوند؛ زیرصفحه‌ها از داخل
+  // استودیوی صفحهٔ والد مدیریت می‌شوند و نیازی به فهرست شدن اینجا ندارند.
+  const topLevelPages = pages.filter((p) => !p.parent_id);
+  const childCountOf = (id: number | undefined) =>
+    id == null ? 0 : pages.filter((p) => p.parent_id === id).length;
+
   return (
     <div className="h-[calc(100dvh_-_13rem)] min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-y-auto rtl text-right transition-colors">
       <div className="max-w-7xl mx-auto px-6 py-6">
@@ -238,15 +287,17 @@ export const PagesList: React.FC<PagesListProps> = ({
               <span className="text-[11px] text-slate-400">بدون محدودیت در تعداد صفحات</span>
             </button>
 
-            {pages.length === 0 && !isLoading ? (
+            {topLevelPages.length === 0 && !isLoading ? (
               <div className="col-span-full py-16 text-center text-sm text-slate-400">
                 هنوز صفحه‌ای ساخته نشده است. با کارت «ایجاد صفحه جدید» اولین صفحه سایت خود را بسازید.
               </div>
             ) : (
-              pages.map((page) => (
+              topLevelPages.map((page) => (
                 <PageCard
                   key={page.id}
                   page={page}
+                  path={buildPagePath(page, pages)}
+                  childrenCount={childCountOf(page.id)}
                   onEdit={() => onEditPage(page.id!)}
                   onSettings={() => onOpenSettings(page.id!)}
                   onPreview={onPreviewPage ? () => onPreviewPage(page.id!) : undefined}

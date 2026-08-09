@@ -20,12 +20,14 @@ import { TemplateModal } from './TemplateModal';
 import { PreviewModal } from './PreviewModal';
 import { ExportModal } from './ExportModal';
 import { ComponentPickerModal } from './ComponentPickerModal';
-import { PagesList } from './PagesList';
+import { PagesList, buildPagePath } from './PagesList';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PageSettingsModal } from './PageSettingsModal';
+import { ChildPagesManagerModal } from './ChildPagesManagerModal';
 import {
   fetchSmartPages,
   fetchSmartPage,
+  fetchSmartPageChildren,
   createSmartPage,
   updateSmartPage,
   deleteSmartPage,
@@ -53,7 +55,8 @@ import {
   ArrowRight,
   Plus,
   Settings2,
-  Loader2
+  Loader2,
+  FolderTree
 } from 'lucide-react';
 
 interface PageBuilderStudioProps {
@@ -67,6 +70,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   // Multi-page state (persisted via backend SmartPage API)
   const [pages, setPages] = useState<SmartPageDto[]>([]);
   const [activePageId, setActivePageId] = useState<number | null>(null);
+  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [isLoadingPages, setIsLoadingPages] = useState(true);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
@@ -80,6 +84,13 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   // Delete confirmation dialog state
   const [pageToDelete, setPageToDelete] = useState<SmartPageDto | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+
+  // Child-pages manager (زیرصفحه‌ها فقط از داخل استودیوی صفحهٔ والد مدیریت می‌شوند)
+  const [showChildPagesModal, setShowChildPagesModal] = useState(false);
+  const [childPages, setChildPages] = useState<SmartPageDto[]>([]);
+  const [isLoadingChildPages, setIsLoadingChildPages] = useState(false);
+  const [isCreatingChild, setIsCreatingChild] = useState(false);
+  const [childCreateError, setChildCreateError] = useState<string | null>(null);
 
   // Load saved pages from backend on mount (card list is shown first)
   useEffect(() => {
@@ -121,6 +132,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         updatedAt: dto.updated_at ?? schema.updatedAt,
       };
       setActivePageId(dto.id!);
+      setCurrentParentId(dto.parent_id ?? null);
       setPageSchema(merged);
       setUndoStack([]);
       setRedoStack([]);
@@ -145,6 +157,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     fresh.versionHistory = [];
     fresh.sections = [];
     setActivePageId(null);
+    setCurrentParentId(null);
     setPageSchema(fresh);
     setUndoStack([]);
     setRedoStack([]);
@@ -178,6 +191,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         setUndoStack([]);
         setRedoStack([]);
         setViewMode('list');
+      } else if (activePageId) {
+        // حذف یک زیرصفحه → فهرست زیرصفحه‌های صفحهٔ باز به‌روز شود
+        void loadChildPages(activePageId);
       }
       setPageToDelete(null);
     } catch {
@@ -187,10 +203,76 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
+  // ---- مدیریت زیرصفحه‌ها (Child Pages) ----
+
+  // بارگذاری زیرصفحه‌های یک صفحه برای نمایش در مدیر زیرصفحه‌ها
+  const loadChildPages = async (id: number) => {
+    setIsLoadingChildPages(true);
+    try {
+      setChildPages(await fetchSmartPageChildren(id));
+    } catch {
+      setChildPages([]);
+    } finally {
+      setIsLoadingChildPages(false);
+    }
+  };
+
+  // باز کردن مدیر زیرصفحه‌ها از داخل استودیوی صفحهٔ والد
+  const handleOpenChildPages = () => {
+    setChildCreateError(null);
+    if (activePageId) void loadChildPages(activePageId);
+    else setChildPages([]);
+    setShowChildPagesModal(true);
+  };
+
+  // ساخت زیرصفحهٔ جدید برای صفحهٔ فعلی — بلافاصله در ویرایشگر باز می‌شود
+  const handleCreateChild = async (data: { title: string; slug: string; status: 'published' | 'draft' }) => {
+    if (!activePageId) return;
+    setIsCreatingChild(true);
+    setChildCreateError(null);
+    try {
+      const fresh = JSON.parse(JSON.stringify(INITIAL_SMART_PAGE)) as SmartPageSchema;
+      fresh.id = `page-new-${Date.now()}`;
+      fresh.slug = data.slug;
+      fresh.title = data.title;
+      fresh.status = data.status;
+      fresh.seo = { title: '', description: '', keywords: '', og_image: '' };
+      fresh.createdAt = new Date().toISOString().slice(0, 10);
+      fresh.updatedAt = new Date().toISOString().slice(0, 10);
+      fresh.versionHistory = [];
+      fresh.sections = [];
+      const res = await createSmartPage({
+        title: data.title,
+        slug: data.slug,
+        parent_id: activePageId,
+        sort_order: childPages.length,
+        status: data.status,
+        seo: { title: '', description: '', keywords: '', og_image: '' },
+        schema: fresh as unknown as Record<string, unknown>,
+      });
+      // به‌روزرسانی فهرست‌ها و رفتن به طراحی زیرصفحهٔ تازه‌ساخته
+      const list = await fetchSmartPages({ per_page: 100 });
+      setPages(list.data);
+      void loadChildPages(activePageId);
+      setShowChildPagesModal(false);
+      openEditor(res.data.id!);
+    } catch (err) {
+      setChildCreateError(err instanceof Error ? err.message : 'خطا در ایجاد زیرصفحه');
+    } finally {
+      setIsCreatingChild(false);
+    }
+  };
+
+  // درخواست حذف یک زیرصفحه (دیالوگ تأیید مشترک با صفحات عادی)
+  const handleDeleteChild = (page: SmartPageDto) => {
+    handleDeleteRequest(page);
+  };
+
   // Save page meta (title/slug/status/seo) — create or update
   const handleSavePageSettings = async (data: {
     title: string;
     slug: string;
+    parent_id?: number | null;
     status: 'published' | 'draft';
     seo: { title?: string; description?: string; keywords?: string; og_image?: string };
   }) => {
@@ -199,15 +281,18 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       const payload = {
         title: data.title,
         slug: data.slug,
+        parent_id: data.parent_id ?? null,
         status: data.status,
         seo: data.seo,
         schema: JSON.parse(JSON.stringify(pageSchema)),
       };
       if (activePageId) {
         await updateSmartPage(activePageId, payload);
+        setCurrentParentId(data.parent_id ?? null);
       } else {
         const res = await createSmartPage(payload);
         setActivePageId(res.data.id!);
+        setCurrentParentId(data.parent_id ?? null);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
       }
       setPageSchema((prev) => ({
@@ -1127,6 +1212,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setSelectedWidgetId(null);
   };
 
+  // ---- مقادیر محاسبه‌شده برای هدر (زیرصفحه‌ها) ----
+  const childCount = activePageId == null ? 0 : pages.filter((p) => p.parent_id === activePageId).length;
+  const parentOfCurrent = currentParentId ? pages.find((p) => p.id === currentParentId) : undefined;
+
   return (
     <>
       {viewMode === 'list' ? (
@@ -1189,6 +1278,16 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
                 <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border border-teal-500/20">
                   Intelligent Layout Engine
                 </span>
+                {parentOfCurrent && (
+                  <button
+                    onClick={() => openEditor(parentOfCurrent.id!)}
+                    className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors cursor-pointer inline-flex items-center gap-1"
+                    title="این صفحه زیرصفحه است — برای رفتن به صفحهٔ والد کلیک کنید"
+                  >
+                    <FolderTree className="w-3 h-3" />
+                    زیرصفحهٔ {parentOfCurrent.title}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1200,6 +1299,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             title="تنظیمات صفحه و سئو (عنوان، لینک، متادیتا)"
           >
             <Settings2 className="w-4 h-4 text-indigo-500" />
+          </button>
+
+          {/* Child-pages manager: زیرصفحه‌ها از داخل همین صفحه ساخته و مدیریت می‌شوند */}
+          <button
+            onClick={handleOpenChildPages}
+            className="relative p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            title="مدیریت زیرصفحه‌های این صفحه (ایجاد، باز کردن، حذف)"
+          >
+            <FolderTree className="w-4 h-4 text-teal-600" />
+            {childCount > 0 && (
+              <span className="absolute -top-1.5 -left-1.5 min-w-4 h-4 px-1 rounded-full bg-teal-600 text-white text-[9px] font-black flex items-center justify-center shadow-sm">
+                {childCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -1397,6 +1510,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         {/* Center Panel: Interactive Drag & Drop Canvas */}
         <Canvas
           pageSchema={pageSchema}
+          pageId={activePageId}
+          pageSlug={pageSchema.slug}
           activeBreakpoint={activeBreakpoint}
           selectedSectionId={selectedSectionId}
           selectedColumnId={selectedColumnId}
@@ -1495,27 +1610,56 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             id: activePageId ?? undefined,
             title: pageSchema.title,
             slug: pageSchema.slug,
+            parent_id: currentParentId,
             status: pageSchema.status,
             seo: pageSchema.seo,
             schema: pageSchema as unknown as Record<string, unknown>,
           }}
+          pages={pages}
           isSaving={isSavingPage}
           onSave={handleSavePageSettings}
           onClose={() => setShowPageSettingsModal(false)}
         />
       )}
 
-      {/* Delete confirmation dialog (replaces window.confirm) */}
-      {pageToDelete && (
-        <ConfirmDialog
-          title="حذف صفحه"
-          message={`آیا از حذف صفحه «${pageToDelete.title}» (/page/${pageToDelete.slug}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.`}
-          confirmLabel="حذف صفحه"
-          isBusy={isDeletingPage}
-          onConfirm={handleConfirmDeletePage}
-          onCancel={() => setPageToDelete(null)}
+      {showChildPagesModal && (
+        <ChildPagesManagerModal
+          parentId={activePageId}
+          parentTitle={pageSchema.title}
+          parentSlug={pageSchema.slug}
+          children={childPages}
+          isLoading={isLoadingChildPages}
+          isCreating={isCreatingChild}
+          createError={childCreateError}
+          onCreateChild={handleCreateChild}
+          onOpenChild={(id) => {
+            setShowChildPagesModal(false);
+            openEditor(id);
+          }}
+          onDeleteChild={handleDeleteChild}
+          onClose={() => setShowChildPagesModal(false)}
         />
       )}
+
+      {/* Delete confirmation dialog (replaces window.confirm) */}
+      {pageToDelete && (() => {
+        const deletedChildCount = pages.filter((p) => p.parent_id === pageToDelete.id).length;
+        return (
+          <ConfirmDialog
+            title={pageToDelete.parent_id ? 'حذف زیرصفحه' : 'حذف صفحه'}
+            message={
+              `آیا از حذف «${pageToDelete.title}» (${buildPagePath(pageToDelete, pages)}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.` +
+              (deletedChildCount > 0
+                ? `\nاین صفحه ${deletedChildCount} زیرصفحه دارد که همراه آن حذف خواهند شد.`
+                : '')
+            }
+            confirmLabel="حذف"
+            isBusy={isDeletingPage}
+            onConfirm={handleConfirmDeletePage}
+            onCancel={() => setPageToDelete(null)}
+          />
+        );
+      })()}
     </>
   );
 };

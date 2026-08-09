@@ -19,6 +19,9 @@ export interface SmartPageDto {
   id?: number;
   title: string;
   slug: string;
+  parent_id?: number | null;
+  parent_slug?: string | null;
+  sort_order?: number;
   status: 'published' | 'draft';
   seo?: {
     title?: string;
@@ -68,10 +71,17 @@ export const fetchSmartPage = async (id: number): Promise<SmartPageDto> => {
   return res.data;
 };
 
+/** Admin list of CHILD pages of a page (lightweight rows for the canvas widget) */
+export const fetchSmartPageChildren = async (parentId: number): Promise<SmartPageDto[]> => {
+  return API<SmartPageDto[]>(`smart-pages/${parentId}/children`);
+};
+
 /** Create a new smart page */
 export const createSmartPage = async (data: {
   title: string;
   slug: string;
+  parent_id?: number | null;
+  sort_order?: number;
   status?: 'published' | 'draft';
   seo?: SmartPageDto['seo'];
   schema: Record<string, unknown>;
@@ -86,6 +96,8 @@ export const updateSmartPage = async (
   data: Partial<{
     title: string;
     slug: string;
+    parent_id?: number | null;
+    sort_order?: number;
     status: 'published' | 'draft';
     seo: SmartPageDto['seo'];
     schema: Record<string, unknown>;

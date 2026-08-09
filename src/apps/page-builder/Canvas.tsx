@@ -26,6 +26,9 @@ import {
 
 interface CanvasProps {
   pageSchema: SmartPageSchema;
+  /** شناسه و slug صفحهٔ در حال ویرایش — برای ویجت‌های وابسته به خودِ صفحه (مثل child-pages) */
+  pageId?: number | null;
+  pageSlug?: string | null;
   activeBreakpoint: Breakpoint;
   selectedSectionId: string | null;
   selectedColumnId: string | null;
@@ -54,6 +57,8 @@ const MAX_DEPTH = 6;
 
 export const Canvas: React.FC<CanvasProps> = ({
   pageSchema,
+  pageId,
+  pageSlug,
   activeBreakpoint,
   selectedSectionId,
   selectedColumnId,
@@ -500,6 +505,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 widget={widget}
                                 currentUserRole={currentUserRole}
                                 isEditorPreview={true}
+                                pageId={pageId}
+                                pageSlug={pageSlug}
                               />
                             </div>
                           );

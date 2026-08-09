@@ -11,8 +11,10 @@ import {
   fetchDataSourceNews,
   fetchDataSourceMedia,
   fetchDataSourceAchievements,
-  fetchDataSourcePeople
+  fetchDataSourcePeople,
+  fetchSmartPageChildren
 } from './api';
+import type { SmartPageDto } from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import {
@@ -60,6 +62,9 @@ interface WidgetRendererProps {
   isEditorPreview?: boolean;
   /** عمق تو در تویی رندر (برای دربرگیرنده‌ها) — جلوگیری از حلقه بی‌نهایت */
   depth?: number;
+  /** شناسه و slug صفحهٔ در حال ویرایش — برای ویجت child-pages (لیست زیرصفحه‌ها) */
+  pageId?: number | null;
+  pageSlug?: string | null;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -879,6 +884,109 @@ const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   );
 };
 
+/** لیست زیرصفحه‌ها — زیرصفحه‌های صفحهٔ فعلی را از وب‌سرویس می‌خواند */
+const ChildPagesBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  pageId?: number | null;
+  pageSlug?: string | null;
+}> = ({ widget, containerStyle, pageId, pageSlug }) => {
+  const props = widget.settings.customProps || {};
+  const mode = props.displayMode === 'grid' ? 'grid' : 'list';
+  const limit = Number(props.limit) || 12;
+  const showDates = props.showDates !== false;
+
+  const { data, error, retry } = useSmartData<SmartPageDto>(() =>
+    pageId ? fetchSmartPageChildren(pageId) : Promise.resolve([]),
+    [pageId]
+  );
+
+  const children = (data || []).slice(0, limit);
+  const linkFor = (child: SmartPageDto) =>
+    pageSlug ? `/page/${pageSlug}/${child.slug}` : `#`;
+
+  // بدون pageId (صفحهٔ جدید هنوز ذخیره نشده) → ساختار نمونه نمایش داده می‌شود
+  if (!pageId) {
+    return (
+      <div style={containerStyle} className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5">
+        <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+          <Layers className="w-4 h-4 text-teal-500" />
+          {widget.title || 'لیست زیرصفحه‌ها'}
+        </h3>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          این ویجت زیرصفحه‌های این صفحه را به‌صورت خودکار فهرست می‌کند.
+          ابتدا صفحه را ذخیره کنید تا فهرست واقعی نمایش داده شود.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle}>
+      {widget.title ? (
+        <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+          <Layers className="w-4 h-4 text-teal-500" />
+          {widget.title}
+        </h3>
+      ) : null}
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <div className="grid gap-2.5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-11 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+          ))}
+        </div>
+      ) : children.length === 0 ? (
+        <div className="py-6 text-center text-xs text-slate-400">
+          هنوز زیرصفحه‌ای برای این صفحه ساخته نشده است.
+        </div>
+      ) : mode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {children.map((child) => (
+            <a
+              key={child.id}
+              href={linkFor(child)}
+              className="group p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-teal-500/50 hover:shadow-md transition-all flex flex-col gap-1.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 text-xs font-black text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5" />
+                </span>
+                {child.title}
+              </span>
+              {showDates && child.published_at && (
+                <span className="text-[10px] text-slate-400">{formatFaDate(child.published_at)}</span>
+              )}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden">
+          <div className="divide-y divide-gray-100 dark:divide-slate-800">
+            {children.map((child) => (
+              <a
+                key={child.id}
+                href={linkFor(child)}
+                className="flex items-center gap-2.5 px-4 py-3 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+              >
+                <span className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5" />
+                </span>
+                <span className="flex-1 font-bold truncate">{child.title}</span>
+                {showDates && child.published_at && (
+                  <span className="text-[10px] text-slate-400 shrink-0">{formatFaDate(child.published_at)}</span>
+                )}
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** نقشه — جاسازی نقشه گوگل */
 const MapBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
@@ -1094,7 +1202,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   widget,
   currentUserRole = 'all',
   isEditorPreview = false,
-  depth = 0
+  depth = 0,
+  pageId,
+  pageSlug
 }) => {
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
@@ -1361,6 +1471,16 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'nav-menu':
       return <NavMenuBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'child-pages':
+      return (
+        <ChildPagesBlock
+          widget={widget}
+          containerStyle={containerStyle}
+          pageId={pageId}
+          pageSlug={pageSlug}
+        />
+      );
 
     case 'map':
       return <MapBlock widget={widget} containerStyle={containerStyle} />;

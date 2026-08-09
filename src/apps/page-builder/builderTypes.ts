@@ -37,6 +37,7 @@ export type StaticWidgetType =
   | 'image-slider'
   | 'navigator'
   | 'nav-menu'
+  | 'child-pages' // لیست زیرصفحه‌های صفحهٔ فعلی
   | 'map'
   | 'contact-info'
   | 'custom-html'
