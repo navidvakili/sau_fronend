@@ -57,7 +57,8 @@ import {
   Plus,
   Settings2,
   Loader2,
-  FolderTree
+  FolderTree,
+  ChevronDown
 } from 'lucide-react';
 
 interface PageBuilderStudioProps {
@@ -81,6 +82,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
   // Version history dropdown (moved from the removed right sidebar into the top bar)
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
 
   // Delete confirmation dialog state
   const [pageToDelete, setPageToDelete] = useState<SmartPageDto | null>(null);
@@ -1477,42 +1479,62 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             <span>پیش‌نمایش زنده</span>
           </button>
 
-          <button
-            onClick={handleSaveDraft}
-            disabled={isSavingPage}
-            className="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-all border border-amber-500/20 disabled:opacity-60"
-            title="ذخیره به‌عنوان پیش‌نویس (بدون انتشار)"
-          >
-            {isSavingPage ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Clock className="w-4 h-4" />
-            )}
-            <span>ذخیره پیش‌نویس</span>
-          </button>
+          {/* دکمهٔ ذخیره و انتشار (اسپلیت) — پیش‌نویس در منوی کشویی */}
+          <div className="relative flex items-stretch rounded-xl shadow-md border border-teal-600 dark:border-teal-500">
+            <button
+              onClick={handleSavePublish}
+              disabled={isSavingPage}
+              className="px-5 py-2 rounded-r-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-60"
+              title="ذخیره و انتشار"
+            >
+              {isSavingPage ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>در حال ذخیره...</span>
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-white dark:text-slate-950" />
+                  <span>ذخیره گردید</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>ذخیره و انتشار</span>
+                </>
+              )}
+            </button>
 
-          <button
-            onClick={handleSavePublish}
-            disabled={isSavingPage}
-            className="px-5 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all disabled:opacity-60"
-          >
-            {isSavingPage ? (
+            <button
+              onClick={() => setShowSaveMenu((v) => !v)}
+              disabled={isSavingPage}
+              className="px-2.5 rounded-l-xl bg-teal-700 dark:bg-teal-600 hover:bg-teal-800 dark:hover:bg-teal-700 text-white dark:text-slate-950 border-r border-white/25 dark:border-slate-950/20 flex items-center justify-center cursor-pointer transition-all disabled:opacity-60"
+              title="گزینه‌های بیشتر ذخیره"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${showSaveMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSaveMenu && (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>در حال ذخیره...</span>
-              </>
-            ) : saveSuccess ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-white dark:text-slate-950" />
-                <span>ذخیره گردید</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>ذخیره و انتشار</span>
+                <div className="fixed inset-0 z-40" onClick={() => setShowSaveMenu(false)} />
+                <div className="absolute top-full left-0 mt-2 z-50 min-w-48 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl p-1.5 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      handleSaveDraft();
+                      setShowSaveMenu(false);
+                    }}
+                    disabled={isSavingPage}
+                    className="w-full px-3 py-2.5 rounded-xl hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center gap-2 cursor-pointer transition-all disabled:opacity-60"
+                    title="ذخیره به‌عنوان پیش‌نویس (بدون انتشار)"
+                  >
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span>ذخیره پیش‌نویس</span>
+                    <span className="mr-auto text-[10px] text-slate-400 font-normal">بدون انتشار</span>
+                  </button>
+                </div>
               </>
             )}
-          </button>
+          </div>
         </div>
       </header>
 

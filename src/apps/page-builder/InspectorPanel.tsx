@@ -61,15 +61,18 @@ const ColorBox: React.FC<{
   const empty = !value || value === 'transparent';
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 shrink-0 ${className}`}
-      style={{
-        backgroundColor: empty ? undefined : value,
-        backgroundImage: empty
-          ? 'conic-gradient(#d8dee6 0 25%, #ffffff 0 50%, #d8dee6 0 75%, #ffffff 0)'
-          : undefined,
-        backgroundSize: empty ? '12px 12px' : undefined
-      }}
+      className={`relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 shrink-0 p-1 ${className}`}
     >
+      <div
+        className="w-full h-full rounded-lg"
+        style={{
+          backgroundColor: empty ? undefined : value,
+          backgroundImage: empty
+            ? 'conic-gradient(#d8dee6 0 25%, #ffffff 0 50%, #d8dee6 0 75%, #ffffff 0)'
+            : undefined,
+          backgroundSize: empty ? '12px 12px' : undefined
+        }}
+      />
       <input
         type="color"
         value={value || '#ffffff'}
