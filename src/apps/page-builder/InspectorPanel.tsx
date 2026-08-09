@@ -51,6 +51,35 @@ const SHADOW_SM = '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)';
 const SHADOW_MD = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)';
 const SHADOW_LG = '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)';
 
+// ── جعبهٔ انتخاب رنگ — وقتی رنگ حذف شده باشد چهارخانهٔ ترانسپرنت نمایش می‌دهد ──
+/** اگر مقدار undefined/transparent باشد، الگوی چهارخانهٔ شفاف (مثل نرم‌افزارهای تصویری) دیده می‌شود */
+const ColorBox: React.FC<{
+  value?: string;
+  onChange: (color: string) => void;
+  className?: string;
+}> = ({ value, onChange, className = '' }) => {
+  const empty = !value || value === 'transparent';
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 shrink-0 ${className}`}
+      style={{
+        backgroundColor: empty ? undefined : value,
+        backgroundImage: empty
+          ? 'conic-gradient(#d8dee6 0 25%, #ffffff 0 50%, #d8dee6 0 75%, #ffffff 0)'
+          : undefined,
+        backgroundSize: empty ? '12px 12px' : undefined
+      }}
+    >
+      <input
+        type="color"
+        value={value || '#ffffff'}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
+    </div>
+  );
+};
+
 interface InspectorPanelProps {
   selectedWidget: WidgetInstance | null;
   selectedColumn: ColumnInstance | null;
@@ -1239,11 +1268,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه</label>
                   <div className="flex items-center gap-1.5">
-                    <input
-                      type="color"
-                      value={selectedWidget.settings.style.backgroundColor || '#ffffff'}
-                      onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                      className="flex-1 min-w-0 h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
+                    <ColorBox
+                      value={selectedWidget.settings.style.backgroundColor}
+                      onChange={(color) => handleStyleChange('backgroundColor', color)}
+                      className="flex-1 min-w-0 h-9"
                     />
                     <button
                       type="button"
@@ -1986,11 +2014,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه سکشن</label>
             <div className="flex items-center gap-1.5">
-              <input
-                type="color"
-                value={selectedSection.backgroundColor || '#ffffff'}
-                onChange={(e) => onUpdateSection({ ...selectedSection, backgroundColor: e.target.value })}
-                className="flex-1 min-w-0 h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
+              <ColorBox
+                value={selectedSection.backgroundColor}
+                onChange={(color) => onUpdateSection({ ...selectedSection, backgroundColor: color })}
+                className="flex-1 min-w-0 h-9"
               />
               <button
                 type="button"
