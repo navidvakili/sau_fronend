@@ -1412,12 +1412,29 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
     }
 
-    case 'button':
+    case 'button': {
+      // استایل ظاهری (رنگ پس‌زمینه/خط/سایه/پدینگ) فقط روی خود دکمه اعمال شود —
+      // wrapper فقط چیدمان است؛ وگرنه رنگ/خطِ پشت دکمه به‌صورت باکس دیده می‌شود
+      const {
+        backgroundColor: _wrapBg,
+        backgroundImage: _wrapBgImage,
+        lineHeight: _wrapLh,
+        borderRadius: _wrapBr,
+        borderWidth: _wrapBw,
+        borderColor: _wrapBc,
+        borderStyle: _wrapBs,
+        boxShadow: _wrapSh,
+        paddingTop: _wrapPt,
+        paddingBottom: _wrapPb,
+        paddingLeft: _wrapPl,
+        paddingRight: _wrapPr,
+        ...buttonWrapperStyle
+      } = containerStyle;
       return (
-        <div style={containerStyle} className={`transition-all ${style.fullWidth ? 'w-full' : 'inline-block'}`}>
+        <div style={buttonWrapperStyle} className={`transition-all ${style.fullWidth ? 'w-full' : 'inline-block'}`}>
           <a
             href={widget.buttonUrl || '#'}
-            className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-black text-sm transition-all shadow-md hover:shadow-lg ${
+            className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-black text-sm transition-all ${
               style.fullWidth ? 'w-full' : ''
             }`}
             style={{
@@ -1452,6 +1469,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </a>
         </div>
       );
+    }
 
     case 'video':
       return (

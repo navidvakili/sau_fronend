@@ -61,7 +61,7 @@ ${pad}        ${col.widgets
 ${pad}        <div className="widget-block my-3">
 ${pad}          ${w.type === 'heading' ? `<h2 className="text-2xl font-black">${w.content}</h2>` : ''}
 ${pad}          ${w.type === 'text' ? `<p className="text-sm leading-relaxed">${w.content}</p>` : ''}
-${pad}          ${w.type === 'button' ? `<a href="${w.buttonUrl || '#'}" className="inline-block px-6 py-3 rounded-xl bg-teal-600 text-white font-bold">${w.buttonText || 'Action Button'}</a>` : ''}
+${pad}          ${w.type === 'button' ? (() => { const _st = w.settings?.style || {}; const _bg = _st.backgroundColor ? ` style="background-color: ${_st.backgroundColor};${_st.textColor ? ` color: ${_st.textColor};` : ''}"` : ''; return `<a href="${w.buttonUrl || '#'}" className="inline-block px-6 py-3 rounded-xl font-bold"${_bg}>${w.buttonText || 'Action Button'}</a>`; })() : ''}
 ${pad}          ${w.type.includes('feed') || w.type.includes('staff') || w.type.includes('file') ? `<div className="dynamic-module-bound border rounded-2xl p-4">[Smart Binding: ${w.type}]</div>` : ''}
 ${pad}        </div>`
       )
