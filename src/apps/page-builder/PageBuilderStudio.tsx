@@ -120,6 +120,19 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setShowVersionHistory(false);
   };
 
+  // Recursively ensure every column has a subSections array (heals legacy schemas
+  // created before the key existed, preventing renderer crashes)
+  const normalizeSubSections = (sections: SectionInstance[]): SectionInstance[] =>
+    sections.map((sec) => ({
+      ...sec,
+      columns: (sec.columns ?? []).map((col) => ({
+        ...col,
+        subSections: Array.isArray(col.subSections)
+          ? normalizeSubSections(col.subSections)
+          : [],
+      })),
+    }));
+
   // Load a saved page (full schema) and make it active
   const loadPage = async (id: number) => {
     try {
@@ -134,6 +147,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         seo: dto.seo ?? schema.seo,
         updatedAt: dto.updated_at ?? schema.updatedAt,
       };
+      merged.sections = normalizeSubSections(merged.sections ?? []);
       setActivePageId(dto.id!);
       setCurrentParentId(dto.parent_id ?? null);
       setPageSchema(merged);
@@ -486,31 +500,31 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     switch (layoutPreset) {
       case '1col':
-        columns = [{ id: `col-${Date.now()}-1`, width: 12, widgets: [] }];
+        columns = [{ id: `col-${Date.now()}-1`, width: 12, widgets: [], subSections: [] }];
         break;
       case '2col':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 6, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 6, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 6, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 6, widgets: [], subSections: [] }
         ];
         break;
       case '3col':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 4, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 4, widgets: [] },
-          { id: `col-${Date.now()}-3`, width: 4, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 4, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 4, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-3`, width: 4, widgets: [], subSections: [] }
         ];
         break;
       case '7-5':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 7, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 5, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 7, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 5, widgets: [], subSections: [] }
         ];
         break;
       case '8-4':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 8, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 4, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 8, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 4, widgets: [], subSections: [] }
         ];
         break;
     }
@@ -552,39 +566,39 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     switch (preset) {
       case '1col':
-        columns = [{ id: `col-${Date.now()}-1`, width: 12, widgets: [] }];
+        columns = [{ id: `col-${Date.now()}-1`, width: 12, widgets: [], subSections: [] }];
         break;
       case '2col':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 6, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 6, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 6, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 6, widgets: [], subSections: [] }
         ];
         break;
       case '3col':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 4, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 4, widgets: [] },
-          { id: `col-${Date.now()}-3`, width: 4, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 4, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 4, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-3`, width: 4, widgets: [], subSections: [] }
         ];
         break;
       case '4col':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 3, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 3, widgets: [] },
-          { id: `col-${Date.now()}-3`, width: 3, widgets: [] },
-          { id: `col-${Date.now()}-4`, width: 3, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 3, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 3, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-3`, width: 3, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-4`, width: 3, widgets: [], subSections: [] }
         ];
         break;
       case '7-5':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 7, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 5, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 7, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 5, widgets: [], subSections: [] }
         ];
         break;
       case '8-4':
         columns = [
-          { id: `col-${Date.now()}-1`, width: 8, widgets: [] },
-          { id: `col-${Date.now()}-2`, width: 4, widgets: [] }
+          { id: `col-${Date.now()}-1`, width: 8, widgets: [], subSections: [] },
+          { id: `col-${Date.now()}-2`, width: 4, widgets: [], subSections: [] }
         ];
         break;
     }
@@ -682,7 +696,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           id: newColId,
           width: 12,
           widths: withWidths(12),
-          widgets: [newWidget]
+          widgets: [newWidget],
+          subSections: []
         }
       ],
       visibility: { desktop: true, tablet: true, mobile: true },
@@ -739,7 +754,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             id: `col-${secId}-${Date.now()}-${i}`,
             width: targetWidths[i],
             widths: { desktop: targetWidths[i] },
-            widgets: []
+            widgets: [],
+            subSections: []
           });
         }
       } else {
@@ -1207,7 +1223,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       layout: 'boxed',
       paddingTop: 24,
       paddingBottom: 24,
-      columns: [{ id: newColId, width: 12, widths: withWidths(12), widgets: [] }],
+      columns: [{ id: newColId, width: 12, widths: withWidths(12), widgets: [], subSections: [] }],
       visibility: { desktop: true, tablet: true, mobile: true },
       conditionalDisplay: { enabled: false, userRole: 'all' }
     };

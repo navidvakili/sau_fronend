@@ -111,7 +111,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                 })}
                 {/* زیربلوک‌های داخل ستون (بازگشتی) */}
                 {hasSubSections &&
-                  col.subSections!.map((sub) => renderSection(sub, depth + 1))}
+                  (col.subSections ?? []).map((sub) => renderSection(sub, depth + 1))}
               </div>
             ))}
           </div>
