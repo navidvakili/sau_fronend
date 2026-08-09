@@ -27,7 +27,7 @@ import {
   List, ListOrdered, AlignRight, AlignCenter, AlignLeft, AlignJustify,
   Quote, Minus, Undo2, Redo2, Link as LinkIcon, Image as ImageIcon,
   Highlighter, Palette, Table as TableIcon, RemoveFormatting,
-  Globe, CodeSquare,
+  Globe, CodeSquare, Maximize2,
 } from 'lucide-react';
 import MediaManager from './MediaManager';
 
@@ -233,6 +233,12 @@ interface WysiwygEditorProps {
   minHeight?: string;
   /** Optional callback when an image is uploaded from editor */
   onImageUpload?: (url: string) => void;
+  /** حالت نمایش: 'basic' = فقط ابزارهای اساسی، 'full' = همه ابزارها (پیش‌فرض) */
+  mode?: 'full' | 'basic';
+  /** نمایش دکمهٔ بزرگ‌نمایی (باز شدن نسخهٔ کامل در دیالوگ) */
+  showMaximize?: boolean;
+  /** با زدن دکمهٔ بزرگ‌نمایی صدا زده می‌شود تا والد دیالوگ نسخهٔ کامل را باز کند */
+  onRequestFullscreen?: () => void;
 }
 
 // ===== Main Component =====
@@ -246,7 +252,11 @@ export default function WysiwygEditor({
   currentUser,
   minHeight = '320px',
   onImageUpload,
+  mode = 'full',
+  showMaximize = false,
+  onRequestFullscreen,
 }: WysiwygEditorProps) {
+  const isBasic = mode === 'basic';
   const yDocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const isInternalUpdate = useRef(false);
@@ -503,25 +513,31 @@ export default function WysiwygEditor({
           >
             <Strikethrough className="w-4 h-4" />
           </ToolbarBtn>
-          <ToolbarBtn
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            active={editor.isActive('code')}
-            title="کد"
-          >
-            <Code className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn
-            onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
-            active={editor.isActive('highlight')}
-            title="هایلایت"
-          >
-            <Highlighter className="w-4 h-4" />
-          </ToolbarBtn>
+          {!isBasic && (
+            <>
+              <ToolbarBtn
+                onClick={() => editor.chain().focus().toggleCode().run()}
+                active={editor.isActive('code')}
+                title="کد"
+              >
+                <Code className="w-4 h-4" />
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
+                active={editor.isActive('highlight')}
+                title="هایلایت"
+              >
+                <Highlighter className="w-4 h-4" />
+              </ToolbarBtn>
+            </>
+          )}
 
-          <ToolbarDivider />
+          {!isBasic && (
+            <>
+              <ToolbarDivider />
 
-          {/* Color */}
-          <div className="relative">
+              {/* Color */}
+              <div className="relative">
             <button
               type="button"
               onMouseDown={e => e.preventDefault()}
@@ -561,7 +577,9 @@ export default function WysiwygEditor({
                 </button>
               </div>
             )}
-          </div>
+              </div>
+            </>
+          )}
 
           <ToolbarDivider />
 
@@ -613,22 +631,26 @@ export default function WysiwygEditor({
             <AlignJustify className="w-4 h-4" />
           </ToolbarBtn>
 
-          <ToolbarDivider />
+          {!isBasic && (
+            <>
+              <ToolbarDivider />
 
-          {/* Block Elements */}
-          <ToolbarBtn
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            active={editor.isActive('blockquote')}
-            title="نقل‌قول"
-          >
-            <Quote className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn
-            onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            title="خط افقی"
-          >
-            <Minus className="w-4 h-4" />
-          </ToolbarBtn>
+              {/* Block Elements */}
+              <ToolbarBtn
+                onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                active={editor.isActive('blockquote')}
+                title="نقل‌قول"
+              >
+                <Quote className="w-4 h-4" />
+              </ToolbarBtn>
+              <ToolbarBtn
+                onClick={() => editor.chain().focus().setHorizontalRule().run()}
+                title="خط افقی"
+              >
+                <Minus className="w-4 h-4" />
+              </ToolbarBtn>
+            </>
+          )}
 
           <ToolbarDivider />
 
@@ -639,73 +661,87 @@ export default function WysiwygEditor({
           <ToolbarBtn onClick={addImage} title="تصویر">
             <ImageIcon className="w-4 h-4" />
           </ToolbarBtn>
-          <ImageSizePalette editor={editor} />
+          {!isBasic && <ImageSizePalette editor={editor} />}
 
-          <ToolbarDivider />
+          {!isBasic && (
+            <>
+              <ToolbarDivider />
 
-          {/* Table */}
-          <div className="relative">
-            <ToolbarBtn
-              onClick={() => { setShowTableModal(v => !v); setShowColorPicker(false); }}
-              active={showTableModal}
-              title="درج جدول"
-            >
-              <TableIcon className="w-4 h-4" />
-            </ToolbarBtn>
-            {showTableModal && (
-              <div
-                onMouseDown={e => e.preventDefault()}
-                className="absolute top-full right-0 mt-1 p-3 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-[60] min-w-[280px]"
-              >
-                <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2">انتخاب اندازه جدول</div>
-                <div
-                  className="inline-grid gap-1 mb-2"
-                  style={{ gridTemplateColumns: 'repeat(8, minmax(0, 1fr))' }}
-                  onMouseLeave={() => setTableHover({ r: 0, c: 0 })}
+              {/* Table */}
+              <div className="relative">
+                <ToolbarBtn
+                  onClick={() => { setShowTableModal(v => !v); setShowColorPicker(false); }}
+                  active={showTableModal}
+                  title="درج جدول"
                 >
-                  {Array.from({ length: 64 }, (_, i) => {
-                    const r = Math.floor(i / 8);
-                    const c = i % 8;
-                    const active = r < tableHover.r && c < tableHover.c;
-                    return (
-                      <div
-                        key={`${r}-${c}`}
-                        className={`w-7 h-7 border cursor-pointer rounded-md transition-colors ${
-                          active
-                            ? 'bg-teal-400 dark:bg-teal-500 border-teal-500'
-                            : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-teal-400'
-                        }`}
-                        onMouseEnter={() => setTableHover({ r: r + 1, c: c + 1 })}
-                        onClick={() => insertTable(r + 1, c + 1)}
-                      />
-                    );
-                  })}
-                </div>
-                <div className="text-[10px] text-gray-400 text-center">
-                  {tableHover.r > 0 ? `${tableHover.r} × ${tableHover.c}` : 'ردیف × ستون'}
-                </div>
+                  <TableIcon className="w-4 h-4" />
+                </ToolbarBtn>
+                {showTableModal && (
+                  <div
+                    onMouseDown={e => e.preventDefault()}
+                    className="absolute top-full right-0 mt-1 p-3 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-[60] min-w-[280px]"
+                  >
+                    <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2">انتخاب اندازه جدول</div>
+                    <div
+                      className="inline-grid gap-1 mb-2"
+                      style={{ gridTemplateColumns: 'repeat(8, minmax(0, 1fr))' }}
+                      onMouseLeave={() => setTableHover({ r: 0, c: 0 })}
+                    >
+                      {Array.from({ length: 64 }, (_, i) => {
+                        const r = Math.floor(i / 8);
+                        const c = i % 8;
+                        const active = r < tableHover.r && c < tableHover.c;
+                        return (
+                          <div
+                            key={`${r}-${c}`}
+                            className={`w-7 h-7 border cursor-pointer rounded-md transition-colors ${
+                              active
+                                ? 'bg-teal-400 dark:bg-teal-500 border-teal-500'
+                                : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-teal-400'
+                            }`}
+                            onMouseEnter={() => setTableHover({ r: r + 1, c: c + 1 })}
+                            onClick={() => insertTable(r + 1, c + 1)}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="text-[10px] text-gray-400 text-center">
+                      {tableHover.r > 0 ? `${tableHover.r} × ${tableHover.c}` : 'ردیف × ستون'}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <ToolbarDivider />
+              <ToolbarDivider />
 
-          {/* Clear Formatting */}
-          <ToolbarBtn
-            onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
-            title="پاک کردن قالب‌بندی"
-          >
-            <RemoveFormatting className="w-4 h-4" />
-          </ToolbarBtn>
+              {/* Clear Formatting */}
+              <ToolbarBtn
+                onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
+                title="پاک کردن قالب‌بندی"
+              >
+                <RemoveFormatting className="w-4 h-4" />
+              </ToolbarBtn>
 
-          {/* HTML Source Toggle */}
-          <ToolbarBtn
-            onClick={toggleHtmlSource}
-            active={showHtmlSource}
-            title={showHtmlSource ? 'بازگشت به ویرایشگر' : 'مشاهده کد HTML'}
-          >
-            <CodeSquare className="w-4 h-4" />
-          </ToolbarBtn>
+              {/* HTML Source Toggle */}
+              <ToolbarBtn
+                onClick={toggleHtmlSource}
+                active={showHtmlSource}
+                title={showHtmlSource ? 'بازگشت به ویرایشگر' : 'مشاهده کد HTML'}
+              >
+                <CodeSquare className="w-4 h-4" />
+              </ToolbarBtn>
+            </>
+          )}
+
+          {/* دکمهٔ بزرگ‌نمایی — باز شدن نسخهٔ کامل در دیالوگ توسط والد */}
+          {showMaximize && (
+            <ToolbarBtn
+              onClick={() => onRequestFullscreen?.()}
+              title="بزرگ‌نمایی — ویرایش در پنجرهٔ کامل"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </ToolbarBtn>
+          )}
 
           {/* Collaboration Indicator */}
           {collaboration && (

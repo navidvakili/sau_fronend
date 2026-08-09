@@ -19,6 +19,7 @@ import {
 } from './api';
 import GradientPicker from '../slider-studio/components/GradientPicker';
 import MediaManager from '@/src/shared-components/MediaManager';
+import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
 import IconPicker, { ICON_CHOICES } from './components/IconPicker';
 import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
@@ -44,7 +45,9 @@ import {
   List,
   Layers,
   Image as ImageIcon,
-  Bookmark as BookmarkIcon
+  Bookmark as BookmarkIcon,
+  X,
+  Maximize2
 } from 'lucide-react';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
@@ -114,6 +117,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
   const [colBp, setColBp] = useState<Breakpoint>('desktop');
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'sectionBg' | 'widgetImage' | 'videoPoster' | null>(null);
+  /** دیالوگ نسخهٔ کامل ویرایشگر متن غنی (WYSIWYG) */
+  const [richtextFullscreen, setRichtextFullscreen] = useState(false);
+
+  // کپی مستعار — قبل از هر Narrowing تا در دیالوگ fullscreen نوع کامل حفظ شود
+  const fullscreenWidget = selectedWidget;
 
   // ── انتخابگر آیکون برای متن / دکمه ──
   const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' }>({ open: false, mode: 'text' });
@@ -199,6 +207,60 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           برای ویرایش خصوصیات، تغییر استایل یا اتصال به ماژول داده، روی یکی از ویجت‌ها یا سکشن‌های بوم کلیک کنید.
         </p>
+      </div>
+    );
+  }
+
+  // ── دیالوگ نسخهٔ کامل ویرایشگر متن غنی (WYSIWYG) ──
+  // این دیالوگ باید قبل از شاخهٔ ویجت/سکشن قرار بگیرد تا با کلیک روی دکمهٔ بزرگ‌نمایی نمایش داده شود
+  if (richtextFullscreen && fullscreenWidget) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-slate-900/70 backdrop-blur-sm select-none rtl text-right">
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950 shrink-0">
+            <div className="flex items-center gap-2">
+              <Maximize2 className="w-4 h-4 text-teal-500" />
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">ویرایشگر کامل متن غنی</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  نوع ویجت: {getWidgetTypeLabel(fullscreenWidget.type)} — همهٔ ابزارها در دسترس است
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setRichtextFullscreen(false)}
+              className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+              title="بستن (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Full Editor */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <WysiwygEditor
+              content={fullscreenWidget.content}
+              onChange={(html) => onUpdateWidget({ ...fullscreenWidget, content: html })}
+              placeholder="متن غنی را بنویسید — تیتر، پاراگراف، لینک، تصویر و جدول..."
+              minHeight="60vh"
+              mode="full"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="p-3 border-t border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between shrink-0">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              تغییرات به‌صورت زنده روی بوم اعمال می‌شود.
+            </p>
+            <button
+              onClick={() => setRichtextFullscreen(false)}
+              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black transition-all cursor-pointer"
+            >
+              اعمال و بستن
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -558,33 +620,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* ریش‌تکست / بلاک متن WYSIWYG */}
               {selectedWidget.type === 'richtext' && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      محتوای HTML (ویرایشگر غنی)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ta = textareaRef.current;
-                        setCursorRange(ta ? { start: ta.selectionStart, end: ta.selectionEnd } : null);
-                        setIconPickerState({ open: true, mode: 'text' });
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
-                      title="درج آیکون در متن (توکن [icon:name])"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      درج آیکون
-                    </button>
-                  </div>
-                  <textarea
-                    ref={textareaRef}
-                    rows={7}
-                    value={selectedWidget.content}
-                    onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
-                    placeholder="<h3>تیتر</h3><p>متن پاراگراف با <b>قلم ضخیم</b> و لینک...</p>"
-                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    محتوای HTML (ویرایشگر غنی)
+                  </label>
+                  <WysiwygEditor
+                    content={selectedWidget.content}
+                    onChange={(html) => onUpdateWidget({ ...selectedWidget, content: html })}
+                    placeholder="متن غنی را بنویسید — تیتر، پاراگراف، لینک، تصویر و جدول..."
+                    minHeight="240px"
+                    mode="basic"
+                    showMaximize
+                    onRequestFullscreen={() => setRichtextFullscreen(true)}
                   />
-                  <p className="text-[10px] text-slate-400">می‌توانید تگ‌های HTML (تیتر، پاراگراف، لینک و آیکون) بنویسید.</p>
+                  <p className="text-[10px] text-slate-400">
+                    ویرایشگر WYSIWYG هم‌سطح مدیریت خبر — برای دسترسی به همهٔ ابزارها دکمهٔ بزرگ‌نمایی را بزنید.
+                  </p>
                 </div>
               )}
 
