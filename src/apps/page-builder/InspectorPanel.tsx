@@ -14,14 +14,13 @@ import {
 import {
   fetchDataSourceNewsCategories,
   fetchDataSourceAnnouncementGroups,
-  fetchDataSourceAnnouncementCategories,
   fetchDataSourceMediaFolders
 } from './api';
 import GradientPicker from '../slider-studio/components/GradientPicker';
 import MediaManager from '@/src/shared-components/MediaManager';
 import WysiwygEditor, { type WysiwygEditorHandle } from '@/src/shared-components/WysiwygEditor';
 import IconPicker, { ICON_CHOICES } from './components/IconPicker';
-import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
+import type { NewsCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
 import {
   Sliders,
@@ -184,7 +183,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   // ── Data-source option lists (گروه‌ها و دسته‌بندی‌ها از وب‌سرویس) ──
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
   const [announcementGroups, setAnnouncementGroups] = useState<string[]>([]);
-  const [announcementCategories, setAnnouncementCategories] = useState<AnnouncementCategory[]>([]);
   const [mediaFolders, setMediaFolders] = useState<MediaFolderDto[]>([]);
   const [dataSourceError, setDataSourceError] = useState<string | null>(null);
 
@@ -202,9 +200,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       fetchDataSourceAnnouncementGroups()
         .then((groups) => { if (!cancelled) setAnnouncementGroups(groups); })
         .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت گروه‌های اطلاعیه'); });
-      fetchDataSourceAnnouncementCategories()
-        .then((cats) => { if (!cancelled) setAnnouncementCategories(cats); })
-        .catch(() => { /* optional */ });
     } else if (activeDataSource === 'gallery' || activeDataSource === 'files') {
       fetchDataSourceMediaFolders()
         .then((folders) => { if (!cancelled) setMediaFolders(folders); })
@@ -1269,24 +1264,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            دسته‌بندی اطلاعیه
-                          </label>
-                          <select
-                            value={selectedWidget.settings.binding.yearFilter || 'all'}
-                            onChange={(e) => handleBindingChange('yearFilter', e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                          >
-                            <option value="all">همه دسته‌بندی‌ها</option>
-                            {announcementCategories.map((c) => (
-                              <option key={c.id} value={String(c.id)}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                             فیلتر اولویت (فوری / عادی)
                           </label>
                           <select
@@ -1297,6 +1274,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             <option value="all">همه</option>
                             <option value="urgent">فقط فوری</option>
                             <option value="standard">فقط عادی</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            نحوه باز شدن اطلاعیه با کلیک
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.openMode || 'self'}
+                            onChange={(e) => handleBindingChange('openMode', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="self">در صفحه جاری</option>
+                            <option value="new">در صفحه جدید (تب جدید)</option>
+                            <option value="modal">در پنجره modal</option>
                           </select>
                         </div>
                       </>
