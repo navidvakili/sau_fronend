@@ -19,7 +19,7 @@ import {
 } from './api';
 import GradientPicker from '../slider-studio/components/GradientPicker';
 import MediaManager from '@/src/shared-components/MediaManager';
-import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
+import WysiwygEditor, { type WysiwygEditorHandle } from '@/src/shared-components/WysiwygEditor';
 import IconPicker, { ICON_CHOICES } from './components/IconPicker';
 import type { NewsCategory, AnnouncementCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
@@ -47,7 +47,9 @@ import {
   Image as ImageIcon,
   Bookmark as BookmarkIcon,
   X,
-  Maximize2
+  Maximize2,
+  Minimize2,
+  Check
 } from 'lucide-react';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
@@ -124,9 +126,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const fullscreenWidget = selectedWidget;
 
   // ── انتخابگر آیکون برای متن / دکمه ──
-  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' }>({ open: false, mode: 'text' });
+  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' | 'richtext' }>({ open: false, mode: 'text' });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [cursorRange, setCursorRange] = useState<{ start: number; end: number } | null>(null);
+
+  // refs ویرایشگر متن غنی (پایه در پنل و کامل در دیالوگ) — برای درج توکن آیکون
+  const richtextEditorRef = useRef<WysiwygEditorHandle | null>(null);
+  const richtextFullscreenEditorRef = useRef<WysiwygEditorHandle | null>(null);
+  /** کدام ویرایشگر متن غنی درخواست درج آیکون داده است */
+  const iconTargetRef = useRef<'inline' | 'fullscreen'>('inline');
 
   /** درج توکن آیکون در محتوای متنی (heading / text / richtext) */
   const insertIconToken = (iconName: string) => {
@@ -162,6 +170,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       onUpdateWidget({ ...selectedWidget, iconName: iconName || undefined });
     }
     setIconPickerState({ open: false, mode: 'button' });
+  };
+
+  /** درج آیکون در ویرایشگر متن غنی (WYSIWYG) — از طریق ref در محل مکان‌نما */
+  const insertRichtextIcon = (iconName: string) => {
+    const ref = iconTargetRef.current === 'fullscreen' ? richtextFullscreenEditorRef : richtextEditorRef;
+    if (iconName) {
+      ref.current?.insertIconToken(iconName);
+    }
+    setIconPickerState({ open: false, mode: 'text' });
   };
 
   // ── Data-source option lists (گروه‌ها و دسته‌بندی‌ها از وب‌سرویس) ──
@@ -240,11 +257,18 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           {/* Full Editor */}
           <div className="flex-1 overflow-y-auto p-4">
             <WysiwygEditor
+              ref={richtextFullscreenEditorRef}
               content={fullscreenWidget.content}
               onChange={(html) => onUpdateWidget({ ...fullscreenWidget, content: html })}
               placeholder="متن غنی را بنویسید — تیتر، پاراگراف، لینک، تصویر و جدول..."
               minHeight="60vh"
               mode="full"
+              onRequestCompact={() => setRichtextFullscreen(false)}
+              showIconButton
+              onRequestIcon={() => {
+                iconTargetRef.current = 'fullscreen';
+                setIconPickerState({ open: true, mode: 'text' });
+              }}
             />
           </div>
 
@@ -255,12 +279,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             </p>
             <button
               onClick={() => setRichtextFullscreen(false)}
-              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black transition-all cursor-pointer flex items-center gap-1.5"
             >
+              <Check className="w-4 h-4" />
               اعمال و بستن
             </button>
           </div>
         </div>
+
+        {/* انتخابگر آیکون — برای نسخهٔ کامل هم در دسترس است */}
+        <IconPicker
+          open={iconPickerState.open}
+          onClose={() => setIconPickerState({ open: false, mode: 'text' })}
+          title="انتخاب آیکون متن"
+          onSelect={insertRichtextIcon}
+        />
       </div>
     );
   }
@@ -624,6 +657,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     محتوای HTML (ویرایشگر غنی)
                   </label>
                   <WysiwygEditor
+                    ref={richtextEditorRef}
                     content={selectedWidget.content}
                     onChange={(html) => onUpdateWidget({ ...selectedWidget, content: html })}
                     placeholder="متن غنی را بنویسید — تیتر، پاراگراف، لینک، تصویر و جدول..."
@@ -631,6 +665,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     mode="basic"
                     showMaximize
                     onRequestFullscreen={() => setRichtextFullscreen(true)}
+                    showIconButton
+                    onRequestIcon={() => {
+                      iconTargetRef.current = 'inline';
+                      setIconPickerState({ open: true, mode: 'richtext' });
+                    }}
                   />
                   <p className="text-[10px] text-slate-400">
                     ویرایشگر WYSIWYG هم‌سطح مدیریت خبر — برای دسترسی به همهٔ ابزارها دکمهٔ بزرگ‌نمایی را بزنید.
@@ -1882,9 +1921,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       <IconPicker
         open={iconPickerState.open}
         onClose={() => setIconPickerState({ open: false, mode: iconPickerState.mode })}
-        title={iconPickerState.mode === 'button' ? 'انتخاب آیکون دکمه' : 'انتخاب آیکون متن'}
+        title={
+          iconPickerState.mode === 'button'
+            ? 'انتخاب آیکون دکمه'
+            : iconPickerState.mode === 'richtext'
+              ? 'انتخاب آیکون متن (ویرایشگر غنی)'
+              : 'انتخاب آیکون متن'
+        }
         value={iconPickerState.mode === 'button' ? selectedWidget.iconName : undefined}
-        onSelect={iconPickerState.mode === 'button' ? selectButtonIcon : insertIconToken}
+        onSelect={
+          iconPickerState.mode === 'button'
+            ? selectButtonIcon
+            : iconPickerState.mode === 'richtext'
+              ? insertRichtextIcon
+              : insertIconToken
+        }
       />
       </>
     );

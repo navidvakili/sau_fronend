@@ -3,7 +3,7 @@
 // مبتنی بر Tiptap + Y.js Collaboration
 // ============================================================
 
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo, useImperativeHandle, forwardRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
@@ -27,7 +27,7 @@ import {
   List, ListOrdered, AlignRight, AlignCenter, AlignLeft, AlignJustify,
   Quote, Minus, Undo2, Redo2, Link as LinkIcon, Image as ImageIcon,
   Highlighter, Palette, Table as TableIcon, RemoveFormatting,
-  Globe, CodeSquare, Maximize2,
+  Globe, CodeSquare, Maximize2, Minimize2, Sparkles,
 } from 'lucide-react';
 import MediaManager from './MediaManager';
 
@@ -239,23 +239,40 @@ interface WysiwygEditorProps {
   showMaximize?: boolean;
   /** با زدن دکمهٔ بزرگ‌نمایی صدا زده می‌شود تا والد دیالوگ نسخهٔ کامل را باز کند */
   onRequestFullscreen?: () => void;
+  /** در حالت full با زدن این دکمه صدا زده می‌شود تا والد به حالت پایه (basic) برگردد */
+  onRequestCompact?: () => void;
+  /** نمایش دکمهٔ درج آیکون (توکن [icon:name]) در نوار ابزار */
+  showIconButton?: boolean;
+  /** با زدن دکمهٔ درج آیکون صدا زده می‌شود تا والد، انتخابگر آیکون را باز کند */
+  onRequestIcon?: () => void;
+}
+
+export interface WysiwygEditorHandle {
+  /** درج توکن آیکون [icon:name] در محل مکان‌نما */
+  insertIconToken: (iconName: string) => void;
 }
 
 // ===== Main Component =====
-export default function WysiwygEditor({
-  content,
-  onChange,
-  placeholder = 'متن خود را بنویسید...',
-  editable = true,
-  collaboration = false,
-  documentId,
-  currentUser,
-  minHeight = '320px',
-  onImageUpload,
-  mode = 'full',
-  showMaximize = false,
-  onRequestFullscreen,
-}: WysiwygEditorProps) {
+export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function WysiwygEditor(
+  {
+    content,
+    onChange,
+    placeholder = 'متن خود را بنویسید...',
+    editable = true,
+    collaboration = false,
+    documentId,
+    currentUser,
+    minHeight = '320px',
+    onImageUpload,
+    mode = 'full',
+    showMaximize = false,
+    onRequestFullscreen,
+    onRequestCompact,
+    showIconButton = false,
+    onRequestIcon,
+  }: WysiwygEditorProps,
+  ref
+) {
   const isBasic = mode === 'basic';
   const yDocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
@@ -403,6 +420,18 @@ export default function WysiwygEditor({
   // EditorContent مستقیماً رندر می‌شود
   const editorView = <EditorContent editor={editor} />;
 
+  // درج توکن آیکون [icon:name] در محل مکان‌نما (دعوت‌شده توسط والد از طریق ref)
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertIconToken: (iconName: string) => {
+        if (!editor || !iconName) return;
+        editor.chain().focus().insertContent(`[icon:${iconName}]`).run();
+      },
+    }),
+    [editor]
+  );
+
   // ===== Toolbar Actions =====
   if (!editor) return null;
 
@@ -434,8 +463,7 @@ export default function WysiwygEditor({
       setShowHtmlSource(false);
     } else {
       setHtmlSourceText(editor.getHTML());
-      setShowHtmlSource(true);
-    }
+      setShowHtmlSource(true);    }
   };
 
   const collaborators = providerRef.current?.awareness?.getStates
@@ -733,13 +761,31 @@ export default function WysiwygEditor({
             </>
           )}
 
-          {/* دکمهٔ بزرگ‌نمایی — باز شدن نسخهٔ کامل در دیالوگ توسط والد */}
-          {showMaximize && (
+          {/* دکمهٔ درج آیکون — توکن [icon:name] */}
+          {showIconButton && (
+            <ToolbarBtn
+              onClick={() => onRequestIcon?.()}
+              title="درج آیکون در متن (توکن [icon:name])"
+            >
+              <Sparkles className="w-4 h-4" />
+            </ToolbarBtn>
+          )}
+
+          {/* دکمه‌های تغییر حالت پایه/کامل — با آیکون */}
+          {isBasic && showMaximize && (
             <ToolbarBtn
               onClick={() => onRequestFullscreen?.()}
               title="بزرگ‌نمایی — ویرایش در پنجرهٔ کامل"
             >
               <Maximize2 className="w-4 h-4" />
+            </ToolbarBtn>
+          )}
+          {!isBasic && onRequestCompact && (
+            <ToolbarBtn
+              onClick={() => onRequestCompact()}
+              title="بازگشت به حالت پایه — ویرایش کوچک"
+            >
+              <Minimize2 className="w-4 h-4" />
             </ToolbarBtn>
           )}
 
@@ -826,4 +872,4 @@ export default function WysiwygEditor({
       />
     </div>
   );
-}
+});
