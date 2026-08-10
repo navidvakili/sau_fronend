@@ -188,6 +188,11 @@ export interface ColumnResponsiveWidths {
   mobile?: number;
 }
 
+/** یک بلوک داخل ستون — یا ویجت یا زیربلوک (سکشن تو در تو). ترتیب یکپارچهٔ بلوک‌ها را نگه می‌دارد */
+export type ColumnBlock =
+  | { kind: 'widget'; widget: WidgetInstance }
+  | { kind: 'section'; section: SectionInstance };
+
 export interface ColumnInstance {
   id: string;
   width: number; // 1 to 12 in a 12-column grid (fallback / desktop)
@@ -195,6 +200,9 @@ export interface ColumnInstance {
   widgets: WidgetInstance[];
   /** بلوک‌های زیرمجموعه (زیربلوک) داخل این ستون — سکشن‌های تو در تو */
   subSections?: SectionInstance[];
+  /** لیست یکپارچهٔ بلوک‌های ستون به ترتیب نمایش — اگر موجود باشد ملاک رندر و جابه‌جایی است،
+   *  در غیر این صورت از widgets + subSections (ویجت‌ها اول، بعد زیربلوک‌ها) ساخته می‌شود */
+  blocks?: ColumnBlock[];
   style?: {
     backgroundColor?: string;
     padding?: number;
@@ -203,6 +211,23 @@ export interface ColumnInstance {
     borderColor?: string;
   };
 }
+
+/** بلوک‌های یک ستون به ترتیب — اگر blocks ذخیره شده باشد همان، وگرنه ویجت‌ها اول بعد زیربلوک‌ها */
+export const getColumnBlocks = (col: ColumnInstance): ColumnBlock[] => {
+  if (Array.isArray(col.blocks) && col.blocks.length > 0) return col.blocks;
+  return [
+    ...(col.widgets ?? []).map((widget) => ({ kind: 'widget' as const, widget })),
+    ...(col.subSections ?? []).map((section) => ({ kind: 'section' as const, section }))
+  ];
+};
+
+/** ستون جدید با blocks دلخواه — آرایه‌های legacy (widgets/subSections) هم همگام می‌شوند */
+export const setColumnBlocks = (col: ColumnInstance, blocks: ColumnBlock[]): ColumnInstance => ({
+  ...col,
+  blocks,
+  widgets: blocks.filter((b) => b.kind === 'widget').map((b) => b.widget),
+  subSections: blocks.filter((b) => b.kind === 'section').map((b) => b.section)
+});
 
 /** عرض ستون در یک دستگاه خاص — پیش‌فرض: موبایل تک‌ستونه، تبلت/دسکتاپ = width */
 export const getColumnWidth = (col: ColumnInstance, bp: Breakpoint): number => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth, resolveBoxShadow } from './builderTypes';
+import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
   X,
@@ -56,7 +56,6 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
   const renderSection = (sec: (typeof pageSchema.sections)[number], depth = 0) => {
     if (depth >= 6) return null;
     if (!sec.visibility[deviceSize]) return null;
-    const hasSubSections = sec.columns.some((c) => (c.subSections?.length ?? 0) > 0);
 
     return (
       <div
@@ -98,7 +97,11 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                 }}
                 className="space-y-4"
               >
-                {col.widgets.map((widget) => {
+                {getColumnBlocks(col).map((block) => {
+                  if (block.kind === 'section') {
+                    return renderSection(block.section, depth + 1);
+                  }
+                  const widget = block.widget;
                   if (!widget.settings.visibility[deviceSize]) return null;
 
                   return (
@@ -110,9 +113,6 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                     />
                   );
                 })}
-                {/* زیربلوک‌های داخل ستون (بازگشتی) */}
-                {hasSubSections &&
-                  (col.subSections ?? []).map((sub) => renderSection(sub, depth + 1))}
               </div>
             ))}
           </div>

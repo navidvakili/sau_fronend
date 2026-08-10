@@ -10,7 +10,10 @@ import {
   Breakpoint,
   PageVersion,
   UserRoleCondition,
-  PageTemplate
+  PageTemplate,
+  ColumnBlock,
+  getColumnBlocks,
+  setColumnBlocks
 } from './builderTypes';
 import { INITIAL_SMART_PAGE } from './mockData';
 import { Canvas } from './Canvas';
@@ -125,12 +128,17 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const normalizeSubSections = (sections: SectionInstance[]): SectionInstance[] =>
     sections.map((sec) => ({
       ...sec,
-      columns: (sec.columns ?? []).map((col) => ({
-        ...col,
-        subSections: Array.isArray(col.subSections)
-          ? normalizeSubSections(col.subSections)
-          : [],
-      })),
+      columns: (sec.columns ?? []).map((col) => {
+        const normalized: ColumnInstance = {
+          ...col,
+          widgets: Array.isArray(col.widgets) ? col.widgets : [],
+          subSections: Array.isArray(col.subSections)
+            ? normalizeSubSections(col.subSections)
+            : [],
+        };
+        // blocks را می‌سازد (اگر نبود) — ترتیب legacy (ویجت‌ها اول، بعد زیربلوک‌ها) حفظ می‌شود
+        return setColumnBlocks(normalized, getColumnBlocks(normalized));
+      }),
     }));
 
   // Load a saved page (full schema) and make it active
@@ -421,7 +429,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     return null;
   };
 
-  /** اعمال تابع روی همهٔ سکشن‌های درخت (بازگشتی) — ستون‌ها و زیربلوک‌ها حفظ می‌شوند */
+  /** اعمال تابع روی همهٔ سکشن‌های درخت (بازگشتی) — ستون‌ها و زیربلوک‌ها حفظ می‌شوند.
+   *  سکشن‌های داخل blocks هم با نسخهٔ جدید همگام می‌شوند */
   const mapSectionsRecursive = (
     sections: SectionInstance[],
     fn: (sec: SectionInstance) => SectionInstance
@@ -430,10 +439,22 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       const mapped = fn(sec);
       return {
         ...mapped,
-        columns: (mapped.columns || []).map((col) => ({
-          ...col,
-          subSections: col.subSections ? mapSectionsRecursive(col.subSections, fn) : undefined
-        }))
+        columns: (mapped.columns || []).map((col) => {
+          const newSubs = col.subSections ? mapSectionsRecursive(col.subSections, fn) : undefined;
+          if (Array.isArray(col.blocks) && col.blocks.length > 0 && newSubs) {
+            const subById = new Map(newSubs.map((s) => [s.id, s]));
+            return {
+              ...col,
+              subSections: newSubs,
+              blocks: col.blocks.map((b) =>
+                b.kind === 'section' && subById.has(b.section.id)
+                  ? { ...b, section: subById.get(b.section.id)! }
+                  : b
+              )
+            };
+          }
+          return { ...col, subSections: newSubs };
+        })
       };
     });
 
@@ -443,10 +464,17 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       .filter((s) => s.id !== id)
       .map((s) => ({
         ...s,
-        columns: (s.columns || []).map((col) => ({
-          ...col,
-          subSections: col.subSections ? removeSectionRecursive(col.subSections, id) : undefined
-        }))
+        columns: (s.columns || []).map((col) => {
+          const newSubs = col.subSections ? removeSectionRecursive(col.subSections, id) : undefined;
+          if (Array.isArray(col.blocks) && col.blocks.length > 0 && newSubs) {
+            return {
+              ...col,
+              subSections: newSubs,
+              blocks: col.blocks.filter((b) => !(b.kind === 'section' && b.section.id === id))
+            };
+          }
+          return { ...col, subSections: newSubs };
+        })
       }));
 
   /** آیا سکشن sec حاوی سکشن id در زیردرخت خود است؟ (برای جابه‌جایی بلوک) */
@@ -472,7 +500,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       if (sec.id === selectedSectionId) currentSection = sec;
       for (const col of sec.columns) {
         if (col.id === selectedColumnId) currentColumn = col;
-        const w = col.widgets.find((item) => item.id === selectedWidgetId);
+        const w = (col.widgets ?? []).find((item) => item.id === selectedWidgetId);
         if (w) {
           currentWidget = w;
           currentColumn = col;
@@ -759,18 +787,18 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           });
         }
       } else {
-        const retainedCols = currentCols.slice(0, newColsCount).map((col, idx) => ({
+        const retainedCols: ColumnInstance[] = currentCols.slice(0, newColsCount).map((col, idx) => ({
           ...col,
           width: targetWidths[idx],
           widths: { ...col.widths, desktop: targetWidths[idx] }
         }));
         const overflowCols = currentCols.slice(newColsCount);
-        const overflowWidgets = overflowCols.flatMap(c => c.widgets);
+        const overflowBlocks = overflowCols.flatMap(c => getColumnBlocks(c));
 
-        retainedCols[retainedCols.length - 1] = {
-          ...retainedCols[retainedCols.length - 1],
-          widgets: [...retainedCols[retainedCols.length - 1].widgets, ...overflowWidgets]
-        };
+        retainedCols[retainedCols.length - 1] = setColumnBlocks(retainedCols[retainedCols.length - 1], [
+          ...getColumnBlocks(retainedCols[retainedCols.length - 1]),
+          ...overflowBlocks
+        ]);
         newCols = retainedCols;
       }
 
@@ -855,10 +883,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       ...sec,
       columns: sec.columns.map(col => {
         if (col.id === colId) {
-          return {
-            ...col,
-            widgets: [...col.widgets, newWidget]
-          };
+          return setColumnBlocks(col, [...getColumnBlocks(col), { kind: 'widget', widget: newWidget }]);
         }
         return col;
       })
@@ -876,10 +901,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const handleUpdateWidget = (updatedWidget: WidgetInstance) => {
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
-      columns: sec.columns.map(col => ({
-        ...col,
-        widgets: col.widgets.map(w => (w.id === updatedWidget.id ? updatedWidget : w))
-      }))
+      columns: sec.columns.map(col => {
+        const blocks = getColumnBlocks(col);
+        const changed = blocks.some(b => b.kind === 'widget' && b.widget.id === updatedWidget.id);
+        if (!changed) return col;
+        return setColumnBlocks(
+          col,
+          blocks.map(b => (b.kind === 'widget' && b.widget.id === updatedWidget.id ? { ...b, widget: updatedWidget } : b))
+        );
+      })
     }));
 
     setPageSchema({
@@ -918,10 +948,14 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const handleDeleteWidget = (wId: string) => {
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
-      columns: sec.columns.map(col => ({
-        ...col,
-        widgets: col.widgets.filter(w => w.id !== wId)
-      }))
+      columns: sec.columns.map(col => {
+        const blocks = getColumnBlocks(col);
+        if (!blocks.some(b => b.kind === 'widget' && b.widget.id === wId)) return col;
+        return setColumnBlocks(
+          col,
+          blocks.filter(b => !(b.kind === 'widget' && b.widget.id === wId))
+        );
+      })
     }));
 
     pushState({
@@ -934,24 +968,25 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
-  // Moving Widget Up / Down inside column (بازگشتی)
+  // Moving Widget Up / Down inside column (بازگشتی) — روی لیست یکپارچه blocks
   const handleMoveWidget = (wId: string, direction: 'up' | 'down') => {
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
-        const index = col.widgets.findIndex(w => w.id === wId);
+        const blocks = getColumnBlocks(col);
+        const index = blocks.findIndex(b => b.kind === 'widget' && b.widget.id === wId);
         if (index === -1) return col;
 
-        const newWidgets = [...col.widgets];
+        const newBlocks = [...blocks];
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
-        if (targetIndex >= 0 && targetIndex < newWidgets.length) {
-          const temp = newWidgets[index];
-          newWidgets[index] = newWidgets[targetIndex];
-          newWidgets[targetIndex] = temp;
+        if (targetIndex >= 0 && targetIndex < newBlocks.length) {
+          const temp = newBlocks[index];
+          newBlocks[index] = newBlocks[targetIndex];
+          newBlocks[targetIndex] = temp;
         }
 
-        return { ...col, widgets: newWidgets };
+        return setColumnBlocks(col, newBlocks);
       })
     }));
 
@@ -972,13 +1007,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
-        if (col.widgets.some(w => w.id === widget.id)) {
-          return {
-            ...col,
-            widgets: [...col.widgets, duplicated]
-          };
-        }
-        return col;
+        const blocks = getColumnBlocks(col);
+        if (!blocks.some(b => b.kind === 'widget' && b.widget.id === widget.id)) return col;
+        return setColumnBlocks(col, [...blocks, { kind: 'widget', widget: duplicated }]);
       })
     }));
 
@@ -1053,7 +1084,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   /** ذخیره و انتشار (وضعیت published) */
   const handleSavePublish = () => savePageWithStatus('published');
 
-  // Move widget to a target column (cross-section Drag & Drop — بازگشتی)
+  // Move widget to a target column (cross-section Drag & Drop — بازگشتی، روی لیست یکپارچه blocks)
   const handleMoveWidgetToColumn = (widgetId: string, targetColumnId: string, index?: number) => {
     let widgetToMove: WidgetInstance | null = null;
     let sourceColumnId: string | null = null;
@@ -1063,14 +1094,17 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     const removedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
       ...sec,
       columns: sec.columns.map(col => {
-        const idx = col.widgets.findIndex(w => w.id === widgetId);
+        const blocks = getColumnBlocks(col);
+        const idx = blocks.findIndex(b => b.kind === 'widget' && b.widget.id === widgetId);
         if (idx !== -1) {
-          widgetToMove = col.widgets[idx];
+          const found = blocks[idx];
+          if (found.kind !== 'widget') return col;
+          widgetToMove = found.widget;
           sourceColumnId = col.id;
           sourceIndex = idx;
-          const newWidgets = [...col.widgets];
-          newWidgets.splice(idx, 1);
-          return { ...col, widgets: newWidgets };
+          const newBlocks = [...blocks];
+          newBlocks.splice(idx, 1);
+          return setColumnBlocks(col, newBlocks);
         }
         return col;
       })
@@ -1083,15 +1117,16 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       ...sec,
       columns: sec.columns.map(col => {
         if (col.id === targetColumnId) {
+          const blocks = getColumnBlocks(col);
           let effectiveIndex =
-            typeof index === 'number' ? Math.min(Math.max(index, 0), col.widgets.length) : col.widgets.length;
+            typeof index === 'number' ? Math.min(Math.max(index, 0), blocks.length) : blocks.length;
           // جابه‌جایی در همان ستون — حذف قبلی ایندکس‌ها را یکی به عقب برده است
           if (col.id === sourceColumnId && typeof index === 'number' && sourceIndex < index) {
-            effectiveIndex = Math.min(Math.max(index - 1, 0), col.widgets.length);
+            effectiveIndex = Math.min(Math.max(index - 1, 0), blocks.length);
           }
-          const newWidgets = [...col.widgets];
-          newWidgets.splice(effectiveIndex, 0, widgetToMove!);
-          return { ...col, widgets: newWidgets };
+          const newBlocks = [...blocks];
+          newBlocks.splice(effectiveIndex, 0, { kind: 'widget', widget: widgetToMove! });
+          return setColumnBlocks(col, newBlocks);
         }
         return col;
       })
@@ -1107,21 +1142,44 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
    * انتقال یک سکشن به داخل ستون هدف (تبدیل به زیربلوک)
    * — جلوگیری از تودرتویی خودارجاع (سکشن داخل خودش)
    */
-  const handleMoveSectionToColumn = (sectionId: string, targetColumnId: string) => {
+  const handleMoveSectionToColumn = (sectionId: string, targetColumnId: string, index?: number) => {
     const sec = findSectionRecursive(pageSchema.sections, sectionId);
     if (!sec) return;
     if (isColumnInSection(sec, targetColumnId)) return; // داخل خودش — ممنوع
+
+    // موقعیت مبدأ (ستون و ایندکس) قبل از حذف — برای اصلاح ایندکس هنگام جابه‌جایی در همان ستون
+    let sourceColumnId: string | null = null;
+    let sourceIndex = -1;
+    mapSectionsRecursive(pageSchema.sections, s => {
+      s.columns.forEach(col => {
+        const bi = getColumnBlocks(col).findIndex(b => b.kind === 'section' && b.section.id === sectionId);
+        if (bi >= 0) {
+          sourceColumnId = col.id;
+          sourceIndex = bi;
+        }
+      });
+      return s;
+    });
 
     const removedSections = removeSectionRecursive(pageSchema.sections, sectionId);
     const clone = JSON.parse(JSON.stringify(sec)) as SectionInstance;
 
     const finalSections = mapSectionsRecursive(removedSections, s => ({
       ...s,
-      columns: s.columns.map(col =>
-        col.id === targetColumnId
-          ? { ...col, subSections: [...(col.subSections || []), clone] }
-          : col
-      )
+      columns: s.columns.map(col => {
+        if (col.id !== targetColumnId) return col;
+        // درج در ایندکس درخواستی (DnD قبل/بعد بلوک‌ها) — پیش‌فرض: انتهای فهرست
+        const blocks = getColumnBlocks(col);
+        let effectiveIndex =
+          typeof index === 'number' ? Math.min(Math.max(index, 0), blocks.length) : blocks.length;
+        // جابه‌جایی در همان ستون: بعد از حذف، فهرست یکی کوتاه‌تر شده — اگر مبدأ قبل از هدف بود یکی کم کن
+        if (typeof index === 'number' && col.id === sourceColumnId && sourceIndex >= 0 && sourceIndex < index) {
+          effectiveIndex = Math.min(Math.max(index - 1, 0), blocks.length);
+        }
+        const newBlocks = [...blocks];
+        newBlocks.splice(effectiveIndex, 0, { kind: 'section', section: clone });
+        return setColumnBlocks(col, newBlocks);
+      })
     }));
 
     pushState({ ...pageSchema, sections: finalSections });
@@ -1174,7 +1232,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setSelectedWidgetId(null);
   };
 
-  /** جابه‌جایی سکشن بالا/پایین درون والد خود (سطح اصلی یا زیربلوک‌های یک ستون) */
+  /** جابه‌جایی سکشن بالا/پایین درون والد خود (سطح اصلی یا بلوک‌های یک ستون — روی لیست یکپارچه blocks) */
   const handleMoveSection = (sectionId: string, direction: 'up' | 'down') => {
     // ابتدا سطح اصلی
     const topIdx = pageSchema.sections.findIndex(s => s.id === sectionId);
@@ -1190,22 +1248,24 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       return;
     }
 
-    // سپس زیربلوک‌ها (بازگشتی)
+    // سپس زیربلوک‌ها (بازگشتی) — جابه‌جایی داخل لیست یکپارچه بلوک‌های ستون،
+    // تا زیربلوک بتواند با ویجت‌های هم‌ستون نیز جابه‌جا شود
     let moved = false;
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => {
       if (moved) return sec;
       const newCols = sec.columns.map(col => {
-        if (moved || !col.subSections) return col;
-        const idx = col.subSections.findIndex(s => s.id === sectionId);
+        if (moved) return col;
+        const blocks = getColumnBlocks(col);
+        const idx = blocks.findIndex(b => b.kind === 'section' && b.section.id === sectionId);
         if (idx === -1) return col;
         const target = direction === 'up' ? idx - 1 : idx + 1;
-        if (target < 0 || target >= col.subSections.length) return col;
-        const copy = [...col.subSections];
+        if (target < 0 || target >= blocks.length) return col;
+        const copy = [...blocks];
         const t = copy[idx];
         copy[idx] = copy[target];
         copy[target] = t;
         moved = true;
-        return { ...col, subSections: copy };
+        return setColumnBlocks(col, copy);
       });
       return { ...sec, columns: newCols };
     });
@@ -1232,7 +1292,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       ...sec,
       columns: sec.columns.map(col =>
         col.id === columnId
-          ? { ...col, subSections: [...(col.subSections || []), newSub] }
+          ? setColumnBlocks(col, [...getColumnBlocks(col), { kind: 'section', section: newSub }])
           : col
       )
     }));

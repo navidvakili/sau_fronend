@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { SmartPageSchema, SectionInstance, getColumnWidth, resolveBoxShadow } from './builderTypes';
+import { SmartPageSchema, SectionInstance, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
 import { applyBackgroundOpacity } from './WidgetRenderer';
 import { X, Code, Copy, Check, Download } from 'lucide-react';
 
@@ -45,7 +45,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ pageSchema, onClose })
     return `${bgColor} ${bgImage} ${bgPos} ${pos} ${shadow}`;
   };
 
-    /** Recursive section -> JSX (nested sub-sections inside columns are emitted too) */
+    /** Recursive section -> JSX (nested sub-sections inside columns are emitted too — ترتیب blocks ملاک است) */
   const renderReactSection = (sec: SectionInstance, depth: number): string => {
     const pad = '  '.repeat(2 + depth * 2);
     return `${pad}<section className="page-section py-10">
@@ -53,20 +53,21 @@ ${pad}  <div className="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4'
 ${pad}    <div className="grid grid-cols-12 gap-6">
 ${sec.columns
   .map((col) => {
-    const subs = (col.subSections || []).map((sub) => renderReactSection(sub, depth + 2)).join('\n');
-    return `${pad}      <div className="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
-${pad}        ${col.widgets
-      .map(
-        (w) => `{/* Widget: ${w.title} (${w.type}) */}
+    const blocks = getColumnBlocks(col)
+      .map((block) => {
+        if (block.kind === 'section') return renderReactSection(block.section, depth + 2);
+        const w = block.widget;
+        return `${pad}        {/* Widget: ${w.title} (${w.type}) */}
 ${pad}        <div className="widget-block my-3">
 ${pad}          ${w.type === 'heading' ? `<h2 className="text-2xl font-black">${w.content}</h2>` : ''}
 ${pad}          ${w.type === 'text' ? `<p className="text-sm leading-relaxed">${w.content}</p>` : ''}
 ${pad}          ${w.type === 'button' ? (() => { const _st = w.settings?.style || {}; const _bg = _st.backgroundColor ? ` style="background-color: ${_st.backgroundColor};${_st.textColor ? ` color: ${_st.textColor};` : ''}"` : ''; return `<a href="${w.buttonUrl || '#'}" className="inline-block px-6 py-3 rounded-xl font-bold"${_bg}>${w.buttonText || 'Action Button'}</a>`; })() : ''}
 ${pad}          ${w.type.includes('feed') || w.type.includes('staff') || w.type.includes('file') ? `<div className="dynamic-module-bound border rounded-2xl p-4">[Smart Binding: ${w.type}]</div>` : ''}
-${pad}        </div>`
-      )
-      .join(`\n${pad}        `)}
-${subs}
+${pad}        </div>`;
+      })
+      .join(`\n${pad}        `);
+    return `${pad}      <div className="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
+${pad}        ${blocks}
 ${pad}      </div>`;
   })
   .join('\n')}
@@ -75,7 +76,7 @@ ${pad}  </div>
 ${pad}</section>`;
   };
 
-  /** Recursive section -> HTML (nested sub-sections inside columns are emitted too) */
+  /** Recursive section -> HTML (nested sub-sections inside columns are emitted too — ترتیب blocks ملاک است) */
   const renderHtmlSection = (sec: SectionInstance, depth: number): string => {
     const pad = '  '.repeat(2 + depth * 2);
     return `${pad}<section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} margin-top: ${sec.marginTop ?? 0}px; margin-bottom: ${sec.marginBottom ?? 0}px; padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
@@ -83,14 +84,17 @@ ${pad}  <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : '
 ${pad}    <div class="grid grid-cols-12 gap-6">
 ${sec.columns
   .map((col) => {
-    const subs = (col.subSections || []).map((sub) => renderHtmlSection(sub, depth + 2)).join('\n');
-    return `${pad}      <div class="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
-${pad}        ${col.widgets
-      .map((w) => `<div class="mb-4">
+    const blocks = getColumnBlocks(col)
+      .map((block) => {
+        if (block.kind === 'section') return renderHtmlSection(block.section, depth + 2);
+        const w = block.widget;
+        return `<div class="mb-4">
 ${pad}          <p class="text-xs text-slate-600">${w.content}</p>
-${pad}        </div>`)
-      .join(`\n${pad}        `)}
-${subs}
+${pad}        </div>`;
+      })
+      .join(`\n${pad}        `);
+    return `${pad}      <div class="col-span-${getColumnWidth(col, 'mobile')} md:col-span-${getColumnWidth(col, 'tablet')} lg:col-span-${getColumnWidth(col, 'desktop')}">
+${pad}        ${blocks}
 ${pad}      </div>`;
   })
   .join('\n')}
