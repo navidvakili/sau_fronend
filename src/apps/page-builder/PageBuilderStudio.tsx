@@ -458,7 +458,11 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       };
     });
 
-  /** حذف یک سکشن از هر جای درخت (سطح اصلی یا زیربلوک) */
+  /** حذف یک سکشن از هر جای درخت (سطح اصلی یا زیربلوک)
+   *  نکته: blocks باید با subSections جدید همگام شوند — فقط فیلتر مستقیم کافی نیست،
+   *  چون سکشنِ حذف‌شده می‌تواند داخل یک زیربلوکِ تودرتو باشد که خودش در blocks ستونِ والد
+   *  نگهداری می‌شود؛ در آن صورت نسخهٔ قدیمیِ آن زیربلوک (که هنوز سکشن حذف‌شده را دارد)
+   *  در blocks می‌ماند و در DOM رندر می‌شود (باعث «حذف نشدن» زیربلوک می‌شد). */
   const removeSectionRecursive = (sections: SectionInstance[], id: string): SectionInstance[] =>
     sections
       .filter((s) => s.id !== id)
@@ -467,10 +471,17 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         columns: (s.columns || []).map((col) => {
           const newSubs = col.subSections ? removeSectionRecursive(col.subSections, id) : undefined;
           if (Array.isArray(col.blocks) && col.blocks.length > 0 && newSubs) {
+            const subById = new Map(newSubs.map((sub) => [sub.id, sub]));
             return {
               ...col,
               subSections: newSubs,
-              blocks: col.blocks.filter((b) => !(b.kind === 'section' && b.section.id === id))
+              blocks: col.blocks
+                .filter((b) => !(b.kind === 'section' && b.section.id === id))
+                .map((b) =>
+                  b.kind === 'section' && subById.has(b.section.id)
+                    ? { ...b, section: subById.get(b.section.id)! }
+                    : b
+                )
             };
           }
           return { ...col, subSections: newSubs };

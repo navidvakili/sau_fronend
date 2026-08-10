@@ -991,14 +991,24 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
 
   // عدد نهایی (شبح نامرئی) — باکس در طول انیمیشن کوچک/بزرگ نمی‌شود و از کارت بیرون نمی‌زند
   const finalStr = `${prefix}${target.toLocaleString('fa-IR')}${suffix}`;
-  const displayStr = `${prefix}${value.toLocaleString('fa-IR')}${suffix}`;
+  // صفرپرشدن به تعداد رقم‌های هدف — رقم‌ها سر جای خودشان عوض می‌شوند و پرش افقی/عمودی نمی‌کنند
+  const digitCount = String(target).length;
+  const toFaDigits = (s: string) => s.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]).replace(/,/g, '٬');
+  const padded = String(value).padStart(digitCount, '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const displayStr = `${prefix}${toFaDigits(padded)}${suffix}`;
   const iconEl = icon
     ? cloneElement(icon as ReactElement<any, any>, { className: '', style: { width: iconSize, height: iconSize } })
     : null;
   const numberBox = (
     <div
       className="relative font-black leading-none"
-      style={{ color: numberColor, fontSize: numberFontSize || undefined, maxWidth: '100%', overflowWrap: 'anywhere' }}
+      style={{
+        color: numberColor,
+        fontSize: numberFontSize || undefined,
+        maxWidth: '100%',
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap'
+      }}
     >
       <span className="invisible">{finalStr}</span>
       <span className="absolute inset-0 flex items-center justify-center" style={{ color: numberColor }}>
