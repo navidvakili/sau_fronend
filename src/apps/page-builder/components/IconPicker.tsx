@@ -34,6 +34,21 @@ import {
   LockOpen,
   Lock,
   GraduationCap,
+  ChartNoAxesColumn,
+  Monitor,
+  FileCheck,
+  BookmarkCheck,
+  Layers,
+  Box,
+  ShieldCheck,
+  UserCheck,
+  FileText,
+  CircleHelp,
+  Linkedin,
+  Instagram,
+  Youtube,
+  MessagesSquare,
+  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -42,7 +57,11 @@ export const ICON_CHOICES: string[] = [
   'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
   'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
   'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar',
-  'external', 'students', 'book', 'award', 'unlock', 'lock', 'grad'
+  'external', 'students', 'book', 'award', 'unlock', 'lock', 'grad',
+  'stat', 'monitor', 'file-check', 'bookmark-check', 'layers', 'box',
+  'shield-check', 'user-check', 'file-text', 'circle-question-mark',
+  'linkedin', 'instagram', 'x', 'youtube', 'telegram',
+  'aparat', 'bale', 'eitaa'
 ];
 
 /** نگاشت نام آیکون به کامپوننت lucide — برای پیش‌نمایش انتخابگر */
@@ -78,6 +97,24 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
   unlock: LockOpen,
   lock: Lock,
   grad: GraduationCap,
+  stat: ChartNoAxesColumn,
+  monitor: Monitor,
+  'file-check': FileCheck,
+  'bookmark-check': BookmarkCheck,
+  layers: Layers,
+  box: Box,
+  'shield-check': ShieldCheck,
+  'user-check': UserCheck,
+  'file-text': FileText,
+  'circle-question-mark': CircleHelp,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  x: X,
+  youtube: Youtube,
+  telegram: Send,
+  aparat: MonitorPlay,
+  bale: MessagesSquare,
+  eitaa: MessageCircle,
 };
 
 interface IconPickerProps {

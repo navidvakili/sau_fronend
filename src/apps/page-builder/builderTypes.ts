@@ -277,6 +277,9 @@ export interface SectionInstance {
   bookmark?: string;
   paddingTop: number;
   paddingBottom: number;
+  /** فاصلهٔ داخلی راست/چپ سکشن (پیکسل) */
+  paddingLeft?: number;
+  paddingRight?: number;
   /** فاصلهٔ خارجی سکشن (می‌تواند منفی باشد تا بلوک روی بلوک قبلی قرار بگیرد) */
   marginTop?: number;
   marginBottom?: number;

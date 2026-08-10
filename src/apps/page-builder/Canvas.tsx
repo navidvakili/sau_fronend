@@ -197,6 +197,8 @@ export const Canvas: React.FC<CanvasProps> = ({
           boxShadow: resolveBoxShadow(sec.boxShadow),
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
+          paddingLeft: sec.paddingLeft !== undefined ? `${sec.paddingLeft}px` : undefined,
+          paddingRight: sec.paddingRight !== undefined ? `${sec.paddingRight}px` : undefined,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
           borderRadius: sec.borderRadius
             ? [
@@ -357,7 +359,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                     setDragSectionId(null);
                     setDragInsertIndex(null);
                   }}
-                  className={`min-h-[100px] p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
+                  className={`min-h-[100px] min-w-0 p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
                     isColSelected
                       ? 'border-indigo-500 bg-indigo-500/5'
                       : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'

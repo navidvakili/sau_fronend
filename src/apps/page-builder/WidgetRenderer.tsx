@@ -60,6 +60,19 @@ import {
   LockOpen,
   Lock,
   GraduationCap,
+  ChartNoAxesColumn,
+  Monitor,
+  FileCheck,
+  BookmarkCheck,
+  Box,
+  ShieldCheck,
+  UserCheck,
+  CircleHelp,
+  Linkedin,
+  Instagram,
+  Youtube,
+  MessagesSquare,
+  MonitorPlay,
   X
 } from 'lucide-react';
 
@@ -731,6 +744,24 @@ const iconMap: Record<string, React.ReactNode> = {
   lock: <Lock className="w-5 h-5" />,
   grad: <GraduationCap className="w-5 h-5" />,
   sparkles: <Sparkles className="w-5 h-5" />,
+  stat: <ChartNoAxesColumn className="w-5 h-5" />,
+  monitor: <Monitor className="w-5 h-5" />,
+  'file-check': <FileCheck className="w-5 h-5" />,
+  'bookmark-check': <BookmarkCheck className="w-5 h-5" />,
+  layers: <Layers className="w-5 h-5" />,
+  box: <Box className="w-5 h-5" />,
+  'shield-check': <ShieldCheck className="w-5 h-5" />,
+  'user-check': <UserCheck className="w-5 h-5" />,
+  'file-text': <FileText className="w-5 h-5" />,
+  'circle-question-mark': <CircleHelp className="w-5 h-5" />,
+  linkedin: <Linkedin className="w-5 h-5" />,
+  instagram: <Instagram className="w-5 h-5" />,
+  x: <X className="w-5 h-5" />,
+  youtube: <Youtube className="w-5 h-5" />,
+  telegram: <Send className="w-5 h-5" />,
+  aparat: <MonitorPlay className="w-5 h-5" />,
+  bale: <MessagesSquare className="w-5 h-5" />,
+  eitaa: <MessageCircle className="w-5 h-5" />,
 };
 
 /** استخراج گزینه‌ها از محتوای متنی (هر خط: برچسب|مقدار|...) */
@@ -780,7 +811,7 @@ const renderHtmlWithIcons = (html: string): string => {
 const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => (
   <div
     style={containerStyle}
-    className="prose-sm max-w-none transition-all leading-relaxed richtext-content"
+    className="transition-all richtext-content"
     dangerouslySetInnerHTML={{
       __html:
         renderHtmlWithIcons(
@@ -935,6 +966,15 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   const caption = hasRealContent ? widget.content : (widget.title || 'شمارنده آماری');
   const icon = props.icon ? iconMap[props.icon] : null;
   const iconColor = props.iconColor || numberColor;
+  const iconSize = Number(props.iconSize) || 32;
+  const layout = props.layout || 'stacked';
+  const align = props.align || 'center';
+  const alignCls =
+    align === 'center' ? 'items-center text-center'
+    : align === 'start' ? 'items-start text-start'
+    : 'items-end text-end';
+  // فاصله بین اجزا — تنظیم «فاصله بین اجزا (px)» در پنل
+  const gap = Number(props.gap) || 6;
   const [value, setValue] = useState(0);
 
   useEffect(() => {
@@ -949,16 +989,41 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
     return () => cancelAnimationFrame(raf);
   }, [target]);
 
+  // عدد نهایی (شبح نامرئی) — باکس در طول انیمیشن کوچک/بزرگ نمی‌شود و از کارت بیرون نمی‌زند
+  const finalStr = `${prefix}${target.toLocaleString('fa-IR')}${suffix}`;
+  const displayStr = `${prefix}${value.toLocaleString('fa-IR')}${suffix}`;
+  const iconEl = icon
+    ? cloneElement(icon as ReactElement<any, any>, { className: '', style: { width: iconSize, height: iconSize } })
+    : null;
+  const numberBox = (
+    <div
+      className="relative font-black leading-none"
+      style={{ color: numberColor, fontSize: numberFontSize || undefined, maxWidth: '100%', overflowWrap: 'anywhere' }}
+    >
+      <span className="invisible">{finalStr}</span>
+      <span className="absolute inset-0 flex items-center justify-center" style={{ color: numberColor }}>
+        {displayStr}
+      </span>
+    </div>
+  );
+
   return (
-    <div style={containerStyle} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 text-center flex flex-col items-center gap-1.5">
-      {icon ? (
-        <div style={{ color: iconColor }} className="mb-1 flex items-center justify-center">
-          {cloneElement(icon as ReactElement<any, any>, { className: 'w-8 h-8' })}
+    <div style={{ ...containerStyle, gap: `${gap}px` }} className={`p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 flex flex-col ${alignCls}`}>
+      {layout === 'inline' ? (
+        <div className={`flex items-center ${align === 'center' ? 'justify-center' : ''}`} style={{ gap: `${gap}px` }}>
+          {iconEl}
+          {numberBox}
         </div>
-      ) : null}
-      <div className="font-black leading-none" style={{ color: numberColor, fontSize: numberFontSize || undefined }}>
-        {prefix}{value.toLocaleString('fa-IR')}{suffix}
-      </div>
+      ) : (
+        <>
+          {iconEl ? (
+            <div style={{ color: iconColor }} className="mb-1 flex items-center justify-center">
+              {iconEl}
+            </div>
+          ) : null}
+          {numberBox}
+        </>
+      )}
       {caption ? (
         <span className="font-bold whitespace-pre-line" style={{ color: captionColor, fontSize: captionFontSize || undefined }}>
           {caption}

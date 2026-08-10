@@ -547,3 +547,122 @@
   margin: 1rem auto;
   display: block;
 }
+
+/* ===== متن غنی صفحه‌ساز (widget type=text / rich) ===== */
+.richtext-content {
+  direction: rtl;
+  line-height: 2;
+  color: #334155;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.richtext-content > *:first-child {
+  margin-top: 0;
+}
+.richtext-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.richtext-content p {
+  margin: 0.75rem 0;
+}
+
+.richtext-content h1,
+.richtext-content h2,
+.richtext-content h3,
+.richtext-content h4,
+.richtext-content h5,
+.richtext-content h6 {
+  font-weight: 800;
+  line-height: 1.6;
+  margin: 1.25rem 0 0.5rem;
+  color: #0f172a;
+}
+.richtext-content h1 { font-size: 1.375rem; }
+.richtext-content h2 { font-size: 1.25rem; }
+.richtext-content h3 { font-size: 1.125rem; }
+.richtext-content h4 { font-size: 1rem; }
+
+.richtext-content blockquote {
+  border-right: 4px solid #236DB6;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: rgba(35, 109, 182, 0.05);
+  border-radius: 0.5rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.dark .richtext-content {
+  color: #cbd5e1;
+}
+.dark .richtext-content h1,
+.dark .richtext-content h2,
+.dark .richtext-content h3,
+.dark .richtext-content h4,
+.dark .richtext-content h5,
+.dark .richtext-content h6 {
+  color: #f1f5f9;
+}
+.dark .richtext-content blockquote {
+  color: #9ca3af;
+  background: rgba(35, 109, 182, 0.1);
+}
+
+.richtext-content ul,
+.richtext-content ol {
+  margin: 0.75rem 0;
+  padding-right: 1.5rem;
+}
+.richtext-content ul { list-style: disc; }
+.richtext-content ol { list-style: decimal; }
+.richtext-content li {
+  margin: 0.25rem 0;
+}
+
+.richtext-content a {
+  color: #236DB6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.richtext-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 0.75rem auto;
+  display: block;
+}
+
+.richtext-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.richtext-content th,
+.richtext-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  text-align: right;
+}
+.dark .richtext-content th,
+.dark .richtext-content td {
+  border-color: #374151;
+}
+.richtext-content th {
+  background: #f9fafb;
+  font-weight: 700;
+}
+.dark .richtext-content th {
+  background: #1f2937;
+}
+
+.richtext-content iframe,
+.richtext-content video {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 1rem auto;
+  display: block;
+}

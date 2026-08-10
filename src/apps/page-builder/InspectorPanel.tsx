@@ -914,6 +914,57 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       />
                     </div>
                   </div>
+                  {/* اندازه آیکون + فاصله بین اجزا */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه آیکون (px)</label>
+                      <input
+                        type="number"
+                        min={8}
+                        max={128}
+                        value={customProps.iconSize ?? 32}
+                        onChange={(e) => updateCustomProps({ iconSize: parseInt(e.target.value) || 32 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله بین اجزا (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={48}
+                        value={customProps.gap ?? 6}
+                        onChange={(e) => updateCustomProps({ gap: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  {/* چیدمان (عمودی/افقی) + تراز محتوا */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت چیدمان</label>
+                      <select
+                        value={customProps.layout || 'stacked'}
+                        onChange={(e) => updateCustomProps({ layout: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                      >
+                        <option value="stacked">عمودی (آیکون بالا)</option>
+                        <option value="inline">افقی (آیکون کنار عدد)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تراز محتوا</label>
+                      <select
+                        value={customProps.align || 'center'}
+                        onChange={(e) => updateCustomProps({ align: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                      >
+                        <option value="center">وسط</option>
+                        <option value="start">راست</option>
+                        <option value="end">چپ</option>
+                      </select>
+                    </div>
+                  </div>
                   {/* متن زیر عدد (کپشن) — به‌جای عنوان ویجت */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
@@ -2928,6 +2979,30 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 min={0}
                 value={selectedSection.paddingBottom}
                 onChange={(e) => onUpdateSection({ ...selectedSection, paddingBottom: Math.max(0, parseInt(e.target.value) || 0) })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+              />
+            </div>
+          </div>
+
+          {/* پدینگ راست/چپ — داخل سکشن (کنار ستون‌ها) */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ راست (px)</label>
+              <input
+                type="number"
+                min={0}
+                value={selectedSection.paddingRight ?? 0}
+                onChange={(e) => onUpdateSection({ ...selectedSection, paddingRight: Math.max(0, parseInt(e.target.value) || 0) })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ چپ (px)</label>
+              <input
+                type="number"
+                min={0}
+                value={selectedSection.paddingLeft ?? 0}
+                onChange={(e) => onUpdateSection({ ...selectedSection, paddingLeft: Math.max(0, parseInt(e.target.value) || 0) })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>

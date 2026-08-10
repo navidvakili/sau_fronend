@@ -79,6 +79,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           boxShadow: resolveBoxShadow(sec.boxShadow),
           paddingTop: `${sec.paddingTop}px`,
           paddingBottom: `${sec.paddingBottom}px`,
+          paddingLeft: sec.paddingLeft !== undefined ? `${sec.paddingLeft}px` : undefined,
+          paddingRight: sec.paddingRight !== undefined ? `${sec.paddingRight}px` : undefined,
           // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BL BR
           borderRadius: sec.borderRadius
             ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]

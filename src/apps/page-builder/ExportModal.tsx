@@ -79,7 +79,7 @@ ${pad}</section>`;
   /** Recursive section -> HTML (nested sub-sections inside columns are emitted too — ترتیب blocks ملاک است) */
   const renderHtmlSection = (sec: SectionInstance, depth: number): string => {
     const pad = '  '.repeat(2 + depth * 2);
-    return `${pad}<section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} margin-top: ${sec.marginTop ?? 0}px; margin-bottom: ${sec.marginBottom ?? 0}px; padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px;">
+    return `${pad}<section id="${sec.bookmark || sec.id}" style="${sectionBackgroundStyle(sec)} margin-top: ${sec.marginTop ?? 0}px; margin-bottom: ${sec.marginBottom ?? 0}px; padding-top: ${sec.paddingTop}px; padding-bottom: ${sec.paddingBottom}px; padding-left: ${sec.paddingLeft ?? 0}px; padding-right: ${sec.paddingRight ?? 0}px;">
 ${pad}  <div class="${sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}">
 ${pad}    <div class="grid grid-cols-12 gap-6">
 ${sec.columns
