@@ -28,6 +28,12 @@ import {
   Search,
   Ban,
   ExternalLink,
+  UsersRound,
+  BookOpen,
+  Award,
+  LockOpen,
+  Lock,
+  GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,7 +42,7 @@ export const ICON_CHOICES: string[] = [
   'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
   'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
   'info', 'send', 'globe', 'hash', 'heart', 'check', 'arrow', 'users', 'dollar',
-  'external'
+  'external', 'students', 'book', 'award', 'unlock', 'lock', 'grad'
 ];
 
 /** نگاشت نام آیکون به کامپوننت lucide — برای پیش‌نمایش انتخابگر */
@@ -66,6 +72,12 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
   users: Users,
   dollar: BadgeDollarSign,
   external: ExternalLink,
+  students: UsersRound,
+  book: BookOpen,
+  award: Award,
+  unlock: LockOpen,
+  lock: Lock,
+  grad: GraduationCap,
 };
 
 interface IconPickerProps {

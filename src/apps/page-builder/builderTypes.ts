@@ -115,6 +115,8 @@ export interface WidgetStyle {
   paddingRight?: number;
   marginTop?: number;
   marginBottom?: number;
+  marginLeft?: number;
+  marginRight?: number;
   // Legacy single radius (all corners) — newer builds use per-corner fields below
   borderRadius?: number;
   borderRadiusTopLeft?: number;
@@ -133,6 +135,8 @@ export interface WidgetStyle {
   imageFrame?: 'rounded' | 'square' | 'circle';
   maxWidth?: number; // px — caps widget width
   fullWidth?: boolean; // button stretches to full column width
+  /** 'full' (default) | 'auto' (fit-content) | 'center' (fit-content + centered) */
+  widthMode?: 'full' | 'auto' | 'center';
   alignVertical?: 'top' | 'center' | 'bottom'; // vertical alignment inside the widget box
   // Video layer settings (slider-studio parity)
   videoAutoplay?: boolean;

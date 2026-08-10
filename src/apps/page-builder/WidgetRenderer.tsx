@@ -53,7 +53,13 @@ import {
   CheckCircle2,
   ArrowLeft,
   Users,
+  UsersRound,
   BadgeDollarSign,
+  BookOpen,
+  Award,
+  LockOpen,
+  Lock,
+  GraduationCap,
   X
 } from 'lucide-react';
 
@@ -718,6 +724,12 @@ const iconMap: Record<string, React.ReactNode> = {
   users: <Users className="w-5 h-5" />,
   dollar: <BadgeDollarSign className="w-5 h-5" />,
   external: <ExternalLink className="w-5 h-5" />,
+  students: <UsersRound className="w-5 h-5" />,
+  book: <BookOpen className="w-5 h-5" />,
+  award: <Award className="w-5 h-5" />,
+  unlock: <LockOpen className="w-5 h-5" />,
+  lock: <Lock className="w-5 h-5" />,
+  grad: <GraduationCap className="w-5 h-5" />,
   sparkles: <Sparkles className="w-5 h-5" />,
 };
 
@@ -1438,13 +1450,17 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     paddingRight: style.paddingRight !== undefined ? `${style.paddingRight}px` : undefined,
     marginTop: style.marginTop !== undefined ? `${style.marginTop}px` : undefined,
     marginBottom: style.marginBottom !== undefined ? `${style.marginBottom}px` : undefined,
+    marginLeft: style.marginLeft !== undefined ? `${style.marginLeft}px` : undefined,
+    marginRight: style.marginRight !== undefined ? `${style.marginRight}px` : undefined,
     borderRadius: resolveBorderRadius(style),
     borderWidth: style.borderWidth !== undefined ? `${style.borderWidth}px` : undefined,
     borderColor: style.borderColor,
     borderStyle: style.borderWidth ? (style.borderStyle || 'solid') : undefined,
     boxShadow: resolveBoxShadow(style.shadow),
     opacity: style.opacity,
-    maxWidth: style.maxWidth !== undefined ? `${style.maxWidth}px` : undefined
+    maxWidth: style.maxWidth !== undefined ? `${style.maxWidth}px` : undefined,
+    width: style.widthMode === 'auto' || style.widthMode === 'center' ? 'fit-content' : undefined,
+    marginInline: style.widthMode === 'center' ? 'auto' : undefined
   };
 
   // State for accordions
@@ -1458,7 +1474,13 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     case 'heading':
       return (
         <div style={containerStyle} className="transition-all">
-          <h2 className="text-2xl font-black tracking-tight leading-tight">
+          <h2
+            className="tracking-tight leading-tight"
+            style={{
+              fontSize: style.fontSize || '1.5rem',
+              fontWeight: style.fontWeight || 900
+            }}
+          >
             {renderTextWithIcons(widget.content || widget.title)}
           </h2>
         </div>
@@ -1467,7 +1489,10 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     case 'text':
       return (
         <div style={containerStyle} className="transition-all leading-relaxed">
-          <p className="whitespace-pre-line text-sm md:text-base">
+          <p
+            className="whitespace-pre-line text-sm md:text-base"
+            style={{ fontSize: style.fontSize || undefined }}
+          >
             {renderTextWithIcons(widget.content || 'متن نمونه برای این ویجت قرار داده شده است.')}
           </p>
         </div>
