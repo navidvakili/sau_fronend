@@ -30,6 +30,8 @@ import {
   Trash2,
   Copy,
   ChevronDown,
+  ChevronUp,
+  Plus,
   Monitor,
   Tablet,
   Smartphone,
@@ -88,6 +90,14 @@ const ColorBox: React.FC<{
   );
 };
 
+/** استخراج گزینه‌ها از محتوای متنی (هر خط: برچسب|مقدار|...) */
+const parseLines = (content: string, separators = '|،,;'): string[][] =>
+  (content || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(new RegExp(`[${separators}]`)).map((p) => p.trim()));
+
 interface InspectorPanelProps {
   selectedWidget: WidgetInstance | null;
   selectedColumn: ColumnInstance | null;
@@ -124,8 +134,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   // کپی مستعار — قبل از هر Narrowing تا در دیالوگ fullscreen نوع کامل حفظ شود
   const fullscreenWidget = selectedWidget;
 
-  // ── انتخابگر آیکون برای متن / دکمه ──
-  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' | 'richtext' }>({ open: false, mode: 'text' });
+  // ── انتخابگر آیکون برای متن / دکمه / شمارنده ──
+  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' | 'richtext' | 'counter' }>({ open: false, mode: 'text' });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [cursorRange, setCursorRange] = useState<{ start: number; end: number } | null>(null);
 
@@ -357,6 +367,16 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     };
 
     const customProps = selectedWidget.settings.customProps || {};
+
+    /** آیتم‌های منوی نوار راهبری — اولویت: customProps.items ساختاریافته ← fallback: content (هر خط عنوان|لینک) ← [] */
+    const navItems: { label: string; url: string; color?: string; fontSize?: number; animation?: string; bold?: boolean }[] =
+      (customProps.items as any[]) && (customProps.items as any[]).length > 0
+        ? (customProps.items as any[])
+        : parseLines(
+            selectedWidget.content && selectedWidget.content !== 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.'
+              ? selectedWidget.content
+              : ''
+          ).map((p) => ({ label: p[0] || 'مورد', url: p[1] || '#' }));
 
     return (
       <>
@@ -780,6 +800,35 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* شمارنده */}
               {selectedWidget.type === 'counter' && (
                 <>
+                  {/* آیکون شمارنده */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیکون (اختیاری)</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIconPickerState({ open: true, mode: 'counter' })}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          customProps.icon
+                            ? 'bg-teal-500/15 border-teal-500/50 text-teal-600 dark:text-teal-400'
+                            : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 hover:text-teal-600 dark:hover:text-teal-400'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {customProps.icon || 'انتخاب آیکون'}
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      {customProps.icon && (
+                        <button
+                          type="button"
+                          onClick={() => updateCustomProps({ icon: undefined })}
+                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                          title="حذف آیکون"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">مقدار عددی هدف</label>
                     <input
@@ -821,6 +870,74 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                       />
                     </div>
+                  </div>
+                  {/* رنگ و اندازه عدد + رنگ آیکون */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ عدد</label>
+                      <ColorBox
+                        value={customProps.numberColor || selectedWidget.settings.style.textColor}
+                        onChange={(c) => updateCustomProps({ numberColor: c })}
+                        className="w-full h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ آیکون</label>
+                      <ColorBox
+                        value={customProps.iconColor || customProps.numberColor || selectedWidget.settings.style.textColor}
+                        onChange={(c) => updateCustomProps({ iconColor: c })}
+                        className="w-full h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه عدد (px)</label>
+                      <input
+                        type="number"
+                        min={12}
+                        max={120}
+                        value={customProps.numberFontSize || 36}
+                        onChange={(e) => updateCustomProps({ numberFontSize: parseInt(e.target.value) || 36 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه کپشن (px)</label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={48}
+                        value={customProps.captionFontSize || 12}
+                        onChange={(e) => updateCustomProps({ captionFontSize: parseInt(e.target.value) || 12 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  {/* متن زیر عدد (کپشن) — به‌جای عنوان ویجت */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      متن زیر عدد (کپشن) — به‌جای عنوان ویجت نمایش داده می‌شود
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={
+                        selectedWidget.content && selectedWidget.content !== 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.'
+                          ? selectedWidget.content
+                          : ''
+                      }
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                      placeholder="مثلاً: دانشجویان فعال"
+                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ کپشن</label>
+                    <ColorBox
+                      value={customProps.captionColor || selectedWidget.settings.style.textColor}
+                      onChange={(c) => updateCustomProps({ captionColor: c })}
+                      className="w-full h-9"
+                    />
                   </div>
                 </>
               )}
@@ -870,8 +987,9 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* نوار راهبری (منو) */}
               {selectedWidget.type === 'nav-menu' && (
                 <>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان برند (سمت راست نوار)</label>
+                  {/* ── عنوان برند ── */}
+                  <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان برند</label>
                     <input
                       type="text"
                       value={customProps.brand || ''}
@@ -879,28 +997,270 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       placeholder="معاونت آموزشی و تحصیلات تکمیلی"
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                     />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">رنگ برند</label>
+                        <ColorBox
+                          value={customProps.brandColor}
+                          onChange={(c) => updateCustomProps({ brandColor: c })}
+                          className="w-full h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">اندازه (px)</label>
+                        <input
+                          type="number"
+                          min={10}
+                          max={64}
+                          value={customProps.brandFontSize || 14}
+                          onChange={(e) => updateCustomProps({ brandFontSize: parseInt(e.target.value) || 14 })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">موقعیت برند</label>
+                      <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-gray-200 dark:border-slate-800">
+                        {([
+                          { v: 'start', l: 'راست' },
+                          { v: 'center', l: 'وسط' },
+                          { v: 'end', l: 'چپ' }
+                        ] as const).map(({ v, l }) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => updateCustomProps({ brandPosition: v })}
+                            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                              (customProps.brandPosition || 'start') === v ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      آیتم‌های منو (هر خط: عنوان|لینک)
-                    </label>
-                    <textarea
-                      rows={5}
-                      value={(customProps.items || []).map((i: any) => `${i.label}|${i.url}`).join('\n')}
-                      onChange={(e) => {
-                        const items = e.target.value
-                          .split('\n')
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                          .map((line) => {
-                            const [label, url] = line.split('|');
-                            return { label: label || 'مورد', url: url || '#' };
-                          });
-                        updateCustomProps({ items });
-                      }}
-                      placeholder={'صفحه اصلی|/\nخدمات|#services'}
-                      className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
-                    />
+
+                  {/* ── آیتم‌های منو ── */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیتم‌های منو</label>
+                      <button
+                        type="button"
+                        onClick={() => updateCustomProps({ items: [...navItems, { label: '', url: '#' }] })}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        افزودن آیتم
+                      </button>
+                    </div>
+                    {navItems.map((item, i) => (
+                      <div key={i} className="rounded-xl border border-gray-200 dark:border-slate-800 p-2.5 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-5 h-5 shrink-0 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-black flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={item.label}
+                            onChange={(e) => {
+                              const next = [...navItems];
+                              next[i] = { ...next[i], label: e.target.value };
+                              updateCustomProps({ items: next });
+                            }}
+                            placeholder="عنوان (مثلاً: درباره ما)"
+                            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                          />
+                          <button
+                            type="button"
+                            disabled={i === 0}
+                            onClick={() => {
+                              const next = [...navItems];
+                              [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                              updateCustomProps({ items: next });
+                            }}
+                            className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer transition-all"
+                            title="انتقال به بالا"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={i === navItems.length - 1}
+                            onClick={() => {
+                              const next = [...navItems];
+                              [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                              updateCustomProps({ items: next });
+                            }}
+                            className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer transition-all"
+                            title="انتقال به پایین"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateCustomProps({ items: navItems.filter((_, idx) => idx !== i) })}
+                            className="p-1 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                            title="حذف آیتم"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          dir="ltr"
+                          value={item.url}
+                          onChange={(e) => {
+                            const next = [...navItems];
+                            next[i] = { ...next[i], url: e.target.value };
+                            updateCustomProps({ items: next });
+                          }}
+                          placeholder="/about یا #services"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 dark:text-indigo-400 focus:outline-none focus:border-teal-500"
+                        />
+                        <div className="grid grid-cols-2 gap-1.5 items-end">
+                          <div className="space-y-0.5">
+                            <label className="text-[9px] font-bold text-slate-400 block">رنگ</label>
+                            <ColorBox
+                              value={item.color}
+                              onChange={(c) => {
+                                const next = [...navItems];
+                                next[i] = { ...next[i], color: c };
+                                updateCustomProps({ items: next });
+                              }}
+                              className="w-full h-7"
+                            />
+                          </div>
+                          <div className="space-y-0.5">
+                            <label className="text-[9px] font-bold text-slate-400 block">اندازه (px)</label>
+                            <input
+                              type="number"
+                              min={10}
+                              max={48}
+                              value={item.fontSize ?? ''}
+                              placeholder="13"
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value);
+                                const next = [...navItems];
+                                next[i] = { ...next[i], fontSize: Number.isNaN(v) ? undefined : v };
+                                updateCustomProps({ items: next });
+                              }}
+                              className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 items-end">
+                          <div className="space-y-0.5">
+                            <label className="text-[9px] font-bold text-slate-400 block">انیمیشن</label>
+                            <select
+                              value={item.animation || ''}
+                              onChange={(e) => {
+                                const next = [...navItems];
+                                next[i] = { ...next[i], animation: e.target.value || undefined };
+                                updateCustomProps({ items: next });
+                              }}
+                              className="w-full px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                            >
+                              <option value="">پیش‌فرض</option>
+                              <option value="none">بدون انیمیشن</option>
+                              <option value="underline">خط زیرین</option>
+                              <option value="fade">محو شدن</option>
+                              <option value="slide">جابجایی</option>
+                              <option value="pulse">تپش</option>
+                            </select>
+                          </div>
+                          <label className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!item.bold}
+                              onChange={(e) => {
+                                const next = [...navItems];
+                                next[i] = { ...next[i], bold: e.target.checked };
+                                updateCustomProps({ items: next });
+                              }}
+                              className="accent-teal-600 w-3.5 h-3.5"
+                            />
+                            ضخیم
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                    {navItems.length === 0 && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-3 text-center leading-relaxed">
+                        هنوز آیتمی ندارید — با «افزودن آیتم» شروع کنید.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ── تنظیمات پیش‌فرض آیتم‌ها ── */}
+                  <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تنظیمات پیش‌فرض آیتم‌ها</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">رنگ متن</label>
+                        <ColorBox
+                          value={customProps.itemColor}
+                          onChange={(c) => updateCustomProps({ itemColor: c })}
+                          className="w-full h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">رنگ هاور</label>
+                        <ColorBox
+                          value={customProps.itemHoverColor}
+                          onChange={(c) => updateCustomProps({ itemHoverColor: c })}
+                          className="w-full h-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">اندازه متن (px)</label>
+                        <input
+                          type="number"
+                          min={10}
+                          max={48}
+                          value={customProps.itemFontSize || 13}
+                          onChange={(e) => updateCustomProps({ itemFontSize: parseInt(e.target.value) || 13 })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">انیمیشن</label>
+                        <select
+                          value={customProps.itemAnimation || 'underline'}
+                          onChange={(e) => updateCustomProps({ itemAnimation: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="none">بدون انیمیشن</option>
+                          <option value="underline">خط زیرین</option>
+                          <option value="fade">محو شدن</option>
+                          <option value="slide">جابجایی</option>
+                          <option value="pulse">تپش</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">تراز نوار منو</label>
+                      <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-gray-200 dark:border-slate-800">
+                        {([
+                          { v: 'start', l: 'راست' },
+                          { v: 'center', l: 'وسط' },
+                          { v: 'end', l: 'چپ' }
+                        ] as const).map(({ v, l }) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => updateCustomProps({ menuPosition: v })}
+                            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                              (customProps.menuPosition || 'start') === v ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
                     برای نوار چسبان، وضعیت «چسبان (sticky)» را از بخش موقعیت سکشن انتخاب کنید و پس‌زمینه را روی همان سکشن تنظیم کنید.
@@ -1912,24 +2272,37 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
         }}
       />
 
-      {/* انتخابگر آیکون — متن و دکمه */}
+      {/* انتخابگر آیکون — متن و دکمه و شمارنده */}
       <IconPicker
         open={iconPickerState.open}
         onClose={() => setIconPickerState({ open: false, mode: iconPickerState.mode })}
         title={
           iconPickerState.mode === 'button'
             ? 'انتخاب آیکون دکمه'
-            : iconPickerState.mode === 'richtext'
-              ? 'انتخاب آیکون متن (ویرایشگر غنی)'
-              : 'انتخاب آیکون متن'
+            : iconPickerState.mode === 'counter'
+              ? 'انتخاب آیکون شمارنده'
+              : iconPickerState.mode === 'richtext'
+                ? 'انتخاب آیکون متن (ویرایشگر غنی)'
+                : 'انتخاب آیکون متن'
         }
-        value={iconPickerState.mode === 'button' ? selectedWidget.iconName : undefined}
+        value={
+          iconPickerState.mode === 'button'
+            ? selectedWidget.iconName
+            : iconPickerState.mode === 'counter'
+              ? customProps.icon
+              : undefined
+        }
         onSelect={
           iconPickerState.mode === 'button'
             ? selectButtonIcon
-            : iconPickerState.mode === 'richtext'
-              ? insertRichtextIcon
-              : insertIconToken
+            : iconPickerState.mode === 'counter'
+              ? (iconName: string) => {
+                  updateCustomProps({ icon: iconName || undefined });
+                  setIconPickerState({ open: false, mode: 'counter' });
+                }
+              : iconPickerState.mode === 'richtext'
+                ? insertRichtextIcon
+                : insertIconToken
         }
       />
       </>

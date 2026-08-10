@@ -692,11 +692,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       bindingDataSource = 'files';
     }
 
+    // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
+    let initialContent = 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.';
+    if (widgetType === 'nav-menu') initialContent = '';
+
     const newWidget: WidgetInstance = {
       id: newWidgetId,
       type: widgetType,
       title,
-      content: 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.',
+      content: initialContent,
       settings: {
         style: {
           paddingTop: 0,
@@ -858,11 +862,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       bindingDataSource = 'files';
     }
 
+    // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
+    let initialContent = 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.';
+    if (widgetType === 'nav-menu') initialContent = '';
+
     const newWidget: WidgetInstance = {
       id: newWidgetId,
       type: widgetType,
       title,
-      content: 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.',
+      content: initialContent,
       settings: {
         style: {
           paddingTop: 0,

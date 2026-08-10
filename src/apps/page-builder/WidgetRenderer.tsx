@@ -905,13 +905,24 @@ const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
   );
 };
 
-/** شمارنده — عدد متحرک با پیشوند/پسوند */
+/** شمارنده — عدد متحرک با پیشوند/پسوند + آیکون و استایل کامل (رنگ/اندازه عدد، کپشن) */
 const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
+  const style = widget.settings.style || {};
   const target = Number(props.target ?? (parseFloat(widget.content) || 100));
   const prefix = props.prefix || '';
   const suffix = props.suffix || '+';
   const duration = Number(props.duration) || 1200;
+  // رنگ عدد — تنظیم اختصاصی شمارنده یا رنگ متن عمومی ویجت
+  const numberColor = props.numberColor || style.textColor || '#0f172a';
+  const numberFontSize = props.numberFontSize ? `${props.numberFontSize}px` : undefined;
+  const captionColor = props.captionColor || style.textColor || '#64748b';
+  const captionFontSize = props.captionFontSize ? `${props.captionFontSize}px` : undefined;
+  // کپشن: متن ویجت (content) اولویت دارد؛ وگرنه عنوان ویجت
+  const hasRealContent = !!widget.content && widget.content !== 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.';
+  const caption = hasRealContent ? widget.content : (widget.title || 'شمارنده آماری');
+  const icon = props.icon ? iconMap[props.icon] : null;
+  const iconColor = props.iconColor || numberColor;
   const [value, setValue] = useState(0);
 
   useEffect(() => {
@@ -928,10 +939,19 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
 
   return (
     <div style={containerStyle} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-indigo-500/10 border border-teal-500/20 text-center flex flex-col items-center gap-1.5">
-      <div className="text-4xl font-black text-slate-900 dark:text-white">
+      {icon ? (
+        <div style={{ color: iconColor }} className="mb-1 flex items-center justify-center">
+          {cloneElement(icon as ReactElement<any, any>, { className: 'w-8 h-8' })}
+        </div>
+      ) : null}
+      <div className="font-black leading-none" style={{ color: numberColor, fontSize: numberFontSize || undefined }}>
         {prefix}{value.toLocaleString('fa-IR')}{suffix}
       </div>
-      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{widget.title || 'شمارنده آماری'}</span>
+      {caption ? (
+        <span className="font-bold whitespace-pre-line" style={{ color: captionColor, fontSize: captionFontSize || undefined }}>
+          {caption}
+        </span>
+      ) : null}
     </div>
   );
 };
@@ -970,34 +990,105 @@ const NavigatorBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.C
   );
 };
 
-/** نوار راهبری — برند + لینک‌های منو (ساخته‌شده از کامپوننت به‌جای HTML دلخواه) */
+/** نوار راهبری — برند + لینک‌های منو با استایل کامل (رنگ/سایز/انیمیشن هر آیتم) */
 const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
   const brand = props.brand || widget.title;
-  const items: { label: string; url: string }[] =
-    (props.items as { label: string; url: string }[]) ||
-    parseLines(widget.content || '').map((p) => ({ label: p[0] || 'مورد', url: p[1] || '#' }));
+  const brandColor = props.brandColor || '#ffffff';
+  const brandFontSize = props.brandFontSize ? `${props.brandFontSize}px` : undefined;
+  const brandPosition = props.brandPosition || 'start';
+  const menuPosition = props.menuPosition || 'start';
+  const defaultItemColor = props.itemColor || '#e2e8f0';
+  const defaultItemFontSize = props.itemFontSize || 13;
+  const hoverColor = props.itemHoverColor || '#ffffff';
+  const defaultAnimation = props.itemAnimation || 'underline';
+  // آیتم‌های منو — اولویت: customProps.items ساختاریافته ← fallback: content (هر خط عنوان|لینک) ← legacy items
+  const hasRealContent = !!widget.content && widget.content !== 'محتوای اولیه این ویجت در ویرایشگر قرار گرفته است.';
+  const contentItems = parseLines(widget.content || '').map((p) => ({ label: p[0] || 'مورد', url: p[1] || '#' }));
+  const items: { label: string; url: string; color?: string; fontSize?: number; animation?: string; bold?: boolean }[] =
+    (props.items as any[]) && (props.items as any[]).length > 0
+      ? (props.items as any[])
+      : hasRealContent && contentItems.length > 0
+        ? contentItems
+        : [];
+
+  // استایل‌های داینامیک (هاور + انیمیشن) — اسکوپ‌شده با شناسهٔ ویجت
+  const uid = `nm-${String(widget.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  const animCss = `
+.${uid} .nm-item{position:relative;transition:color .2s ease,transform .2s ease,opacity .2s ease}
+.${uid} .nm-item:hover{color:${hoverColor}!important}
+.${uid} .nm-anim-underline::after{content:'';position:absolute;bottom:-3px;right:0;width:0;height:2px;background:${hoverColor};transition:width .25s ease}
+.${uid} .nm-anim-underline:hover::after{width:100%}
+.${uid} .nm-anim-fade:hover{opacity:.6}
+.${uid} .nm-anim-slide:hover{transform:translateY(-2px)}
+.${uid} .nm-anim-pulse{animation:${uid}-pulse 2.2s ease-in-out infinite}
+@keyframes ${uid}-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+`;
+
+  // ترازبندی — برند در راست/وسط/چپ و تراز نوار منو
+  let navCls = 'flex items-center gap-4 flex-wrap';
+  if (brandPosition === 'center') {
+    navCls += '';
+  } else if (menuPosition === 'center') {
+    navCls += ' mx-auto';
+  } else if (menuPosition === 'end') {
+    navCls += ' me-auto';
+  } else {
+    navCls += ' ms-auto';
+  }
 
   return (
-    <div
-      style={containerStyle}
-      className="flex items-center gap-4 flex-wrap py-1.5"
-    >
-      {brand ? (
-        <strong className="text-sm font-black text-white whitespace-nowrap">{brand}</strong>
-      ) : null}
-      <nav className="flex items-center gap-4 flex-wrap ms-auto">
-        {items.map((item, i) => (
-          <a
-            key={i}
-            href={item.url || '#'}
-            className="text-[13px] font-bold text-slate-200 hover:text-white transition-all border-b-2 border-transparent hover:border-teal-400 cursor-pointer"
+    <>
+      <style>{animCss}</style>
+      <div
+        style={containerStyle}
+        className={`flex items-center gap-4 flex-wrap py-1.5 ${brandPosition === 'center' ? 'justify-center' : ''}`}
+      >
+        {brand && brandPosition !== 'end' ? (
+          <strong
+            className="font-black whitespace-nowrap"
+            style={{ color: brandColor, fontSize: brandFontSize }}
           >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-    </div>
+            {brand}
+          </strong>
+        ) : null}
+        <nav className={navCls}>
+          {items.map((item, i) => {
+            const anim = item.animation || defaultAnimation;
+            const cls = [
+              'nm-item',
+              'font-bold',
+              'cursor-pointer',
+              anim && anim !== 'none' ? `nm-anim-${anim}` : ''
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <a
+                key={i}
+                href={item.url || '#'}
+                className={cls}
+                style={{
+                  color: item.color || defaultItemColor,
+                  fontSize: item.fontSize ? `${item.fontSize}px` : `${defaultItemFontSize}px`,
+                  fontWeight: item.bold ? 900 : undefined
+                }}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+        {brand && brandPosition === 'end' ? (
+          <strong
+            className="font-black whitespace-nowrap"
+            style={{ color: brandColor, fontSize: brandFontSize }}
+          >
+            {brand}
+          </strong>
+        ) : null}
+      </div>
+    </>
   );
 };
 
