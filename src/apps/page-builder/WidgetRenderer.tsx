@@ -744,6 +744,7 @@ const iconMap: Record<string, React.ReactNode> = {
   globe: <Globe className="w-5 h-5" />,
   hash: <Hash className="w-5 h-5" />,
   heart: <Heart className="w-5 h-5" />,
+  clock: <Clock className="w-5 h-5" />,
   check: <CheckCircle2 className="w-5 h-5" />,
   arrow: <ArrowLeft className="w-5 h-5" />,
   users: <Users className="w-5 h-5" />,
@@ -930,7 +931,7 @@ const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   return (
     <div
       style={containerStyle}
-      className="p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md"
+      className="p-6 rounded-2xl transition-all"
     >
       {layout === 'stack' && (
         <div className="flex flex-col items-start gap-3 text-right">
