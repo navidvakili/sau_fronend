@@ -771,6 +771,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                   </div>
 
+                  {/* موقعیت کل کارت در ستون */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">موقعیت کارت در ستون</label>
+                    <select
+                      value={customProps.cardAlign || 'full'}
+                      onChange={(e) => updateCustomProps({ cardAlign: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="full">تمام عرض ستون (پیش‌فرض)</option>
+                      <option value="right">سمت راست</option>
+                      <option value="center">وسط</option>
+                      <option value="left">سمت چپ</option>
+                    </select>
+                  </div>
+
                   {/* تنظیمات آیکون */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">

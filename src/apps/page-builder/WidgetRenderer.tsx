@@ -928,9 +928,21 @@ const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
       {buttonEl}
     </div>
   );
+  // موقعیت کل کارت در ستون (راست/وسط/چپ/تمام‌عرض) — در RTL راست = شروع
+  // maxWidth: وقتی متن بلندتر از ستون باشد fit-content کل عرض ستون را می‌گیرد و تراز دیده نمی‌شود؛
+  // با این سقف کارت به پهنای ~عرض خواهر خودش می‌ماند و به سمت انتخابی می‌چسبد
+  const cardAlign = props.cardAlign || 'full';
+  const cardPosStyle: React.CSSProperties =
+    cardAlign === 'center'
+      ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: 'auto' }
+      : cardAlign === 'left'
+        ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: 'auto 0' }
+        : cardAlign === 'right'
+          ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: '0 auto' }
+          : {};
   return (
     <div
-      style={containerStyle}
+      style={{ ...containerStyle, ...cardPosStyle }}
       className="p-6 rounded-2xl transition-all"
     >
       {layout === 'stack' && (
