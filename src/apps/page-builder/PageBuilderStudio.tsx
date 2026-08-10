@@ -441,8 +441,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         ...mapped,
         columns: (mapped.columns || []).map((col) => {
           const newSubs = col.subSections ? mapSectionsRecursive(col.subSections, fn) : undefined;
-          if (Array.isArray(col.blocks) && col.blocks.length > 0 && newSubs) {
-            const subById = new Map(newSubs.map((s) => [s.id, s]));
+          if (Array.isArray(col.blocks) && col.blocks.length > 0) {
+            const subById = new Map((newSubs ?? []).map((s) => [s.id, s]));
             return {
               ...col,
               subSections: newSubs,
@@ -470,8 +470,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         ...s,
         columns: (s.columns || []).map((col) => {
           const newSubs = col.subSections ? removeSectionRecursive(col.subSections, id) : undefined;
-          if (Array.isArray(col.blocks) && col.blocks.length > 0 && newSubs) {
-            const subById = new Map(newSubs.map((sub) => [sub.id, sub]));
+          if (Array.isArray(col.blocks) && col.blocks.length > 0) {
+            const subById = new Map((newSubs ?? []).map((sub) => [sub.id, sub]));
             return {
               ...col,
               subSections: newSubs,

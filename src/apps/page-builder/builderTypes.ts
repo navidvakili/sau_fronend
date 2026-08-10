@@ -66,7 +66,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   button: 'دکمه',
   video: 'ویدیو',
   icon: 'آیکون',
-  'icon-box': 'باکس آیکون',
+  'icon-box': 'کارت اطلاعاتی',
   divider: 'خط جداکننده',
   spacer: 'فاصله‌گذار',
   'stat-card': 'کارت آمار',

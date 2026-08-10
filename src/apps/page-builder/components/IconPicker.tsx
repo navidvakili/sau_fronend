@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { SVGProps, ComponentType } from 'react';
 import {
   X,
   Sparkles,
@@ -47,12 +48,24 @@ import {
   Linkedin,
   Instagram,
   Youtube,
-  MessagesSquare,
-  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
+import {
+  EitaaIcon,
+  BaleIcon,
+  CafeBazaarIcon,
+  EnamadIcon,
+  GapIcon,
+  SappIcon,
+  ShetabIcon,
+  AdobeAcrobatReaderIcon,
+  AdobeAfterEffectsIcon,
+  AdobeAuditionIcon,
+  AdobeIcon,
+  AparatIcon,
+} from './BrandIcons';
 
-/** آیکون‌های قابل انتخاب — منبع واحد برای صفحه‌ساز و باکس آیکون */
+/** آیکون‌های قابل انتخاب — منبع واحد برای صفحه‌ساز و کارت اطلاعاتی */
 export const ICON_CHOICES: string[] = [
   'sparkles', 'map', 'phone', 'mail', 'share', 'chat', 'link', 'type',
   'columns', 'rows', 'images', 'gauge', 'compass', 'code', 'quote',
@@ -61,11 +74,12 @@ export const ICON_CHOICES: string[] = [
   'stat', 'monitor', 'file-check', 'bookmark-check', 'layers', 'box',
   'shield-check', 'user-check', 'file-text', 'circle-question-mark',
   'linkedin', 'instagram', 'x', 'youtube', 'telegram',
-  'aparat', 'bale', 'eitaa'
+  'aparat', 'bale', 'eitaa', 'cafebazaar', 'enamad', 'gap', 'sapp',
+  'shetab', 'adobeacrobatreader', 'adobeaftereffects', 'adobeaudition', 'adobe'
 ];
 
-/** نگاشت نام آیکون به کامپوننت lucide — برای پیش‌نمایش انتخابگر */
-const ICON_COMPONENTS: Record<string, LucideIcon> = {
+/** نگاشت نام آیکون به کامپوننت — برای پیش‌نمایش انتخابگر */
+const ICON_COMPONENTS: Record<string, LucideIcon | ComponentType<SVGProps<SVGSVGElement>>> = {
   sparkles: Sparkles,
   map: MapPin,
   phone: Phone,
@@ -112,9 +126,18 @@ const ICON_COMPONENTS: Record<string, LucideIcon> = {
   x: X,
   youtube: Youtube,
   telegram: Send,
-  aparat: MonitorPlay,
-  bale: MessagesSquare,
-  eitaa: MessageCircle,
+  aparat: AparatIcon,
+  bale: BaleIcon,
+  eitaa: EitaaIcon,
+  cafebazaar: CafeBazaarIcon,
+  enamad: EnamadIcon,
+  gap: GapIcon,
+  sapp: SappIcon,
+  shetab: ShetabIcon,
+  adobeacrobatreader: AdobeAcrobatReaderIcon,
+  adobeaftereffects: AdobeAfterEffectsIcon,
+  adobeaudition: AdobeAuditionIcon,
+  adobe: AdobeIcon,
 };
 
 interface IconPickerProps {

@@ -64,11 +64,32 @@ const ColorBox: React.FC<{
   value?: string;
   onChange: (color: string) => void;
   className?: string;
-}> = ({ value, onChange, className = '' }) => {
+  /** آیا دکمهٔ × (حذف رنگ) نمایش داده شود؟ پیش‌فرض: وقتی مقدار فعلی رنگ دارد */
+  clearable?: boolean;
+}> = ({ value, onChange, className = '', clearable }) => {
   const empty = !value || value === 'transparent';
+  // ورودی بومی <input type=color> فقط #rrggbb می‌پذیرد — rgba/rgb را به هگز تبدیل می‌کنیم
+  // تا colorpicker همان رنگ مؤثر (مثلاً پیش‌فرض سبز کم‌رنگ) را نشان دهد نه سفید
+  const toInputHex = (v?: string): string => {
+    if (!v || v === 'transparent') return '#ffffff';
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
+    const m = v.match(/rgba?\(([^)]+)\)/i);
+    if (m) {
+      const [r, g, b] = m[1].split(',').map((s) => Math.round(Number(s.trim())));
+      if (![r, g, b].some(Number.isNaN)) {
+        return `#${[r, g, b]
+          .map((n) => Math.min(255, Math.max(0, n)).toString(16).padStart(2, '0'))
+          .join('')}`;
+      }
+    }
+    return '#ffffff';
+  };
+  const inputHex = toInputHex(value);
+  const showClear = clearable !== undefined ? clearable : !empty;
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 shrink-0 p-1 ${className}`}
+      className={`relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 shrink-0 p-1 w-8 h-8 ${className}`}
+      title={empty ? 'شفاف (بدون رنگ)' : 'برای حذف رنگ روی × بزنید'}
     >
       <div
         className="w-full h-full rounded-lg"
@@ -82,10 +103,20 @@ const ColorBox: React.FC<{
       />
       <input
         type="color"
-        value={value || '#ffffff'}
+        value={inputHex}
         onChange={(e) => onChange(e.target.value)}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />
+      {showClear && !empty && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          className="absolute top-0.5 left-0.5 z-10 w-4 h-4 rounded-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 shadow-sm flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-rose-500 hover:border-rose-400 transition-all cursor-pointer"
+          title="حذف رنگ (بازگشت به پیش‌فرض/شفاف)"
+        >
+          <X className="w-2.5 h-2.5" />
+        </button>
+      )}
     </div>
   );
 };
@@ -134,8 +165,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   // کپی مستعار — قبل از هر Narrowing تا در دیالوگ fullscreen نوع کامل حفظ شود
   const fullscreenWidget = selectedWidget;
 
-  // ── انتخابگر آیکون برای متن / دکمه / شمارنده ──
-  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' | 'richtext' | 'counter' }>({ open: false, mode: 'text' });
+  // ── انتخابگر آیکون برای متن / دکمه / شمارنده / کارت اطلاعاتی ──
+  const [iconPickerState, setIconPickerState] = useState<{ open: boolean; mode: 'text' | 'button' | 'richtext' | 'counter' | 'icon-box' }>({ open: false, mode: 'text' });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [cursorRange, setCursorRange] = useState<{ start: number; end: number } | null>(null);
 
@@ -692,21 +723,177 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
-              {/* باکس آیکون */}
+              {/* کارت اطلاعاتی */}
               {selectedWidget.type === 'icon-box' && (
                 <>
+                  {/* آیکون — با IconPicker */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آیکون</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIconPickerState({ open: true, mode: 'icon-box' })}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          customProps.iconName || selectedWidget.iconName
+                            ? 'bg-teal-500/15 border-teal-500/50 text-teal-600 dark:text-teal-400'
+                            : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 hover:text-teal-600 dark:hover:text-teal-400'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {customProps.iconName || selectedWidget.iconName || 'انتخاب آیکون'}
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                      {(customProps.iconName || selectedWidget.iconName) && (
+                        <button
+                          type="button"
+                          onClick={() => updateCustomProps({ iconName: undefined })}
+                          className="p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                          title="حذف آیکون"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* نوع چیدمان */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نوع چیدمان</label>
                     <select
-                      value={customProps.iconName || 'sparkles'}
-                      onChange={(e) => updateCustomProps({ iconName: e.target.value })}
+                      value={customProps.layout || 'stack'}
+                      onChange={(e) => updateCustomProps({ layout: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                     >
-                      {ICON_CHOICES.map((ic) => (
-                        <option key={ic} value={ic}>{ic}</option>
-                      ))}
+                      <option value="stack">آیکون بالا — عنوان و توضیح زیر آن (عمودی)</option>
+                      <option value="row">آیکون کنار عنوان — توضیح زیر (راست‌به‌چپ)</option>
+                      <option value="row-reverse">آیکون کنار عنوان — توضیح زیر (چپ‌به‌راست)</option>
+                      <option value="center">وسط‌چین — آیکون، عنوان و توضیح وسط</option>
                     </select>
                   </div>
+
+                  {/* تنظیمات آیکون */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ آیکون</label>
+                      <ColorBox
+                        value={customProps.iconColor || selectedWidget.settings.style.textColor || '#0f172a'}
+                        onChange={(c) => updateCustomProps({ iconColor: c || undefined })}
+                        className="w-full h-9"
+                        clearable={!!customProps.iconColor}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه آیکون (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={customProps.iconSize ?? 24}
+                        onChange={(e) => updateCustomProps({ iconSize: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه آیکون</label>
+                    <ColorBox
+                      value={customProps.iconBgColor === 'transparent' ? undefined : customProps.iconBgColor || 'rgba(20,184,166,0.1)'}
+                      onChange={(c) => updateCustomProps({ iconBgColor: c === '' ? 'transparent' : c })}
+                      className="w-full h-9"
+                      clearable
+                    />
+                    <p className="text-[10px] text-slate-400">برای شفاف‌کردن پس‌زمینه، روی × داخل جعبهٔ رنگ بزنید.</p>
+                  </div>
+
+                  {/* خط دور آیکون */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ خط دور آیکون</label>
+                      <ColorBox
+                        value={customProps.iconBorderColor === 'transparent' ? undefined : customProps.iconBorderColor || 'rgba(20,184,166,0.2)'}
+                        onChange={(c) => updateCustomProps({ iconBorderColor: c === '' ? 'transparent' : c })}
+                        className="w-full h-9"
+                        clearable
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ضخامت خط دور (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={customProps.iconBorderWidth ?? 1}
+                        onChange={(e) => updateCustomProps({ iconBorderWidth: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">برای حذف خط دور آیکون، ضخامت را ۰ کنید.</p>
+
+                  {/* تنظیمات عنوان */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان</label>
+                    <div className="flex items-center gap-2">
+                      <ColorBox
+                        value={customProps.titleColor || selectedWidget.settings.style.textColor || '#0f172a'}
+                        onChange={(c) => updateCustomProps({ titleColor: c || undefined })}
+                        className="w-9 h-9"
+                        clearable={!!customProps.titleColor}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={customProps.titleSize ?? 16}
+                        onChange={(e) => updateCustomProps({ titleSize: parseInt(e.target.value) || 0 })}
+                        className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        title="اندازه عنوان (px)"
+                        placeholder="اندازه (px)"
+                      />
+                    </div>
+                    <select
+                      value={customProps.titleFont || 'Vazirmatn, sans-serif'}
+                      onChange={(e) => updateCustomProps({ titleFont: e.target.value === 'Vazirmatn, sans-serif' ? undefined : e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="Vazirmatn, sans-serif">فونت عنوان: وزیرمتن (پیش‌فرض)</option>
+                      <option value="Poppins, sans-serif">فونت عنوان: Poppins</option>
+                      <option value="Inter, sans-serif">فونت عنوان: Inter</option>
+                      <option value="Impact, sans-serif">فونت عنوان: Impact (برجسته)</option>
+                      <option value="Allemand, serif">فونت عنوان: Allemand</option>
+                    </select>
+                  </div>
+
+                  {/* تنظیمات توضیح */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">توضیح</label>
+                    <div className="flex items-center gap-2">
+                      <ColorBox
+                        value={customProps.descColor || selectedWidget.settings.style.textColor || '#0f172a'}
+                        onChange={(c) => updateCustomProps({ descColor: c || undefined })}
+                        className="w-9 h-9"
+                        clearable={!!customProps.descColor}
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={customProps.descSize ?? 12}
+                        onChange={(e) => updateCustomProps({ descSize: parseInt(e.target.value) || 0 })}
+                        className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        title="اندازه توضیح (px)"
+                        placeholder="اندازه (px)"
+                      />
+                    </div>
+                    <select
+                      value={customProps.descFont || 'Vazirmatn, sans-serif'}
+                      onChange={(e) => updateCustomProps({ descFont: e.target.value === 'Vazirmatn, sans-serif' ? undefined : e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="Vazirmatn, sans-serif">فونت توضیح: وزیرمتن (پیش‌فرض)</option>
+                      <option value="Poppins, sans-serif">فونت توضیح: Poppins</option>
+                      <option value="Inter, sans-serif">فونت توضیح: Inter</option>
+                      <option value="Impact, sans-serif">فونت توضیح: Impact (برجسته)</option>
+                      <option value="Allemand, serif">فونت توضیح: Allemand</option>
+                    </select>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">توضیح باکس</label>
                     <textarea
@@ -1956,7 +2143,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.paddingTop || 0}
                     onChange={(e) => handleStyleChange('paddingTop', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -1966,7 +2152,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ پایین (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.paddingBottom || 0}
                     onChange={(e) => handleStyleChange('paddingBottom', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -1976,7 +2161,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ راست (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.paddingRight || 0}
                     onChange={(e) => handleStyleChange('paddingRight', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -1986,7 +2170,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ چپ (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.paddingLeft || 0}
                     onChange={(e) => handleStyleChange('paddingLeft', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -2000,7 +2183,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی بالا (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.marginTop || 0}
                     onChange={(e) => handleStyleChange('marginTop', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -2010,7 +2192,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی پایین (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.marginBottom || 0}
                     onChange={(e) => handleStyleChange('marginBottom', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -2020,7 +2201,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی راست (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.marginRight || 0}
                     onChange={(e) => handleStyleChange('marginRight', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -2030,7 +2210,6 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فاصله خارجی چپ (px)</label>
                   <input
                     type="number"
-                    min={0}
                     value={selectedWidget.settings.style.marginLeft || 0}
                     onChange={(e) => handleStyleChange('marginLeft', parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
@@ -2252,21 +2431,19 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </label>
               )}
 
-              {/* Width mode — همه ویجت‌ها به‌جز دکمه (دکمه گزینه اختصاصی دارد) */}
-              {selectedWidget.type !== 'button' && (
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت عرض</label>
-                  <select
-                    value={selectedWidget.settings.style.widthMode || 'full'}
-                    onChange={(e) => handleStyleChange('widthMode', e.target.value as 'full' | 'auto' | 'center')}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  >
-                    <option value="full">تمام‌عرض (پیش‌فرض)</option>
-                    <option value="auto">اندازه محتوا</option>
-                    <option value="center">اندازه محتوا — وسط‌چین</option>
-                  </select>
-                </div>
-              )}
+              {/* Width mode — همه ویجت‌ها (دکمه هم شامل می‌شود: تمام‌عرض/اندازه محتوا/وسط‌چین) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت عرض</label>
+                <select
+                  value={selectedWidget.settings.style.widthMode || 'full'}
+                  onChange={(e) => handleStyleChange('widthMode', e.target.value as 'full' | 'auto' | 'center')}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                >
+                  <option value="full">تمام‌عرض (پیش‌فرض)</option>
+                  <option value="auto">اندازه محتوا</option>
+                  <option value="center">اندازه محتوا — وسط‌چین</option>
+                </select>
+              </div>
 
               {/* Max width */}
               <div className="space-y-1.5">
@@ -2383,7 +2560,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
         }}
       />
 
-      {/* انتخابگر آیکون — متن و دکمه و شمارنده */}
+      {/* انتخابگر آیکون — متن و دکمه و شمارنده و کارت اطلاعاتی */}
       <IconPicker
         open={iconPickerState.open}
         onClose={() => setIconPickerState({ open: false, mode: iconPickerState.mode })}
@@ -2392,16 +2569,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             ? 'انتخاب آیکون دکمه'
             : iconPickerState.mode === 'counter'
               ? 'انتخاب آیکون شمارنده'
-              : iconPickerState.mode === 'richtext'
-                ? 'انتخاب آیکون متن (ویرایشگر غنی)'
-                : 'انتخاب آیکون متن'
+              : iconPickerState.mode === 'icon-box'
+                ? 'انتخاب آیکون کارت اطلاعاتی'
+                : iconPickerState.mode === 'richtext'
+                  ? 'انتخاب آیکون متن (ویرایشگر غنی)'
+                  : 'انتخاب آیکون متن'
         }
         value={
           iconPickerState.mode === 'button'
             ? selectedWidget.iconName
             : iconPickerState.mode === 'counter'
               ? customProps.icon
-              : undefined
+              : iconPickerState.mode === 'icon-box'
+                ? customProps.iconName || selectedWidget.iconName
+                : undefined
         }
         onSelect={
           iconPickerState.mode === 'button'
@@ -2411,9 +2592,14 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   updateCustomProps({ icon: iconName || undefined });
                   setIconPickerState({ open: false, mode: 'counter' });
                 }
-              : iconPickerState.mode === 'richtext'
-                ? insertRichtextIcon
-                : insertIconToken
+              : iconPickerState.mode === 'icon-box'
+                ? (iconName: string) => {
+                    updateCustomProps({ iconName: iconName || undefined });
+                    setIconPickerState({ open: false, mode: 'icon-box' });
+                  }
+                : iconPickerState.mode === 'richtext'
+                  ? insertRichtextIcon
+                  : insertIconToken
         }
       />
       </>

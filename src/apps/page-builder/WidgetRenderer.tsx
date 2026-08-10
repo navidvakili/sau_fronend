@@ -71,10 +71,22 @@ import {
   Linkedin,
   Instagram,
   Youtube,
-  MessagesSquare,
-  MonitorPlay,
   X
 } from 'lucide-react';
+import {
+  EitaaIcon,
+  BaleIcon,
+  CafeBazaarIcon,
+  EnamadIcon,
+  GapIcon,
+  SappIcon,
+  ShetabIcon,
+  AdobeAcrobatReaderIcon,
+  AdobeAfterEffectsIcon,
+  AdobeAuditionIcon,
+  AdobeIcon,
+  AparatIcon,
+} from './components/BrandIcons';
 
 interface WidgetRendererProps {
   widget: WidgetInstance;
@@ -711,7 +723,7 @@ const FileManagerWidget: React.FC<{
 // NEW STATIC BLOCKS — بلوک‌های جدید سازنده صفحه
 // ==============================================================
 
-/** آیکون‌های قابل انتخاب برای باکس آیکون / متن‌های دارای آیکون */
+/** آیکون‌های قابل انتخاب برای کارت اطلاعاتی / متن‌های دارای آیکون */
 const iconMap: Record<string, React.ReactNode> = {
   map: <MapPin className="w-5 h-5" />,
   phone: <Phone className="w-5 h-5" />,
@@ -759,9 +771,18 @@ const iconMap: Record<string, React.ReactNode> = {
   x: <X className="w-5 h-5" />,
   youtube: <Youtube className="w-5 h-5" />,
   telegram: <Send className="w-5 h-5" />,
-  aparat: <MonitorPlay className="w-5 h-5" />,
-  bale: <MessagesSquare className="w-5 h-5" />,
-  eitaa: <MessageCircle className="w-5 h-5" />,
+  aparat: <AparatIcon className="w-5 h-5" />,
+  bale: <BaleIcon className="w-5 h-5" />,
+  eitaa: <EitaaIcon className="w-5 h-5" />,
+  cafebazaar: <CafeBazaarIcon className="w-5 h-5" />,
+  enamad: <EnamadIcon className="w-5 h-5" />,
+  gap: <GapIcon className="w-5 h-5" />,
+  sapp: <SappIcon className="w-5 h-5" />,
+  shetab: <ShetabIcon className="w-5 h-5" />,
+  adobeacrobatreader: <AdobeAcrobatReaderIcon className="w-5 h-5" />,
+  adobeaftereffects: <AdobeAfterEffectsIcon className="w-5 h-5" />,
+  adobeaudition: <AdobeAuditionIcon className="w-5 h-5" />,
+  adobe: <AdobeIcon className="w-5 h-5" />,
 };
 
 /** استخراج گزینه‌ها از محتوای متنی (هر خط: برچسب|مقدار|...) */
@@ -822,21 +843,112 @@ const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CS
   />
 );
 
-/** باکس آیکون — آیکون + عنوان + متن */
+/** کارت اطلاعاتی — آیکون + عنوان + متن با چیدمان‌ها و تنظیمات رنگی/سایزی */
 const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
   const icon = iconMap[props.iconName || widget.iconName || 'sparkles'] || <Sparkles className="w-5 h-5" />;
+  // چیدمان: stack (پیش‌فرض) | row (آیکون کنار عنوان، RTL) | row-reverse (LTR) | center (وسط‌چین)
+  const layout = props.layout || 'stack';
+  const isRow = layout === 'row' || layout === 'row-reverse';
+  const iconSize = props.iconSize ?? 24;
+  const titleSize = props.titleSize ?? 16;
+  const descSize = props.descSize ?? 12;
+  const rowIcon = cloneElement(icon as ReactElement<any, any>, {
+    style: {
+      width: iconSize,
+      height: iconSize,
+      color: props.iconColor || undefined
+    },
+    className: 'shrink-0'
+  });
+  const stackIcon = cloneElement(icon as ReactElement<any, any>, {
+    style: {
+      width: iconSize,
+      height: iconSize,
+      color: props.iconColor || undefined
+    }
+  });
+  const iconWrap = (iconNode: ReactNode) => {
+    const borderWidth = (props.iconBorderWidth ?? 1) > 0 ? (props.iconBorderWidth ?? 1) : 0;
+    return (
+      <div
+        className="rounded-2xl flex items-center justify-center shrink-0"
+        style={{
+          width: iconSize + 24,
+          height: iconSize + 24,
+          backgroundColor: props.iconBgColor === 'transparent' ? undefined : props.iconBgColor || 'rgba(20,184,166,0.1)',
+          color: props.iconColor || undefined,
+          borderWidth,
+          borderStyle: borderWidth > 0 ? 'solid' : undefined,
+          borderColor: props.iconBorderColor === 'transparent' ? 'transparent' : props.iconBorderColor || 'rgba(20,184,166,0.2)'
+        }}
+      >
+        {iconNode}
+      </div>
+    );
+  };
+  const titleEl = (
+    <h3
+      className="font-black"
+      style={{
+        color: props.titleColor || undefined,
+        fontSize: titleSize,
+        fontFamily: props.titleFont || undefined
+      }}
+    >
+      {widget.title || 'عنوان کارت اطلاعاتی'}
+    </h3>
+  );
+  const descEl = (
+    <p
+      className="leading-relaxed"
+      style={{
+        color: props.descColor || undefined,
+        fontSize: descSize,
+        fontFamily: props.descFont || undefined
+      }}
+    >
+      {widget.content || 'توضیحات کوتاه این باکس در این بخش نمایش داده می‌شود.'}
+    </p>
+  );
+  const buttonEl = props.buttonUrl && (
+    <a
+      href={props.buttonUrl}
+      className="mt-1 inline-flex items-center gap-1 font-black hover:gap-2 transition-all cursor-pointer"
+      style={{ color: props.iconColor || undefined, fontSize: descSize }}
+    >
+      {props.buttonText || 'بیشتر بدانید'} <ArrowLeft className="w-3.5 h-3.5" />
+    </a>
+  );
+  const textBlock = (
+    <div className={`flex flex-col gap-1 ${isRow ? 'min-w-0' : ''}`} style={{ textAlign: layout === 'center' ? 'center' : undefined }}>
+      {titleEl}
+      {descEl}
+      {buttonEl}
+    </div>
+  );
   return (
-    <div style={containerStyle} className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm text-right flex flex-col items-start gap-3 transition-all hover:shadow-md">
-      <div className="p-3 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">{icon}</div>
-      <h3 className="text-base font-black text-slate-900 dark:text-white">{widget.title || 'عنوان باکس آیکون'}</h3>
-      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        {widget.content || 'توضیحات کوتاه این باکس در این بخش نمایش داده می‌شود.'}
-      </p>
-      {props.buttonUrl && (
-        <a href={props.buttonUrl} className="mt-1 inline-flex items-center gap-1 text-xs font-black text-teal-600 dark:text-teal-400 hover:gap-2 transition-all cursor-pointer">
-          {props.buttonText || 'بیشتر بدانید'} <ArrowLeft className="w-3.5 h-3.5" />
-        </a>
+    <div
+      style={containerStyle}
+      className="p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md"
+    >
+      {layout === 'stack' && (
+        <div className="flex flex-col items-start gap-3 text-right">
+          {iconWrap(stackIcon)}
+          {textBlock}
+        </div>
+      )}
+      {layout === 'center' && (
+        <div className="flex flex-col items-center gap-3 text-center">
+          {iconWrap(stackIcon)}
+          {textBlock}
+        </div>
+      )}
+      {isRow && (
+        <div className={`flex gap-4 text-right ${layout === 'row-reverse' ? 'flex-row-reverse' : 'flex-row'} items-start`}>
+          {iconWrap(rowIcon)}
+          {textBlock}
+        </div>
       )}
     </div>
   );
@@ -1621,8 +1733,23 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         paddingRight: _wrapPr,
         ...buttonWrapperStyle
       } = containerStyle;
+      // ترازبندی دکمه در سکشن — مثل ویجت عنوان: راست (پیش‌فرض RTL) / وسط / چپ
+      const buttonJustify = style.fullWidth
+        ? undefined
+        : style.textAlign === 'center'
+          ? 'center'
+          : style.textAlign === 'left'
+            ? 'flex-end'
+            : 'flex-start';
       return (
-        <div style={buttonWrapperStyle} className={`transition-all ${style.fullWidth ? 'w-full' : 'inline-block'}`}>
+        <div
+          style={{
+            ...buttonWrapperStyle,
+            display: style.fullWidth ? undefined : 'flex',
+            justifyContent: buttonJustify
+          }}
+          className={`transition-all ${style.fullWidth ? 'w-full' : ''}`}
+        >
           <a
             href={widget.buttonUrl || '#'}
             className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-black text-sm transition-all ${

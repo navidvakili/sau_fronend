@@ -72,7 +72,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
 
     // NEW BASIC BLOCKS — بلوک‌های جدید
     { type: 'richtext', category: 'basic', name: 'بلاک متن غنی (WYSIWYG)', desc: 'ویرایشگر متن با HTML — تیتر، پاراگراف، لینک و آیکون', icon: StickyNote, badge: 'ویرایشگر پیشرفته' },
-    { type: 'icon-box', category: 'basic', name: 'باکس آیکون (Icon Box)', desc: 'آیکون + عنوان + توضیح برای ویژگی‌ها و خدمات', icon: MousePointerClick },
+    { type: 'icon-box', category: 'basic', name: 'کارت اطلاعاتی (Info Card)', desc: 'آیکون + عنوان + توضیح برای ویژگی‌ها و خدمات', icon: MousePointerClick },
     { type: 'vertical-container', category: 'basic', name: 'دربرگیرنده عمودی (Vertical Container)', desc: 'چیدمان عمودی چند زیربلوک در یک قاب', icon: Rows },
     { type: 'horizontal-container', category: 'basic', name: 'دربرگیرنده افقی (Horizontal Container)', desc: 'چیدمان افقی چند زیربلوک در یک ردیف', icon: Columns },
     { type: 'image-slider', category: 'basic', name: 'اسلایدر تصویر (Image Slider)', desc: 'چرخش خودکار تصاویر با دکمه‌های پیمایش و نقاط', icon: Images, badge: 'کاروسل' },
