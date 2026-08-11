@@ -1,0 +1,682 @@
+import React, { useState } from 'react';
+import {
+  Layers,
+  Plus,
+  Search,
+  Globe,
+  History,
+  Eye,
+  Code,
+  CheckCircle,
+  Copy,
+  Trash2,
+  FolderTree,
+  ChevronRight,
+  ChevronDown,
+  Sparkles,
+  Shield,
+  Save,
+  Sliders,
+  LayoutGrid,
+  FileText,
+  Newspaper,
+  BookOpen,
+  Calendar,
+  HardDrive,
+  Download,
+  Award,
+  Link as LinkIcon,
+  RotateCcw,
+  PlusCircle,
+  Check,
+  AlertCircle
+} from 'lucide-react';
+
+import {
+  NavigationMenu,
+  NavigationItem,
+  MenuLocation,
+  LanguageCode,
+  InternalSource,
+  CmsSourceScope,
+  MenuVersionHistory,
+  CmsSourceItem
+} from './types';
+import { sampleNavigationMenus, sampleCmsSources, sampleVersionHistory } from './mockData';
+import { NavigationTreeItem } from './NavigationTreeItem';
+import { MenuItemEditorModal } from './MenuItemEditorModal';
+import { MegaMenuDesignerModal } from './MegaMenuDesignerModal';
+import { LiveNavigationPreview } from './LiveNavigationPreview';
+import { ApiHeadlessPreviewModal } from './ApiHeadlessPreviewModal';
+
+const MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
+  { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
+  { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
+  { id: 'Footer Menu 1', label: 'فوتر - ستون ۱', icon: FolderTree },
+  { id: 'Footer Menu 2', label: 'فوتر - ستون ۲', icon: FolderTree },
+  { id: 'Footer Menu 3', label: 'فوتر - ستون ۳', icon: FolderTree },
+  { id: 'Mobile Menu', label: 'منوی کشویی موبایل', icon: Sliders },
+  { id: 'Sidebar Menu', label: 'منوی کناری (Sidebar)', icon: FolderTree },
+  { id: 'Dashboard Menu', label: 'منوی داشبورد کاربران', icon: LayoutGrid },
+  { id: 'Breadcrumb Navigation', label: 'ناوبری خرده‌نانی (Breadcrumb)', icon: ChevronRight }
+];
+
+export const NavigationBuilderStudio: React.FC = () => {
+  // Navigation Menus State
+  const [menus, setMenus] = useState<NavigationMenu[]>(sampleNavigationMenus);
+  const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
+  const [activeLanguage, setActiveLanguage] = useState<LanguageCode>('fa');
+  const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
+
+  // Modals & Panels State
+  const [editingItem, setEditingItem] = useState<NavigationItem | null>(null);
+  const [megaMenuEditingItem, setMegaMenuEditingItem] = useState<NavigationItem | null>(null);
+  const [isLivePreviewOpen, setIsLivePreviewOpen] = useState(false);
+  const [isApiPreviewOpen, setIsApiPreviewOpen] = useState(false);
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+
+  // Search & Filters inside current tree
+  const [treeSearchTerm, setTreeSearchTerm] = useState('');
+  const [cmsSourceCategory, setCmsSourceCategory] = useState<InternalSource | 'ALL'>('ALL');
+  const [paletteScopeFilter, setPaletteScopeFilter] = useState<'all' | CmsSourceScope>('all');
+  const [sourceSearch, setSourceSearch] = useState('');
+
+  // Bulk selection for tree items
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Get or initialize active menu for current location & language
+  const activeMenu = menus.find(
+    m => m.location === activeLocation && m.language === activeLanguage
+  ) || {
+    id: `menu_${Date.now()}`,
+    name: `منوی ${activeLocation}`,
+    slug: activeLocation.toLowerCase().replace(/ /g, '-'),
+    location: activeLocation,
+    language: activeLanguage,
+    status: 'active',
+    version: 1,
+    createdBy: 'مدیر CMS',
+    createdAt: new Date().toLocaleDateString('fa-IR'),
+    updatedAt: new Date().toLocaleDateString('fa-IR'),
+    items: []
+  };
+
+  // Helper to update items in active menu
+  const updateActiveMenuItems = (newItems: NavigationItem[]) => {
+    const updatedMenu: NavigationMenu = {
+      ...activeMenu,
+      updatedAt: new Date().toLocaleDateString('fa-IR'),
+      items: newItems
+    };
+
+    const exists = menus.some(m => m.id === activeMenu.id);
+    if (exists) {
+      setMenus(menus.map(m => (m.id === activeMenu.id ? updatedMenu : m)));
+    } else {
+      setMenus([...menus, updatedMenu]);
+    }
+  };
+
+  // Add Item to Menu (Root level or child)
+  const handleAddItem = (parentId: string | null = null, defaultTitle?: string, defaultUrl?: string, defaultSource?: InternalSource) => {
+    const newItem: NavigationItem = {
+      id: `item_${Date.now()}`,
+      menuId: activeMenu.id,
+      parentId,
+      title: defaultTitle || 'آیتم جدید منو',
+      itemType: defaultSource ? 'internal' : 'custom',
+      internalSource: defaultSource,
+      targetUrl: defaultUrl || '/new-page',
+      target: '_self',
+      displayType: 'simple',
+      sortOrder: (activeMenu.items.length || 0) + 1,
+      status: 'active',
+      settings: {
+        accessRules: ['Public User', 'Student', 'Employee', 'Administrator']
+      }
+    };
+
+    if (parentId) {
+      // Recursive helper to insert as child
+      const insertChild = (items: NavigationItem[]): NavigationItem[] => {
+        return items.map(item => {
+          if (item.id === parentId) {
+            return {
+              ...item,
+              displayType: item.displayType === 'simple' ? 'dropdown' : item.displayType,
+              children: [...(item.children || []), newItem]
+            };
+          }
+          if (item.children) {
+            return { ...item, children: insertChild(item.children) };
+          }
+          return item;
+        });
+      };
+      updateActiveMenuItems(insertChild(activeMenu.items));
+    } else {
+      updateActiveMenuItems([...activeMenu.items, newItem]);
+    }
+
+    showToast('آیتم جدید به ساختار منو اضافه شد');
+  };
+
+  // Quick Add from CMS Source Palette
+  const handleAddFromCmsSource = (source: CmsSourceItem) => {
+    handleAddItem(null, source.title, source.url, source.type);
+  };
+
+  // Save Item from MenuItemEditorModal
+  const handleSaveItemModal = (updatedItem: NavigationItem) => {
+    const updateRecursive = (items: NavigationItem[]): NavigationItem[] => {
+      return items.map(item => {
+        if (item.id === updatedItem.id) {
+          return updatedItem;
+        }
+        if (item.children) {
+          return { ...item, children: updateRecursive(item.children) };
+        }
+        return item;
+      });
+    };
+
+    updateActiveMenuItems(updateRecursive(activeMenu.items));
+    setEditingItem(null);
+    showToast('تغییرات آیتم منو با موفقیت ذخیره شد');
+  };
+
+  // Save Mega Menu Config from MegaMenuDesignerModal
+  const handleSaveMegaMenuModal = (updatedItem: NavigationItem) => {
+    handleSaveItemModal(updatedItem);
+    setMegaMenuEditingItem(null);
+    showToast('پیکربندی مگا منو به‌روزرسانی گردید');
+  };
+
+  // Delete Item recursively
+  const handleDeleteItem = (itemId: string) => {
+    const deleteRecursive = (items: NavigationItem[]): NavigationItem[] => {
+      return items
+        .filter(item => item.id !== itemId)
+        .map(item => ({
+          ...item,
+          children: item.children ? deleteRecursive(item.children) : undefined
+        }));
+    };
+
+    updateActiveMenuItems(deleteRecursive(activeMenu.items));
+    showToast('آیتم از ساختار منو حذف شد');
+  };
+
+  // Duplicate Item
+  const handleDuplicateItem = (item: NavigationItem) => {
+    const duplicated: NavigationItem = {
+      ...item,
+      id: `item_dup_${Date.now()}`,
+      title: `${item.title} (کپی)`,
+      sortOrder: item.sortOrder + 1
+    };
+    updateActiveMenuItems([...activeMenu.items, duplicated]);
+    showToast('تکثیر آیتم انجام شد');
+  };
+
+  // Toggle Item Status
+  const handleToggleStatus = (itemId: string) => {
+    const toggleRecursive = (items: NavigationItem[]): NavigationItem[] => {
+      return items.map(item => {
+        if (item.id === itemId) {
+          return { ...item, status: item.status === 'active' ? 'inactive' : 'active' };
+        }
+        if (item.children) {
+          return { ...item, children: toggleRecursive(item.children) };
+        }
+        return item;
+      });
+    };
+    updateActiveMenuItems(toggleRecursive(activeMenu.items));
+  };
+
+  // Reorder Item Up/Down
+  const handleMoveUp = (itemId: string) => {
+    const index = activeMenu.items.findIndex(i => i.id === itemId);
+    if (index <= 0) return;
+    const newItems = [...activeMenu.items];
+    const temp = newItems[index];
+    newItems[index] = newItems[index - 1];
+    newItems[index - 1] = temp;
+    updateActiveMenuItems(newItems);
+  };
+
+  const handleMoveDown = (itemId: string) => {
+    const index = activeMenu.items.findIndex(i => i.id === itemId);
+    if (index < 0 || index >= activeMenu.items.length - 1) return;
+    const newItems = [...activeMenu.items];
+    const temp = newItems[index];
+    newItems[index] = newItems[index + 1];
+    newItems[index + 1] = temp;
+    updateActiveMenuItems(newItems);
+  };
+
+  // Indent (Make child of previous sibling)
+  const handleIndent = (itemId: string) => {
+    const index = activeMenu.items.findIndex(i => i.id === itemId);
+    if (index <= 0) return; // Cannot indent first item
+    const targetItem = activeMenu.items[index];
+    const prevItem = activeMenu.items[index - 1];
+
+    const updatedPrevItem = {
+      ...prevItem,
+      displayType: prevItem.displayType === 'simple' ? 'dropdown' : prevItem.displayType,
+      children: [...(prevItem.children || []), { ...targetItem, parentId: prevItem.id }]
+    };
+
+    const newItems = activeMenu.items.filter(i => i.id !== itemId).map(i => (i.id === prevItem.id ? updatedPrevItem : i));
+    updateActiveMenuItems(newItems);
+  };
+
+  // Outdent (Promote child to parent level)
+  const handleOutdent = (itemId: string) => {
+    // For root level, nothing happens
+    showToast('آیتم در سطح اصلی قرار دارد');
+  };
+
+  // Save & Publish Menu Version
+  const handlePublishMenu = () => {
+    const newVer = activeMenu.version + 1;
+    const updatedMenu: NavigationMenu = {
+      ...activeMenu,
+      version: newVer,
+      updatedAt: new Date().toLocaleDateString('fa-IR')
+    };
+
+    setMenus(menus.map(m => (m.id === activeMenu.id ? updatedMenu : m)));
+
+    const newHistoryEntry: MenuVersionHistory = {
+      id: `ver_${Date.now()}`,
+      menuId: activeMenu.id,
+      version: newVer,
+      changedBy: 'مدیر کل CMS',
+      timestamp: `${new Date().toLocaleDateString('fa-IR')} - ${new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`,
+      changeSummary: `انتشار نسخه ${newVer} با ${activeMenu.items.length} آیتم ناوبری`,
+      itemsSnapshot: activeMenu.items
+    };
+
+    setVersionHistory([newHistoryEntry, ...versionHistory]);
+    showToast(`نسخه جدید منو (${newVer}) با موفقیت ذخیره و منتشر شد!`);
+  };
+
+  // Filtered CMS Sources for Palette
+  const filteredPaletteSources = sampleCmsSources.filter(s => {
+    const matchesCategory = cmsSourceCategory === 'ALL' || s.type === cmsSourceCategory;
+    const matchesScope = paletteScopeFilter === 'all' || s.scope === paletteScopeFilter;
+    const matchesSearch =
+      s.title.toLowerCase().includes(sourceSearch.toLowerCase()) ||
+      (s.categoryPath && s.categoryPath.toLowerCase().includes(sourceSearch.toLowerCase()));
+    return matchesCategory && matchesScope && matchesSearch;
+  });
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans p-4 sm:p-6 space-y-6" dir="rtl">
+      {/* Toast Alert Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-6 z-50 px-4 py-3 bg-teal-600 text-white font-bold text-xs rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce">
+          <CheckCircle className="w-4 h-4" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Studio Header Bar */}
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black shadow-md">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                ماژول مدیریت و ساخت ناوبری سایت (Navigation Builder)
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
+                Enterprise CMS
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              مدیریت یکپارچه منوهای هدر، فوتر، مگامنوها، موبایل با پشتیبانی از چندزبانه، نسخه دراگ اند دراپ و API
+            </p>
+          </div>
+        </div>
+
+        {/* Global Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Version History Button */}
+          <button
+            onClick={() => setIsVersionHistoryOpen(!isVersionHistoryOpen)}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <History className="w-4 h-4 text-teal-600" />
+            <span>تاریخچه نسخه‌ها ({activeMenu.version})</span>
+          </button>
+
+          {/* Headless API Endpoint JSON Button */}
+          <button
+            onClick={() => setIsApiPreviewOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Code className="w-4 h-4 text-teal-600" />
+            <span>Headless API</span>
+          </button>
+
+          {/* Frontend Live Preview Button */}
+          <button
+            onClick={() => setIsLivePreviewOpen(true)}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-all"
+          >
+            <Eye className="w-4 h-4" />
+            <span>پیش‌نمایش فرانت‌اند</span>
+          </button>
+
+          {/* Publish Changes */}
+          <button
+            onClick={handlePublishMenu}
+            className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all"
+          >
+            <Save className="w-4 h-4" />
+            <span>ذخیره و انتشار منو</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Menu Locations & Language Selector Bar */}
+      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <FolderTree className="w-4 h-4 text-teal-600" />
+            موقعیت منو در پوسته سایت (Navigation Location):
+          </span>
+
+          {/* Multi-Language Selector */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+            <Globe className="w-3.5 h-3.5 text-teal-600 mr-2" />
+            {[
+              { code: 'fa', label: 'فارسی (FA)' },
+              { code: 'en', label: 'English (EN)' },
+              { code: 'ar', label: 'العربية (AR)' }
+            ].map(lang => (
+              <button
+                key={lang.code}
+                onClick={() => setActiveLanguage(lang.code as LanguageCode)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                  activeLanguage === lang.code
+                    ? 'bg-teal-600 text-white shadow'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Location Tabs Slider */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          {MENU_LOCATIONS.map(loc => {
+            const isSelected = activeLocation === loc.id;
+            return (
+              <button
+                key={loc.id}
+                onClick={() => setActiveLocation(loc.id)}
+                className={`px-4 py-2.5 rounded-2xl font-bold flex items-center gap-2 whitespace-nowrap transition-all border ${
+                  isSelected
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                    : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <loc.icon className="w-4 h-4" />
+                <span>{loc.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Studio Grid: Left CMS Palette, Center Tree Builder, Right Version Drawer */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LEFT COLUMN: CMS Source Link Palette */}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-2">
+                <PlusCircle className="w-4 h-4 text-teal-600" />
+                پالت منابع محتوایی CMS
+              </h3>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              با کلیک روی هر آیتم، به منوی فعال اضافه می‌شود:
+            </p>
+
+            {/* Source Category Picker */}
+            <select
+              value={cmsSourceCategory}
+              onChange={e => setCmsSourceCategory(e.target.value as any)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold"
+            >
+              <option value="ALL">✨ تمامی منابع CMS</option>
+              <option value="CMS Pages">📄 صفحات اصلی CMS</option>
+              <option value="Page Builder">🧩 صفحه‌ساز (Page Builder)</option>
+              <option value="News">📰 اخبار (خبر منفرد)</option>
+              <option value="News Categories">📂 دسته‌بندی اخبار (گروه خبری)</option>
+              <option value="Announcements">📣 اطلاعیه‌ها (اطلاعیه منفرد)</option>
+              <option value="Announcement Categories">📂 دسته‌بندی اطلاعیه‌ها</option>
+              <option value="Articles">📚 مقالات (مقاله منفرد)</option>
+              <option value="Article Categories">📂 دسته‌بندی مقالات</option>
+              <option value="Events">📅 رویدادها</option>
+              <option value="Services">🛠️ خدمات الکترونیک</option>
+              <option value="Downloads">📥 آیین‌نامه‌ها و دانلودها</option>
+              <option value="Forms">📝 فرم‌ها</option>
+              <option value="Categories">📁 سایر دسته‌بندی‌ها</option>
+              <option value="Tags">🏷️ تگ‌ها و برچسب‌ها</option>
+            </select>
+
+            {/* Scope Filter Tabs in Palette */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] font-bold">
+              {[
+                { id: 'all', label: 'همه' },
+                { id: 'single_item', label: '📄 منفرد' },
+                { id: 'category_group', label: '📁 دسته‌بندی/گروه' },
+                { id: 'page_builder', label: '🧩 صفحه‌ساز' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setPaletteScopeFilter(tab.id as any)}
+                  className={`px-2.5 py-1 rounded-lg border transition-all whitespace-nowrap ${
+                    paletteScopeFilter === tab.id
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute right-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="جستجو در محتوا..."
+                value={sourceSearch}
+                onChange={e => setSourceSearch(e.target.value)}
+                className="w-full pr-8 pl-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+              />
+            </div>
+
+            {/* List of Palette Items */}
+            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+              {filteredPaletteSources.length === 0 ? (
+                <p className="p-4 text-center text-slate-400 text-[11px]">
+                  محتوایی یافت نشد
+                </p>
+              ) : (
+                filteredPaletteSources.map(source => (
+                  <button
+                    key={source.id}
+                    onClick={() => handleAddFromCmsSource(source)}
+                    className="w-full text-right p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-teal-50 dark:hover:bg-teal-950/60 border border-slate-200 dark:border-slate-800 flex flex-col gap-1 text-xs transition-all group"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-700 dark:group-hover:text-teal-300">
+                        {source.title}
+                      </span>
+                      <Plus className="w-4 h-4 text-slate-400 group-hover:text-teal-600 shrink-0 mr-1" />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <span
+                        className={`px-1.5 py-0.2 rounded font-bold ${
+                          source.scope === 'category_group'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                            : source.scope === 'page_builder'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : source.scope === 'tag'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        }`}
+                      >
+                        {source.scope === 'category_group'
+                          ? '📁 دسته‌بندی'
+                          : source.scope === 'page_builder'
+                          ? '🧩 صفحه‌ساز'
+                          : source.scope === 'tag'
+                          ? '🏷️ تگ'
+                          : '📄 منفرد'}
+                      </span>
+
+                      {source.itemCount !== undefined && (
+                        <span className="text-slate-400 font-mono">
+                          ({source.itemCount} مورد)
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Add Custom Blank Item */}
+            <button
+              onClick={() => handleAddItem()}
+              className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+            >
+              <Plus className="w-4 h-4 text-teal-600" />
+              افزودن آیتم جدید سفارشی
+            </button>
+          </div>
+        </div>
+
+        {/* CENTER COLUMN: Interactive Drag & Drop Tree Structure Builder */}
+        <div className="lg:col-span-9 space-y-4">
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            {/* Tree Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <FolderTree className="w-4 h-4 text-teal-600" />
+                  ساختار درختی ناوبری: {activeMenu.name}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  تعداد کل آیتم‌ها: {activeMenu.items.length} | وضعیت: {activeMenu.status === 'active' ? 'فعال' : 'پیش‌نویس'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleAddItem(null)}
+                  className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
+                >
+                  <Plus className="w-4 h-4" /> افزودن به ریشه منو
+                </button>
+              </div>
+            </div>
+
+            {/* Tree Items List */}
+            {activeMenu.items.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                <Layers className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-500">
+                  هنوز هیچ آیتمی برای این منو ایجاد نشده است.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  از پالت سمت راست یا دکمه «افزودن به ریشه منو» استفاده کنید.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activeMenu.items.map((item, idx) => (
+                  <NavigationTreeItem
+                    key={item.id}
+                    item={item}
+                    level={0}
+                    onEdit={setEditingItem}
+                    onEditMegaMenu={setMegaMenuEditingItem}
+                    onDelete={handleDeleteItem}
+                    onDuplicate={handleDuplicateItem}
+                    onAddChild={parentId => handleAddItem(parentId)}
+                    onToggleStatus={handleToggleStatus}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                    onIndent={handleIndent}
+                    onOutdent={handleOutdent}
+                    isFirst={idx === 0}
+                    isLast={idx === activeMenu.items.length - 1}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* MODAL 1: MenuItemEditorModal */}
+      {editingItem && (
+        <MenuItemEditorModal
+          item={editingItem}
+          onSave={handleSaveItemModal}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+
+      {/* MODAL 2: MegaMenuDesignerModal */}
+      {megaMenuEditingItem && (
+        <MegaMenuDesignerModal
+          item={megaMenuEditingItem}
+          onSave={handleSaveMegaMenuModal}
+          onClose={() => setMegaMenuEditingItem(null)}
+        />
+      )}
+
+      {/* MODAL 3: Live Frontend Preview */}
+      {isLivePreviewOpen && (
+        <LiveNavigationPreview
+          menus={menus}
+          activeMenuId={activeMenu.id}
+          onClose={() => setIsLivePreviewOpen(false)}
+        />
+      )}
+
+      {/* MODAL 4: ApiHeadlessPreviewModal */}
+      {isApiPreviewOpen && (
+        <ApiHeadlessPreviewModal
+          menus={menus}
+          onClose={() => setIsApiPreviewOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
+export default NavigationBuilderStudio;

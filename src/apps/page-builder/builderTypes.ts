@@ -159,7 +159,32 @@ export interface WidgetDataBinding {
   folderFilter?: string;
   limit?: number;
   sortBy?: 'date_desc' | 'date_asc' | 'views' | 'priority' | 'title';
-  displayMode?: 'grid' | 'list' | 'carousel' | 'masonry' | 'timeline' | 'marquee' | 'table' | 'boxes' | 'grid-overlay' | 'featured';
+  displayMode?:
+    | 'grid'
+    | 'list'
+    | 'carousel'
+    | 'masonry'
+    | 'timeline'
+    | 'marquee'
+    | 'table'
+    | 'boxes'
+    | 'grid-overlay'
+    | 'featured'
+    | 'numbered-list'
+    | 'horizontal-list'
+    | 'date-based'
+    | 'ticker'
+    | 'tabbed'
+    | 'accordion'
+    | 'load-more'
+    | 'infinite-scroll'
+    | 'mixed'
+    | 'multi-section'
+    | 'combined'
+    | 'date-badge'
+    | 'magazine'
+    | 'full-width-slider'
+    | 'featured-list';
   columnsCount?: number;
   /** نمایش تصویر بندانگشتی در نمای لیستی اخبار */
   newsListImage?: boolean;

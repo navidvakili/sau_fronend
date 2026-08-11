@@ -1363,6 +1363,22 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       <MediaManager
         open={showPhotoImageSelector}
         onClose={() => setShowPhotoImageSelector(false)}
+        multiSelect
+        onSelectMultiple={(files) => {
+          if (photoImageIndex !== null) {
+            // جایگزینی تصویر ویرایش‌شده با اولین انتخاب + افزودن بقیه
+            const updated = [...formPhotoReportImages];
+            updated[photoImageIndex] = { ...updated[photoImageIndex], url: files[0].url };
+            const rest = files.slice(1).map(f => ({ url: f.url, title: '' }));
+            setFormPhotoReportImages([...updated, ...rest]);
+          } else {
+            // افزودن همه تصاویر انتخاب‌شده
+            setFormPhotoReportImages([
+              ...formPhotoReportImages,
+              ...files.map(f => ({ url: f.url, title: '' })),
+            ]);
+          }
+        }}
         onSelect={(url) => {
           if (photoImageIndex !== null) {
             // Replace existing image

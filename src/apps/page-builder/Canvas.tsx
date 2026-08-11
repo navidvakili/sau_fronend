@@ -663,8 +663,19 @@ export const Canvas: React.FC<CanvasProps> = ({
   const globalStyles = pageSchema.globalStyles;
 
   return (
-    <div
-      className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all"
+    <>
+      {/* در بوم استودیو، انیمیشن‌های CSS اجرا نمی‌شوند (فریز در همان فریم) */}
+      <style>{`
+        .pb-editor-canvas *,
+        .pb-editor-canvas *::before,
+        .pb-editor-canvas *::after {
+          animation-play-state: paused !important;
+          animation-duration: 0s !important;
+          transition-duration: 0.001s !important;
+        }
+      `}</style>
+      <div
+        className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all"
       onDragOver={(e) => {
         // رهاسازی روی فضای خالی بوم (خارج از سکشن‌ها) مجاز باشد
         if (dragWidgetId || dragSectionId) {
@@ -692,10 +703,23 @@ export const Canvas: React.FC<CanvasProps> = ({
     >
       {/* Canvas Frame Container — shrink-0 keeps natural height so the overflow-auto canvas scrolls (x & y) when sections exceed viewport */}
       <div
-        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 ${getCanvasWidthClass()}`}
+        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 pb-editor-canvas ${getCanvasWidthClass()}`}
         style={{
           fontFamily: globalStyles.fontFamily,
           color: globalStyles.textColor
+        }}
+        onClickCapture={(e) => {
+          // در بوم استودیو، لینک‌های داخلی نباید ناوبری شوند — فقط preventDefault،
+          // تا رویداد همچنان به ویجت برسد و انتخاب ویجت انجام شود.
+          const t = e.target as Element | null;
+          const anchor = t && typeof t.closest === 'function' ? t.closest('a[href]') : null;
+          if (anchor) {
+            const href = anchor.getAttribute('href') || '';
+            const isExternal = /^(https?:|mailto:|tel:|ftp:|javascript:)/i.test(href);
+            if (!isExternal) {
+              e.preventDefault();
+            }
+          }
         }}
         onDragOver={(e) => {
           if (dragWidgetId || dragSectionId) {
@@ -958,6 +982,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };

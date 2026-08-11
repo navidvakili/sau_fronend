@@ -126,12 +126,14 @@ export const deleteSmartPage = async (id: number): Promise<{ message: string }> 
 
 /** اخبار — برای ویجت news-feed */
 export const fetchDataSourceNews = async (params: {
+  page?: number;
   per_page?: number;
   category_id?: number | null;
   status?: string;
   lang?: string;
 } = {}) => {
   const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
   if (params.per_page) qs.set('per_page', String(params.per_page));
   if (params.category_id) qs.set('category_id', String(params.category_id));
   if (params.status) qs.set('status', params.status);

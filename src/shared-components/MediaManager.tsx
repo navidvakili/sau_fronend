@@ -78,6 +78,10 @@ interface MediaManagerProps {
   filter?: 'image' | 'video' | 'all';
   /** عنوان دیالوگ */
   title?: string;
+  /** حالت چندانتخابی — خروجی از طریق onSelectMultiple (آرایه‌ای از فایل‌ها) */
+  multiSelect?: boolean;
+  /** وقتی multiSelect فعال است، لیست فایل‌های انتخاب‌شده به‌جای onSelect برمی‌گردد */
+  onSelectMultiple?: (files: MediaFile[]) => void;
 }
 
 export default function MediaManager({
@@ -86,6 +90,8 @@ export default function MediaManager({
   onSelect,
   filter = 'image',
   title = 'مدیریت رسانه',
+  multiSelect = false,
+  onSelectMultiple,
 }: MediaManagerProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,6 +106,7 @@ export default function MediaManager({
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   // File waiting for delete confirmation dialog
   const [deleteFile, setDeleteFile] = useState<MediaFile | null>(null);
@@ -119,6 +126,19 @@ export default function MediaManager({
 
   const isImage = (type: string) => type.startsWith('image/');
   const isVideo = (type: string) => type.startsWith('video/');
+
+  // انتخاب/لغو انتخاب در حالت چندانتخابی
+  const toggleSelectFile = (file: MediaFile) => {
+    setSelectedFiles(prev =>
+      prev.some(f => f.id === file.id)
+        ? prev.filter(f => f.id !== file.id)
+        : [...prev, file]
+    );
+  };
+
+  // آیا این فایل در حالت فعلی «انتخاب‌شده» است؟
+  const isFileSelected = (file: MediaFile) =>
+    multiSelect ? selectedFiles.some(f => f.id === file.id) : selectedFile?.id === file.id;
 
   // Load files
   const loadFiles = useCallback(async (requestedPage = 1, requestedSearch = '') => {
@@ -165,6 +185,7 @@ export default function MediaManager({
       setSearchQuery('');
       setDebouncedSearchQuery('');
       setSelectedFile(null);
+      setSelectedFiles([]);
       setError(null);
       setSuccessMsg(null);
       loadFiles(1, '');
@@ -190,11 +211,11 @@ export default function MediaManager({
   }, [open, page, debouncedSearchQuery, loadFiles]);
 
   // Upload file
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File): Promise<boolean> => {
     // جلوگیری از آپلود فایل‌های غیرمجاز (bat، exe و ...)
     if (isBlockedFile(file)) {
       setError(`آپلود فایل «${file.name}» مجاز نیست. نوع فایل‌های اجرایی و خطرناک (مانند bat، exe و ...) قابل آپلود نیستند.`);
-      return;
+      return false;
     }
     setUploading(true);
     setUploadProgress(0);
@@ -221,6 +242,7 @@ export default function MediaManager({
       await loadFiles(1, searchQuery);
 
       setTimeout(() => setSuccessMsg(null), 3000);
+      return true;
     } catch (err: any) {
       const apiMessage = err.message || '';
       // Check both direct errors (from API function) and response.data.errors (from APISendFiles prior fix)
@@ -234,9 +256,31 @@ export default function MediaManager({
         displayMessage = 'فرمت فایل مجاز نیست. فرمت‌های مجاز: تصویر (jpg,png,webp) و ویدئو (mp4,webm,mov)';
       }
       setError(displayMessage);
+      return false;
     } finally {
       setUploading(false);
       setUploadProgress(0);
+    }
+  };
+
+  // آپلود چند فایل به‌صورت همزمان — هر فایل در یک درخواست جداگانه آپلود می‌شود
+  const handleUploadMany = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    const blocked = list.filter(f => isBlockedFile(f));
+    if (blocked.length > 0) {
+      setError(`آپلود فایل‌های «${blocked.map(f => f.name).join('، ')}» مجاز نیست. نوع فایل‌های اجرایی و خطرناک (مانند bat، exe و ...) قابل آپلود نیستند.`);
+    }
+
+    let uploadedCount = 0;
+    for (const file of list.filter(f => !isBlockedFile(f))) {
+      const ok = await handleUpload(file);
+      if (ok) uploadedCount += 1;
+    }
+    if (uploadedCount > 1) {
+      setSuccessMsg(`${uploadedCount.toLocaleString('fa-IR')} فایل با موفقیت آپلود شد.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
     }
   };
 
@@ -299,8 +343,14 @@ export default function MediaManager({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      if (files.length === 1) {
+        handleUpload(files[0]);
+      } else {
+        handleUploadMany(files);
+      }
+    }
   };
 
   // Filter files by type only; search is handled server-side.
@@ -396,6 +446,7 @@ export default function MediaManager({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               className="hidden"
               accept={
                 filter === 'image'
@@ -405,8 +456,14 @@ export default function MediaManager({
                     : ALLOWED_ACCEPT
               }
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleUpload(file);
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                  if (files.length === 1) {
+                    handleUpload(files[0]);
+                  } else {
+                    handleUploadMany(files);
+                  }
+                }
                 e.target.value = '';
               }}
             />
@@ -483,15 +540,14 @@ export default function MediaManager({
                 {filteredFiles.map((file) => (
                   <div
                     key={file.id}
-                    className={`group relative rounded-2xl border-2 overflow-hidden transition-all ${
-                      selectedFile?.id === file.id
+                    className={`group relative rounded-2xl border-2 overflow-hidden transition-all ${isFileSelected(file)
                         ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-lg'
                         : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
                     }`}
                   >
                     {/* Thumbnail */}
                     <div
-                      onClick={() => setSelectedFile(file)}
+                      onClick={() => (multiSelect ? toggleSelectFile(file) : setSelectedFile(file))}
                       className="aspect-square bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden cursor-pointer"
                     >
                       {isImage(file.type) ? (
@@ -546,29 +602,39 @@ export default function MediaManager({
                     </div>
 
                     {/* Edit metadata button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); openEdit(file); }}
-                      className="absolute bottom-2 left-2 p-1.5 rounded-full bg-slate-800/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-teal-600"
-                      title="ویرایش عنوان و توضیح"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
+                    {!multiSelect && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEdit(file); }}
+                        className="absolute bottom-2 left-2 p-1.5 rounded-full bg-slate-800/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-teal-600"
+                        title="ویرایش عنوان و توضیح"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
 
                     {/* Selection indicator */}
-                    {selectedFile?.id === file.id && (
+                    {isFileSelected(file) && (
                       <div className="absolute top-2 right-2 p-1 rounded-full bg-teal-500 text-white shadow-md">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {multiSelect ? (
+                          <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] font-black">
+                            {selectedFiles.findIndex(f => f.id === file.id) + 1}
+                          </span>
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
                       </div>
                     )}
 
                     {/* Delete button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); askDelete(file); }}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
-                      title="حذف فایل"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {!multiSelect && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); askDelete(file); }}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
+                        title="حذف فایل"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -615,12 +681,24 @@ export default function MediaManager({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {selectedFile && (
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <CheckCircle2 className="w-4 h-4 text-teal-500" />
-                    <span className="font-bold">انتخاب شده:</span>
-                    <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
-                  </div>
+                {multiSelect ? (
+                  selectedFiles.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500" />
+                      <span className="font-bold">انتخاب شده:</span>
+                      <span className="text-gray-900 dark:text-white font-semibold">
+                        {selectedFiles.length.toLocaleString('fa-IR')} فایل
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  selectedFile && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500" />
+                      <span className="font-bold">انتخاب شده:</span>
+                      <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
+                    </div>
+                  )
                 )}
                 <button
                   onClick={onClose}
@@ -630,21 +708,28 @@ export default function MediaManager({
                 </button>
                 <button
                   onClick={() => {
-                    if (selectedFile) {
+                    if (multiSelect) {
+                      if (selectedFiles.length > 0) {
+                        onSelectMultiple?.(selectedFiles);
+                        onClose();
+                      }
+                    } else if (selectedFile) {
                       onSelect(selectedFile.url, selectedFile);
                       onClose();
                     }
                   }}
-                  disabled={!selectedFile}
+                  disabled={multiSelect ? selectedFiles.length === 0 : !selectedFile}
                   className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {selectedFile
-                    ? isImage(selectedFile.type)
-                      ? 'استفاده از تصویر'
-                      : isVideo(selectedFile.type)
-                      ? 'استفاده از ویدئو'
-                      : 'استفاده از فایل'
-                    : 'استفاده'}
+                  {multiSelect
+                    ? `استفاده از ${selectedFiles.length.toLocaleString('fa-IR')} فایل`
+                    : selectedFile
+                      ? isImage(selectedFile.type)
+                        ? 'استفاده از تصویر'
+                        : isVideo(selectedFile.type)
+                        ? 'استفاده از ویدئو'
+                        : 'استفاده از فایل'
+                      : 'استفاده'}
                 </button>
               </div>
             </div>

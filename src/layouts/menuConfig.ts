@@ -87,6 +87,7 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-picture-o': 'Image',
   'fa fa-box': 'Box',
   'fa fa-cube': 'Box',
+  'fa fa-sitemap': 'Sitemap',
 };
 
 // ========== Utility Functions ==========

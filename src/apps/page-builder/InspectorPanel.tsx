@@ -1908,6 +1908,23 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             <option value="grid-overlay">کارت با عنوان روی تصویر (Overlay)</option>
                             <option value="featured">نمایش برجسته / ویژه (Featured)</option>
                             <option value="carousel">خبرهای ویژه (Carousel)</option>
+                            <option value="timeline">خط زمانی اخبار (Timeline)</option>
+                            <option value="numbered-list">لیست شماره‌دار (Numbered List)</option>
+                            <option value="horizontal-list">لیست افقی (Horizontal List)</option>
+                            <option value="masonry">چیدمان موزاییکی (Masonry)</option>
+                            <option value="date-based">گروه‌بندی بر اساس تاریخ (Date-based)</option>
+                            <option value="ticker">تیک خبر فوری (Breaking News / Ticker)</option>
+                            <option value="tabbed">خبرهای زبانه‌دار (Tabbed)</option>
+                            <option value="accordion">اخبار آکاردئونی (Accordion)</option>
+                            <option value="load-more">نمایش بیشتر (Load More)</option>
+                            <option value="infinite-scroll">اسکرول بی‌نهایت (Infinite Scroll)</option>
+                            <option value="mixed">چیدمان کنار هم (Sidebar / Mixed)</option>
+                            <option value="multi-section">اخبار چندبخشی (Multi-Section)</option>
+                            <option value="combined">اخبار ترکیبی (Combined)</option>
+                            <option value="date-badge">اخبار با تاریخ برجسته (Date Badge)</option>
+                            <option value="magazine">نمایش مجله‌ای (Magazine)</option>
+                            <option value="full-width-slider">اسلایدشو تمام عرض (Full-width Slider)</option>
+                            <option value="featured-list">خبر اصلی + اخبار فرعی (Featured + Sub)</option>
                           </>
                         ) : (
                           <>
@@ -1943,10 +1960,14 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     )}
 
                     {/* ── تعداد کارت در هر ردیف (حالت شبکه‌ای / کادر فایلی) ── */}
-                    {activeDataSource === 'files' &&
+                    {(activeDataSource === 'files' &&
                       ['grid', 'boxes'].includes(
                         selectedWidget.settings.binding.displayMode || 'list'
-                      ) && (
+                      )) ||
+                    (activeDataSource === 'news' &&
+                      ['grid', 'grid-overlay', 'masonry', 'infinite-scroll', 'mixed'].includes(
+                        selectedWidget.settings.binding.displayMode || 'grid'
+                      )) ? (
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                             تعداد کارت در هر ردیف
@@ -1968,7 +1989,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             ))}
                           </div>
                         </div>
-                      )}
+                      ) : null}
 
                     {/* ── نمایش تصویر در لیست اخبار ── */}
                     {activeDataSource === 'news' &&
