@@ -931,14 +931,20 @@ const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   // موقعیت کل کارت در ستون (راست/وسط/چپ/تمام‌عرض) — در RTL راست = شروع
   // maxWidth: وقتی متن بلندتر از ستون باشد fit-content کل عرض ستون را می‌گیرد و تراز دیده نمی‌شود؛
   // با این سقف کارت به پهنای ~عرض خواهر خودش می‌ماند و به سمت انتخابی می‌چسبد
+  // فاصلهٔ خارجی دستی کاربر (margin-left/right) بر تراز cardAlign مقدم است — cardAlign فقط
+  // سمتِ auto را پیشنهاد می‌کند؛ اگر کاربر همان سمت را دستی ست کرده باشد مقدارش حفظ می‌شود
+  // (قبلاً marginInline: '0 auto' مقدار margin-left کاربر را نادیده می‌گرفت و در خروجی auto می‌ماند)
   const cardAlign = props.cardAlign || 'full';
+  const wStyle = widget.settings.style || {};
+  const mLeft = wStyle.marginLeft !== undefined ? `${wStyle.marginLeft}px` : undefined;
+  const mRight = wStyle.marginRight !== undefined ? `${wStyle.marginRight}px` : undefined;
   const cardPosStyle: React.CSSProperties =
     cardAlign === 'center'
-      ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: 'auto' }
+      ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginLeft: mLeft ?? 'auto', marginRight: mRight ?? 'auto' }
       : cardAlign === 'left'
-        ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: 'auto 0' }
+        ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginRight: mRight ?? 'auto', marginLeft: mLeft ?? 0 }
         : cardAlign === 'right'
-          ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginInline: '0 auto' }
+          ? { width: 'fit-content', maxWidth: 'calc(100% - 3.5rem)', minWidth: 'min-content', marginRight: mRight ?? 0, marginLeft: mLeft ?? 'auto' }
           : {};
   return (
     <div
