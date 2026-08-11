@@ -537,6 +537,7 @@ const NewsFeedWidget: React.FC<{
   );
 
   const newsList = data || [];
+  const displayMode = binding.displayMode || 'grid';
   const cols = binding.columnsCount || 2;
   const gridClass =
     cols === 3
@@ -545,13 +546,96 @@ const NewsFeedWidget: React.FC<{
         ? 'grid grid-cols-1 gap-4'
         : 'grid grid-cols-1 md:grid-cols-2 gap-4';
 
-  return (
-    <div style={containerStyle} className="space-y-4">
-      {error ? (
+  const fallbackImg =
+    'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80';
+  const newsImg = (n: NewsItem) => n.image_url || fallbackImg;
+
+  if (error) {
+    return (
+      <div style={containerStyle} className="space-y-4">
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data ? (
-        <SmartSkeleton variant="cards" count={binding.limit || 4} />
-      ) : newsList.length === 0 ? null : (
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div style={containerStyle} className="space-y-4">
+        <SmartSkeleton
+          variant={displayMode === 'list' ? 'list' : displayMode === 'carousel' ? 'table' : 'cards'}
+          count={binding.limit || 4}
+        />
+      </div>
+    );
+  }
+  if (newsList.length === 0) return null;
+
+  const metaRow = (n: NewsItem, cls = 'text-[10px] text-slate-400') => (
+    <div className={`flex items-center justify-between ${cls}`}>
+      <span className="flex items-center gap-1">
+        <Calendar className="w-3 h-3" />
+        {formatFaDate(n.published_at || n.created_at)}
+      </span>
+      <span className="flex items-center gap-1">
+        <Eye className="w-3 h-3" />
+        {n.views_count}
+      </span>
+    </div>
+  );
+
+  const categoryBadge = (n: NewsItem, cls = 'bg-slate-900/80 text-white') => (
+    <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-lg backdrop-blur-md text-[10px] font-bold ${cls}`}>
+      {n.category_name || 'بدون دسته'}
+    </span>
+  );
+
+  // ── نمایش لیستی (List) ──
+  if (displayMode === 'list') {
+    const withThumb = !!binding.newsListImage;
+    return (
+      <div style={containerStyle} className="space-y-4">
+        <div className="space-y-2.5">
+          {newsList.map((news) => (
+            <div
+              key={news.id}
+              className={`group p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs hover:border-indigo-500/40 transition-all ${
+                withThumb ? 'flex items-center gap-3' : ''
+              }`}
+            >
+              {withThumb && (
+                <img
+                  src={newsImg(news)}
+                  alt={news.title}
+                  loading="lazy"
+                  className="w-20 h-16 rounded-lg object-cover shrink-0 group-hover:scale-105 transition-transform duration-500"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-black text-slate-900 dark:text-white line-clamp-1 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {news.title}
+                </h4>
+                {!withThumb && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed mt-0.5">
+                    {news.summary}
+                  </p>
+                )}
+                <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-400">
+                  <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold">
+                    {news.category_name || 'بدون دسته'}
+                  </span>
+                  {metaRow(news, 'text-[10px] text-slate-400 flex items-center gap-2')}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── نمایش شبکه‌ای / کارتی (Grid) — پیش‌فرض ──
+  if (displayMode === 'grid') {
+    return (
+      <div style={containerStyle} className="space-y-4">
         <div className={gridClass}>
           {newsList.map((news) => (
             <div
@@ -560,13 +644,12 @@ const NewsFeedWidget: React.FC<{
             >
               <div className="h-36 overflow-hidden relative">
                 <img
-                  src={news.image_url || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
+                  src={newsImg(news)}
                   alt={news.title}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-md">
-                  {news.category_name || 'بدون دسته'}
-                </div>
+                {categoryBadge(news)}
               </div>
 
               <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
@@ -576,7 +659,40 @@ const NewsFeedWidget: React.FC<{
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                   {news.summary}
                 </p>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-gray-100 dark:border-slate-800/60">
+                <div className="pt-2 border-t border-gray-100 dark:border-slate-800/60">
+                  {metaRow(news)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── کارت با عنوان روی تصویر (Grid Overlay) ──
+  if (displayMode === 'grid-overlay') {
+    return (
+      <div style={containerStyle} className="space-y-4">
+        <div className={gridClass}>
+          {newsList.map((news) => (
+            <div
+              key={news.id}
+              className="group relative rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all h-52"
+            >
+              <img
+                src={newsImg(news)}
+                alt={news.title}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+              {categoryBadge(news)}
+              <div className="absolute bottom-0 inset-x-0 p-4 space-y-1.5">
+                <h4 className="text-xs font-black text-white line-clamp-2 leading-snug drop-shadow">
+                  {news.title}
+                </h4>
+                <div className="flex items-center gap-3 text-[10px] text-slate-300">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {formatFaDate(news.published_at || news.created_at)}
@@ -590,7 +706,165 @@ const NewsFeedWidget: React.FC<{
             </div>
           ))}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // ── نمایش برجسته / ویژه (Featured Hero) ──
+  if (displayMode === 'featured') {
+    const [hero, ...rest] = newsList;
+    return (
+      <div style={containerStyle} className="space-y-4">
+        {hero && (
+          <div className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all h-64 md:h-80">
+            <img
+              src={newsImg(hero)}
+              alt={hero.title}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent" />
+            {categoryBadge(hero)}
+            <div className="absolute bottom-0 inset-x-0 p-5 space-y-2">
+              <h3 className="text-sm md:text-lg font-black text-white line-clamp-2 leading-snug drop-shadow">
+                {hero.title}
+              </h3>
+              <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed hidden md:block">
+                {hero.summary}
+              </p>
+              <div className="flex items-center gap-3 text-[10px] text-slate-300">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {formatFaDate(hero.published_at || hero.created_at)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  {hero.views_count}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        {rest.length > 0 && (
+          <div className={gridClass}>
+            {rest.map((news) => (
+              <div
+                key={news.id}
+                className="group flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs hover:border-indigo-500/40 transition-all"
+              >
+                <img
+                  src={newsImg(news)}
+                  alt={news.title}
+                  loading="lazy"
+                  className="w-20 h-16 rounded-lg object-cover shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-[11px] font-black text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {news.title}
+                  </h4>
+                  <div className="mt-1 text-[10px] text-slate-400 flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    {formatFaDate(news.published_at || news.created_at)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── کاروسل خبرهای ویژه (Carousel) ──
+  if (displayMode === 'carousel') {
+    return <NewsCarousel newsList={newsList} formatDate={formatFaDate} />;
+  }
+
+  return null;
+};
+
+/** کاروسل اخبار — چرخش خودکار با فلش و نقطه‌های ناوبری */
+const NewsCarousel: React.FC<{
+  newsList: NewsItem[];
+  formatDate: (d?: string) => string;
+}> = ({ newsList, formatDate }) => {
+  const [index, setIndex] = useState(0);
+  const total = newsList.length;
+  const current = newsList[index % total] || newsList[0];
+  useEffect(() => {
+    if (total === 0) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % total), 5000);
+    return () => clearInterval(t);
+  }, [total]);
+  const fallbackImg =
+    'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80';
+  if (!current) return null;
+  return (
+    <div className="space-y-4">
+      <div className="relative rounded-2xl overflow-hidden shadow-sm h-56 md:h-72">
+        <img
+          src={current.image_url || fallbackImg}
+          alt={current.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent" />
+        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-md">
+          {current.category_name || 'بدون دسته'}
+        </span>
+        <div className="absolute bottom-0 inset-x-0 p-5 space-y-2">
+          <h3 className="text-sm md:text-lg font-black text-white line-clamp-2 leading-snug drop-shadow">
+            {current.title}
+          </h3>
+          <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed hidden md:block">
+            {current.summary}
+          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[10px] text-slate-300">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {formatDate(current.published_at || current.created_at)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                {current.views_count}
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+              {index + 1} / {total}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIndex((index - 1 + total) % total)}
+          className="absolute top-1/2 right-3 -translate-y-1/2 p-2 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md transition-all cursor-pointer"
+          title="قبلی"
+        >
+          <ChevronUp className="w-4 h-4 rotate-90" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIndex((index + 1) % total)}
+          className="absolute top-1/2 left-3 -translate-y-1/2 p-2 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md transition-all cursor-pointer"
+          title="بعدی"
+        >
+          <ChevronUp className="w-4 h-4 -rotate-90" />
+        </button>
+      </div>
+      <div className="flex items-center justify-center gap-1.5">
+        {newsList.map((n, i) => (
+          <button
+            key={n.id}
+            type="button"
+            onClick={() => setIndex(i)}
+            className={`h-1.5 rounded-full transition-all cursor-pointer ${
+              i === index % total ? 'w-6 bg-indigo-500' : 'w-1.5 bg-slate-300 dark:bg-slate-700'
+            }`}
+            title={n.title}
+          />
+        ))}
+      </div>
     </div>
   );
 };
@@ -774,11 +1048,17 @@ const FileManagerWidget: React.FC<{
   const fileName = (file: MediaFile) => file.title || file.name;
   const isImageFile = (file: MediaFile) => (file.type || '').startsWith('image/');
 
-  // ── تعداد کارت در هر ردیف (حالت شبکه‌ای) ──
-  const cols = Math.min(Math.max(Number(binding.columnsCount) || 3, 1), 4);
+  // ── تعداد کارت در هر ردیف (حالت شبکه‌ای / کادر فایلی) ──
+  const cols = Math.min(Math.max(Number(binding.columnsCount) || 3, 1), 6);
   const gridCols =
-    { 1: 'sm:grid-cols-1 lg:grid-cols-1', 2: 'sm:grid-cols-2 lg:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4' }[cols] ||
-    'sm:grid-cols-2 lg:grid-cols-3';
+    {
+      1: 'sm:grid-cols-1 lg:grid-cols-1',
+      2: 'sm:grid-cols-2 lg:grid-cols-2',
+      3: 'sm:grid-cols-2 lg:grid-cols-3',
+      4: 'sm:grid-cols-2 lg:grid-cols-4',
+      5: 'sm:grid-cols-2 lg:grid-cols-5',
+      6: 'sm:grid-cols-2 lg:grid-cols-6'
+    }[cols] || 'sm:grid-cols-2 lg:grid-cols-3';
 
   const fileBadge = (file: MediaFile, cls: string) =>
     isImageFile(file) ? (
@@ -805,7 +1085,7 @@ const FileManagerWidget: React.FC<{
     return (
       <div style={containerStyle}>
         <SmartSkeleton
-          variant={displayMode === 'table' ? 'table' : displayMode === 'grid' ? 'cards' : 'list'}
+          variant={displayMode === 'table' ? 'table' : displayMode === 'grid' || displayMode === 'boxes' ? 'cards' : 'list'}
           count={binding.limit || 6}
         />
       </div>
@@ -900,6 +1180,49 @@ const FileManagerWidget: React.FC<{
                 </p>
               )}
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── حالت کادر کوچک فایلی (File Box) ──
+  if (displayMode === 'boxes') {
+    return (
+      <div style={containerStyle}>
+        <div className={`grid grid-cols-2 ${gridCols} gap-2.5`}>
+          {files.map((file) => (
+            <a
+              key={file.id}
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs hover:border-blue-500/40 hover:shadow-md transition-all flex items-center gap-2 min-w-0"
+              title={file.name}
+            >
+              {isImageFile(file) ? (
+                <img
+                  src={file.url}
+                  alt={file.name}
+                  loading="lazy"
+                  className="w-10 h-10 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-black uppercase flex items-center justify-center text-[9px] shrink-0">
+                  {getExt(file.name)}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                  {fileName(file)}
+                </div>
+                <div className="text-[9px] text-slate-400 flex items-center gap-1 mt-0.5">
+                  <FileText className="w-2.5 h-2.5" />
+                  <span className="truncate">{formatFileSize(file.size)}</span>
+                </div>
+              </div>
+              <Download className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 shrink-0 transition-colors" />
+            </a>
           ))}
         </div>
       </div>
@@ -1250,21 +1573,65 @@ const ContainerBlock: React.FC<{
 };
 
 /** اسلایدر تصویر — چرخش خودکار تصاویر */
+/** اسلایدر تصویر — منبع رسانه (با عنوان) یا آدرس دستی؛ حالت اسلایدشو یا فهرست بندانگشتی + لایت‌باکس */
 const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
-  const images: string[] =
+  const sliderMode = props.sliderMode === 'thumbs' ? 'thumbs' : 'slideshow';
+  const source = props.sliderSource || 'media';
+  const limit = Number(props.sliderLimit) || 10;
+  const manualImages: string[] =
     (props.images as string[]) ||
     parseLines(widget.content || '').map((p) => p[0]).filter(Boolean) ||
     [];
+  const folderFilter =
+    props.mediaFolder && props.mediaFolder !== 'all' ? String(props.mediaFolder) : null;
+
+  const { data, error, retry } = useSmartData<MediaFile>(
+    () =>
+      source === 'media'
+        ? fetchDataSourceMedia({
+            per_page: 100,
+            folder_id: folderFilter,
+            type: 'image'
+          }).then((res) => res.data.slice(0, limit))
+        : Promise.resolve([]),
+    [source, folderFilter, limit]
+  );
+
+  // هر اسلاید: { url, title }
+  const slides: { url: string; title: string }[] =
+    source === 'media'
+      ? (data || []).map((f) => ({ url: f.url, title: f.title || f.name }))
+      : manualImages.map((u, i) => ({ url: u, title: `اسلاید ${i + 1}` }));
+
   const [index, setIndex] = useState(0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   useEffect(() => {
-    if (images.length < 2) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % images.length), 3500);
+    if (sliderMode !== 'slideshow' || slides.length < 2) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % slides.length), 3500);
     return () => clearInterval(t);
-  }, [images.length]);
+  }, [slides.length, sliderMode]);
 
-  if (images.length === 0) {
+  // بستن لایت‌باکس با کلید Escape
+  useEffect(() => {
+    if (lightbox === null) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setLightbox(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
+  const loading = source === 'media' && !data && !error;
+
+  if (loading) {
+    return (
+      <div style={containerStyle} className="space-y-4">
+        <SmartSkeleton variant={sliderMode === 'thumbs' ? 'gallery' : 'table'} count={4} />
+      </div>
+    );
+  }
+
+  if (slides.length === 0) {
     return (
       <div style={containerStyle} className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 aspect-video text-slate-400 text-xs">
         <Images className="w-5 h-5" />
@@ -1273,15 +1640,103 @@ const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
     );
   }
 
+  // ── حالت فهرست بندانگشتی + لایت‌باکس ──
+  if (sliderMode === 'thumbs') {
+    return (
+      <div style={containerStyle}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          {slides.map((s, i) => (
+            <button
+              key={`${s.url}-${i}`}
+              type="button"
+              onClick={() => setLightbox(i)}
+              className="group relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 shadow-xs hover:border-teal-500/50 hover:shadow-md transition-all cursor-pointer focus:outline-none"
+              title={s.title}
+            >
+              <img
+                src={s.url}
+                alt={s.title}
+                loading="lazy"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/30 transition-colors" />
+              {s.title && (
+                <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-slate-950/80 to-transparent">
+                  <div className="text-[10px] font-bold text-white text-right truncate">{s.title}</div>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* لایت‌باکس */}
+        {lightbox !== null && slides[lightbox] && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4"
+            onClick={() => setLightbox(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              className="absolute top-4 left-4 p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
+              title="بستن"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div
+              className="relative max-w-4xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={slides[lightbox].url}
+                alt={slides[lightbox].title}
+                className="w-full max-h-[75vh] object-contain rounded-xl"
+              />
+              {slides[lightbox].title && (
+                <div className="mt-3 text-center text-white text-sm font-black">
+                  {slides[lightbox].title}
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setLightbox((lightbox - 1 + slides.length) % slides.length)}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                  title="قبلی"
+                >
+                  <ChevronUp className="w-5 h-5 rotate-90" />
+                </button>
+                <span className="text-white/80 text-xs font-bold tabular-nums">
+                  {lightbox + 1} / {slides.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLightbox((lightbox + 1) % slides.length)}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                  title="بعدی"
+                >
+                  <ChevronUp className="w-5 h-5 -rotate-90" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── حالت اسلایدشو ──
   return (
     <div style={containerStyle} className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 group">
-      <img src={images[index]} alt={`اسلاید ${index + 1}`} className="w-full h-full object-cover" />
+      <img src={slides[index].url} alt={slides[index].title} className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
-      <div className="absolute bottom-3 right-4 text-white text-sm font-black drop-shadow">
-        {index + 1} / {images.length}
-      </div>
+      {slides[index].title && (
+        <div className="absolute bottom-3 right-4 text-white text-sm font-black drop-shadow">
+          {slides[index].title}
+        </div>
+      )}
       <div className="absolute bottom-3 left-3 flex gap-1.5">
-        {images.map((_, i) => (
+        {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => setIndex(i)}
@@ -1291,14 +1746,14 @@ const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
         ))}
       </div>
       <button
-        onClick={() => setIndex((index - 1 + images.length) % images.length)}
+        onClick={() => setIndex((index - 1 + slides.length) % slides.length)}
         className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
         aria-label="اسلاید قبلی"
       >
         <ChevronUp className="w-4 h-4 rotate-90" />
       </button>
       <button
-        onClick={() => setIndex((index + 1) % images.length)}
+        onClick={() => setIndex((index + 1) % slides.length)}
         className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
         aria-label="اسلاید بعدی"
       >

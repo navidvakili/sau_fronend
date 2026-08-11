@@ -159,8 +159,10 @@ export interface WidgetDataBinding {
   folderFilter?: string;
   limit?: number;
   sortBy?: 'date_desc' | 'date_asc' | 'views' | 'priority' | 'title';
-  displayMode?: 'grid' | 'list' | 'carousel' | 'masonry' | 'timeline' | 'marquee' | 'table';
+  displayMode?: 'grid' | 'list' | 'carousel' | 'masonry' | 'timeline' | 'marquee' | 'table' | 'boxes' | 'grid-overlay' | 'featured';
   columnsCount?: number;
+  /** نمایش تصویر بندانگشتی در نمای لیستی اخبار */
+  newsListImage?: boolean;
   /** نوع فایل نمایش‌داده‌شده در ویجت مخزن اسناد / گالری رسانه */
   fileType?: 'all' | 'image' | 'video' | 'audio' | 'document';
   /** نحوه باز شدن اطلاعیه هنگام کلیک — صفحه جاری / صفحه جدید / پنجره modal */

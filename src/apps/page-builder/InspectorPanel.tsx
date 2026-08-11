@@ -982,20 +982,89 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
               {/* اسلایدر تصویر */}
               {selectedWidget.type === 'image-slider' && (
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                    آدرس تصاویر (هر خط یک URL)
-                  </label>
-                  <textarea
-                    rows={5}
-                    value={(customProps.images || []).join('\n')}
-                    onChange={(e) => {
-                      const urls = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
-                      updateCustomProps({ images: urls });
-                    }}
-                    placeholder={'https://example.com/1.jpg\nhttps://example.com/2.jpg'}
-                    className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
-                  />
+                <div className="space-y-3">
+                  {/* منبع تصاویر */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      منبع تصاویر
+                    </label>
+                    <select
+                      value={customProps.sliderSource || 'media'}
+                      onChange={(e) => updateCustomProps({ sliderSource: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="media">مدیریت دارایی‌های دیجیتال (با عنوان)</option>
+                      <option value="manual">آدرس دستی تصاویر</option>
+                    </select>
+                  </div>
+
+                  {(customProps.sliderSource || 'media') === 'media' ? (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        پوشه رسانه (اختیاری)
+                      </label>
+                      <select
+                        value={customProps.mediaFolder || 'all'}
+                        onChange={(e) => updateCustomProps({ mediaFolder: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                      >
+                        <option value="all">همه پوشه‌ها</option>
+                        {mediaFolders.map((f) => (
+                          <option key={f.id} value={String(f.id)}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                        تصاویر به همراه عنوان از رسانه دریافت می‌شوند.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        آدرس تصاویر (هر خط یک URL)
+                      </label>
+                      <textarea
+                        rows={5}
+                        value={(customProps.images || []).join('\n')}
+                        onChange={(e) => {
+                          const urls = e.target.value.split('\n').map((s) => s.trim()).filter(Boolean);
+                          updateCustomProps({ images: urls });
+                        }}
+                        placeholder={'https://example.com/1.jpg\nhttps://example.com/2.jpg'}
+                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
+                      />
+                    </div>
+                  )}
+
+                  {/* حالت نمایش */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      حالت نمایش
+                    </label>
+                    <select
+                      value={customProps.sliderMode || 'slideshow'}
+                      onChange={(e) => updateCustomProps({ sliderMode: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="slideshow">اسلایدشو (نمایش متوالی)</option>
+                      <option value="thumbs">فهرست بندانگشتی + مشاهده Lightbox</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      حداکثر تعداد تصویر
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={customProps.sliderLimit || 10}
+                      onChange={(e) => updateCustomProps({ sliderLimit: parseInt(e.target.value) || 10 })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1829,7 +1898,16 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                           <>
                             <option value="list">لیست فایل‌ها (List)</option>
                             <option value="grid">شبکه کارتی (Grid)</option>
+                            <option value="boxes">کادر کوچک فایلی (File Box)</option>
                             <option value="table">جدول کامل (Table)</option>
+                          </>
+                        ) : activeDataSource === 'news' ? (
+                          <>
+                            <option value="list">نمایش لیستی (List)</option>
+                            <option value="grid">نمایش شبکه‌ای / کارتی (Grid)</option>
+                            <option value="grid-overlay">کارت با عنوان روی تصویر (Overlay)</option>
+                            <option value="featured">نمایش برجسته / ویژه (Featured)</option>
+                            <option value="carousel">خبرهای ویژه (Carousel)</option>
                           </>
                         ) : (
                           <>
@@ -1864,15 +1942,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       </div>
                     )}
 
-                    {/* ── تعداد کارت در هر ردیف (حالت شبکه‌ای) ── */}
+                    {/* ── تعداد کارت در هر ردیف (حالت شبکه‌ای / کادر فایلی) ── */}
                     {activeDataSource === 'files' &&
-                      (selectedWidget.settings.binding.displayMode || 'list') === 'grid' && (
+                      ['grid', 'boxes'].includes(
+                        selectedWidget.settings.binding.displayMode || 'list'
+                      ) && (
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                             تعداد کارت در هر ردیف
                           </label>
                           <div className="flex items-center gap-1.5">
-                            {[1, 2, 3, 4].map((n) => (
+                            {[1, 2, 3, 4, 5, 6].map((n) => (
                               <button
                                 key={n}
                                 type="button"
@@ -1887,6 +1967,40 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                               </button>
                             ))}
                           </div>
+                        </div>
+                      )}
+
+                    {/* ── نمایش تصویر در لیست اخبار ── */}
+                    {activeDataSource === 'news' &&
+                      (selectedWidget.settings.binding.displayMode || 'grid') === 'list' && (
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            نمایش تصویر در لیست اخبار
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleBindingChange('newsListImage', !selectedWidget.settings.binding.newsListImage)
+                            }
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                              selectedWidget.settings.binding.newsListImage
+                                ? 'bg-teal-600 text-white border-teal-600'
+                                : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            <span>لیست با تصویر بندانگشتی</span>
+                            <span
+                              className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${
+                                selectedWidget.settings.binding.newsListImage ? 'bg-teal-400/60' : 'bg-slate-300 dark:bg-slate-700'
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                                  selectedWidget.settings.binding.newsListImage ? 'left-0.5' : 'left-5'
+                                }`}
+                              />
+                            </span>
+                          </button>
                         </div>
                       )}
 
