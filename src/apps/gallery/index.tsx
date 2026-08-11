@@ -165,7 +165,12 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     const q = filters.searchQuery.trim().toLowerCase();
     return assets
       .filter((asset) => {
-        if (filters.folderId && String(asset.folder_id ?? '') !== String(filters.folderId)) return false;
+        if (filters.folderId) {
+          const fid = Number(filters.folderId);
+          const inAnyGroup =
+            (asset.folder_ids || []).includes(fid) || String(asset.folder_id ?? '') === String(fid);
+          if (!inAnyGroup) return false;
+        }
         if (filters.fileType !== 'all' && asset.fileType !== filters.fileType) return false;
         if (q && !asset.name.toLowerCase().includes(q)) return false;
         return true;
@@ -182,7 +187,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   const folderCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const a of assets) {
-      if (a.folder_id != null) counts[String(a.folder_id)] = (counts[String(a.folder_id)] || 0) + 1;
+      const ids = a.folder_ids && a.folder_ids.length > 0
+        ? a.folder_ids
+        : a.folder_id != null
+          ? [a.folder_id]
+          : [];
+      for (const id of ids) {
+        counts[String(id)] = (counts[String(id)] || 0) + 1;
+      }
     }
     return counts;
   }, [assets]);
@@ -264,17 +276,26 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     setDeleteError(null);
   };
 
-  // ===================== Move to virtual folder =====================
-  const handleMoveAsset = async (asset: GalleryAsset, folderId: number | null): Promise<boolean> => {
+  // ===================== Register in virtual folder group(s) =====================
+  const handleMoveAsset = async (asset: GalleryAsset, folderIds: number[]): Promise<boolean> => {
     try {
-      const res = await moveMediaFile(asset, folderId);
-      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, folder_id: res.data.folder_id } : a)));
-      setSelectedAssetForDrawer((prev) => (prev?.id === asset.id ? { ...prev, folder_id: res.data.folder_id } : prev));
+      const res = await moveMediaFile(asset, folderIds);
+      const folderId = res.data.folder_id ?? (folderIds[0] ?? null);
+      const savedIds = res.data.folder_ids && res.data.folder_ids.length > 0 ? res.data.folder_ids : folderIds;
+      const patch = { folder_id: folderId, folder_ids: savedIds };
+      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, ...patch } : a)));
+      setSelectedAssetForDrawer((prev) => (prev?.id === asset.id ? { ...prev, ...patch } : prev));
       return true;
     } catch (e: any) {
-      window.alert(e?.message || 'خطا در انتقال فایل.');
+      window.alert(e?.message || 'خطا در ثبت گروه‌ها.');
       return false;
     }
+  };
+
+  // ===================== Update title / description metadata =====================
+  const handleUpdateMetadata = (updated: GalleryAsset) => {
+    setAssets((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setSelectedAssetForDrawer(updated);
   };
 
   // ===================== Save from editor (always a NEW file) =====================
@@ -785,7 +806,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
                                   )}
                                 </div>
                               )}
-                              <span className="truncate max-w-xs">{asset.name}</span>
+                              <span className="truncate max-w-xs" title={asset.name}>
+                                {asset.title || asset.name}
+                              </span>
+                              {asset.description && (
+                                <span className="text-[10px] text-slate-400 truncate max-w-[240px] block">
+                                  {asset.description}
+                                </span>
+                              )}
                             </td>
                             <td className="p-3">
                               <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-bold">
@@ -846,6 +874,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
               onDelete={requestDeleteAsset}
               onMove={handleMoveAsset}
               onOpenEditor={() => handleOpenEditor(selectedAssetForDrawer)}
+              onUpdateMetadata={handleUpdateMetadata}
             />
           </div>
         )}
@@ -1119,9 +1148,19 @@ const AssetCard: React.FC<AssetCardProps> = ({
 
       {/* Card Info */}
       <div className="p-4 space-y-2">
-        <h4 className="text-xs font-extrabold text-slate-900 dark:text-white truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-          {asset.name}
+        <h4 className="text-xs font-extrabold text-slate-900 dark:text-white truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" title={asset.name}>
+          {asset.title || asset.name}
         </h4>
+        {asset.title && (
+          <p className="text-[10px] text-slate-400 truncate" title={asset.name}>
+            {asset.name}
+          </p>
+        )}
+        {asset.description && (
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
+            {asset.description}
+          </p>
+        )}
 
         <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
           <span>{asset.sizeFormatted}</span>

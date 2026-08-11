@@ -161,6 +161,8 @@ export interface WidgetDataBinding {
   sortBy?: 'date_desc' | 'date_asc' | 'views' | 'priority' | 'title';
   displayMode?: 'grid' | 'list' | 'carousel' | 'masonry' | 'timeline' | 'marquee' | 'table';
   columnsCount?: number;
+  /** نوع فایل نمایش‌داده‌شده در ویجت مخزن اسناد / گالری رسانه */
+  fileType?: 'all' | 'image' | 'video' | 'audio' | 'document';
   /** نحوه باز شدن اطلاعیه هنگام کلیک — صفحه جاری / صفحه جدید / پنجره modal */
   openMode?: 'self' | 'new' | 'modal';
 }

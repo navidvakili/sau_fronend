@@ -241,6 +241,82 @@ const SmartEmpty: React.FC<{ error?: string | null; onRetry?: () => void }> = ({
   </div>
 );
 
+/** اسکلت‌تون (Skeleton) ویجت‌های هوشمند — هنگام دریافت داده از وب‌سرویس نمایش داده می‌شود */
+const SmartSkeleton: React.FC<{
+  variant?: 'cards' | 'list' | 'table' | 'gallery' | 'rows';
+  count?: number;
+}> = ({ variant = 'list', count = 3 }) => {
+  const shimmer = 'bg-slate-200/80 dark:bg-slate-800 animate-pulse';
+
+  if (variant === 'cards') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden"
+          >
+            <div className={`h-36 ${shimmer}`} />
+            <div className="p-4 space-y-2.5">
+              <div className={`h-3.5 rounded w-3/4 ${shimmer}`} />
+              <div className={`h-3 rounded w-full ${shimmer}`} />
+              <div className={`h-3 rounded w-5/6 ${shimmer}`} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === 'gallery') {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className={`h-32 rounded-xl ${shimmer}`} />
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === 'table') {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-800 last:border-0"
+          >
+            <div className={`w-8 h-8 rounded-lg shrink-0 ${shimmer}`} />
+            <div className="flex-1 space-y-1.5">
+              <div className={`h-3 rounded w-2/5 ${shimmer}`} />
+              <div className={`h-2.5 rounded w-1/3 ${shimmer}`} />
+            </div>
+            <div className={`w-16 h-3 rounded ${shimmer}`} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // list / rows
+  return (
+    <div className="space-y-2.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3"
+        >
+          <div className={`w-9 h-9 rounded-lg shrink-0 ${shimmer}`} />
+          <div className="flex-1 space-y-2">
+            <div className={`h-3 rounded w-2/3 ${shimmer}`} />
+            <div className={`h-2.5 rounded w-1/2 ${shimmer}`} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ==============================================================
 // SMART WIDGETS — اتصال به وب‌سرویس‌های واقعی
 // ==============================================================
@@ -316,7 +392,9 @@ const AnnouncementsFeedWidget: React.FC<{
       <div style={containerStyle} className="space-y-4">
         {error ? (
           <SmartEmpty error={error} onRetry={retry} />
-        ) : !data || items.length === 0 ? null : (
+        ) : !data ? (
+          <SmartSkeleton variant="list" count={binding.limit || 5} />
+        ) : items.length === 0 ? null : (
           <div className="space-y-2.5">
             {items.map((item) =>
               openMode === 'new' ? (
@@ -471,7 +549,9 @@ const NewsFeedWidget: React.FC<{
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data || newsList.length === 0 ? null : (
+      ) : !data ? (
+        <SmartSkeleton variant="cards" count={binding.limit || 4} />
+      ) : newsList.length === 0 ? null : (
         <div className={gridClass}>
           {newsList.map((news) => (
             <div
@@ -523,9 +603,10 @@ const ImageGalleryWidget: React.FC<{
 }> = ({ widget, binding, containerStyle }) => {
   const { data, error, retry } = useSmartData<MediaFile>(() =>
     fetchDataSourceMedia({
-      per_page: binding.limit || 8,
-      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null
-    }).then((res) => res.data.filter((f) => f.type.startsWith('image/'))),
+      per_page: 100,
+      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null,
+      type: 'image'
+    }).then((res) => res.data.slice(0, binding.limit || 8)),
     [binding.limit, binding.folderFilter]
   );
 
@@ -535,7 +616,9 @@ const ImageGalleryWidget: React.FC<{
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data || gallery.length === 0 ? null : (
+      ) : !data ? (
+        <SmartSkeleton variant="gallery" count={4} />
+      ) : gallery.length === 0 ? null : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {gallery.map((img) => (
             <div
@@ -579,7 +662,9 @@ const AchievementsWidget: React.FC<{
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data || achs.length === 0 ? null : (
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={binding.limit || 5} />
+      ) : achs.length === 0 ? null : (
         <div className="space-y-3 relative before:absolute before:right-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-yellow-500/30">
           {achs.map((ach) => (
             <div key={ach.id} className="relative pr-9 flex flex-col gap-1">
@@ -629,7 +714,9 @@ const StaffDirectoryWidget: React.FC<{
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data || staffList.length === 0 ? null : (
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={binding.limit || 6} />
+      ) : staffList.length === 0 ? null : (
         <div className="space-y-3">
           {staffList.map((st) => (
             <div
@@ -666,55 +753,197 @@ const FileManagerWidget: React.FC<{
 }> = ({ widget, binding, containerStyle }) => {
   const { data, error, retry } = useSmartData<MediaFile>(() =>
     fetchDataSourceMedia({
-      per_page: binding.limit || 6,
-      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null
-    }).then((res) => res.data.filter((f) => !f.type.startsWith('image/'))),
-    [binding.limit, binding.folderFilter]
+      // Fetch a large page and let the server apply the type/folder filters —
+      // otherwise a small per_page would cut the list BEFORE filtering and only
+      // a few matching files would remain.
+      per_page: 100,
+      folder_id: binding.folderFilter && binding.folderFilter !== 'all' ? binding.folderFilter : null,
+      type: binding.fileType || 'document'
+    }).then((res) => res.data.slice(0, binding.limit || 6)),
+    [binding.limit, binding.folderFilter, binding.fileType]
   );
 
   const files = data || [];
+  const displayMode = binding.displayMode || 'list';
 
   const getExt = (name: string) => {
     const parts = name.split('.');
     return parts.length > 1 ? parts[parts.length - 1].toUpperCase().slice(0, 4) : 'FILE';
   };
 
-  return (
-    <div style={containerStyle} className="space-y-4">
-      {error ? (
+  const fileName = (file: MediaFile) => file.title || file.name;
+  const isImageFile = (file: MediaFile) => (file.type || '').startsWith('image/');
+
+  // ── تعداد کارت در هر ردیف (حالت شبکه‌ای) ──
+  const cols = Math.min(Math.max(Number(binding.columnsCount) || 3, 1), 4);
+  const gridCols =
+    { 1: 'sm:grid-cols-1 lg:grid-cols-1', 2: 'sm:grid-cols-2 lg:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4' }[cols] ||
+    'sm:grid-cols-2 lg:grid-cols-3';
+
+  const fileBadge = (file: MediaFile, cls: string) =>
+    isImageFile(file) ? (
+      <img
+        src={file.url}
+        alt={file.name}
+        loading="lazy"
+        className={`rounded-lg object-cover shrink-0 ${cls}`}
+      />
+    ) : (
+      <div className={`rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-black uppercase shrink-0 ${cls}`}>
+        {getExt(file.name)}
+      </div>
+    );
+
+  if (error) {
+    return (
+      <div style={containerStyle}>
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data || files.length === 0 ? null : (
-        <div className="space-y-2">
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div style={containerStyle}>
+        <SmartSkeleton
+          variant={displayMode === 'table' ? 'table' : displayMode === 'grid' ? 'cards' : 'list'}
+          count={binding.limit || 6}
+        />
+      </div>
+    );
+  }
+  if (files.length === 0) return null;
+
+  // ── حالت جدول (Table) ──
+  if (displayMode === 'table') {
+    return (
+      <div style={containerStyle}>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-800">
+          <table className="w-full text-right text-xs">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-800">
+                <th className="px-3 py-2.5 font-bold">نام سند</th>
+                <th className="px-3 py-2.5 font-bold hidden sm:table-cell">توضیح</th>
+                <th className="px-3 py-2.5 font-bold">حجم</th>
+                <th className="px-3 py-2.5 font-bold text-center w-14">دانلود</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
+              {files.map((file) => (
+                <tr key={file.id} className="hover:bg-teal-500/5 transition-colors">
+                  <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {fileBadge(file, 'p-1.5 text-[10px] w-8 h-8 flex items-center justify-center')}
+                      <span className="truncate" title={file.name}>{fileName(file)}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 hidden sm:table-cell max-w-[260px]">
+                    {file.description ? (
+                      <span className="line-clamp-2">{file.description}</span>
+                    ) : (
+                      <span className="text-slate-300 dark:text-slate-600">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    {formatFileSize(file.size)}
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all"
+                      title="دانلود فایل"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ── حالت شبکه کارتی (Grid) ──
+  if (displayMode === 'grid') {
+    return (
+      <div style={containerStyle}>
+        <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
           {files.map((file) => (
             <div
               key={file.id}
-              className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-blue-500/30 transition-all"
+              className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs hover:border-blue-500/30 hover:shadow-md transition-all flex flex-col gap-2"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-black text-xs uppercase shrink-0">
-                  {getExt(file.name)}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{file.name}</div>
-                  <div className="text-[10px] text-slate-400 flex items-center gap-2">
-                    <span>حجم: {formatFileSize(file.size)}</span>
+                {fileBadge(file, 'p-2.5 text-xs w-10 h-10 flex items-center justify-center')}
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={file.name}>
+                    {fileName(file)}
                   </div>
+                  <div className="text-[10px] text-slate-400">حجم: {formatFileSize(file.size)}</div>
                 </div>
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shrink-0"
+                  title="دانلود فایل"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
               </div>
-
-              <a
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shrink-0"
-                title="دانلود فایل"
-              >
-                <Download className="w-4 h-4" />
-              </a>
+              {file.description && (
+                <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 line-clamp-2 border-t border-gray-100 dark:border-slate-800 pt-2">
+                  {file.description}
+                </p>
+              )}
             </div>
           ))}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // ── حالت لیست (List) — پیش‌فرض ──
+  return (
+    <div style={containerStyle} className="space-y-4">
+      <div className="space-y-2">
+        {files.map((file) => (
+          <div
+            key={file.id}
+            className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-blue-500/30 transition-all"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              {fileBadge(file, 'p-2 text-xs w-9 h-9 flex items-center justify-center')}
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={file.name}>
+                  {fileName(file)}
+                </div>
+                <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                  <span>حجم: {formatFileSize(file.size)}</span>
+                </div>
+                {file.description && (
+                  <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                    {file.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all cursor-pointer shrink-0"
+              title="دانلود فایل"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

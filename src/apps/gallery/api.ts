@@ -48,12 +48,24 @@ export const fetchAllMedia = async (maxFiles = 600): Promise<MediaFile[]> => {
 /** آپلود فایل (multipart) — هم‌خوان با MediaManager */
 export const uploadMediaFile = (
   file: File,
-  folderId: number | null
+  folderId: number | null,
+  extraFolderIds: number[] = []
 ): Promise<{ message: string; data: MediaFile }> => {
   const formData = new FormData();
   formData.append('file', file);
   if (folderId !== null && folderId !== undefined) {
     formData.append('folder_id', String(folderId));
+  }
+  const folderIds = Array.from(
+    new Set(
+      [
+        ...(folderId !== null && folderId !== undefined ? [folderId] : []),
+        ...extraFolderIds.filter((f) => f !== folderId),
+      ].filter((f) => f != null)
+    )
+  );
+  if (folderIds.length > 0) {
+    formData.append('folder_ids', JSON.stringify(folderIds));
   }
   return APISendFiles<{ message: string; data: MediaFile }>('media/upload', formData);
 };
@@ -62,15 +74,35 @@ export const uploadMediaFile = (
 export const deleteMediaFile = (file: MediaFile): Promise<{ message: string }> =>
   API<{ message: string }>(`media/${file.id}`, { url: file.url }, 'DELETE');
 
-/** انتقال فایل به پوشه مجازی (folderId=null یعنی بدون پوشه) */
+/** ثبت فایل در یک یا چند پوشه مجازی (folderIds=[] یعنی بدون پوشه — ریشه) */
 export const moveMediaFile = (
   file: MediaFile,
-  folderId: number | null
+  folderIds: number[] | number | null
+): Promise<{ message: string; data: MediaFile }> => {
+  const ids = Array.isArray(folderIds)
+    ? folderIds
+    : folderIds === null || folderIds === undefined
+      ? []
+      : [folderIds];
+  return API<{ message: string; data: MediaFile }>(
+    `media/${file.id}/move`,
+    { path: file.path, folder_ids: ids },
+    'POST'
+  );
+};
+
+/** به‌روزرسانی عنوان و توضیح فایل (نمایش در ویجت مخزن اسناد) */
+export const updateMediaMetadata = (
+  file: MediaFile,
+  metadata: { title?: string | null; description?: string | null }
 ): Promise<{ message: string; data: MediaFile }> =>
   API<{ message: string; data: MediaFile }>(
-    `media/${file.id}/move`,
-    { path: file.path, folder_id: folderId },
-    'POST'
+    `media/${file.id}`,
+    {
+      title: metadata.title ?? null,
+      description: metadata.description ?? null,
+    },
+    'PUT'
   );
 
 // ========== پوشه‌های مجازی (فقط DB — در دیالوگ MediaManager نمایش داده نمی‌شوند) ==========

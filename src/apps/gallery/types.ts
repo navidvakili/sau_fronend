@@ -139,11 +139,14 @@ export interface DamFilterState {
 export interface MediaFile {
   id: string; // md5(path) — شناسه پایدار API
   name: string;
+  title?: string | null; // عنوان نمایشی (ویجت مخزن اسناد)
+  description?: string | null; // توضیح (ویجت مخزن اسناد)
   url: string;
   path: string;
   size: number; // بایت
   type: string; // mime type
-  folder_id: number | null;
+  folder_id: number | null; // پوشه اولیه (سازگاری) — اولین عضو folder_ids
+  folder_ids?: number[] | null; // همه پوشه‌های مجازی که فایل در آن‌ها ثبت شده (چند گروهی)
   created_at: string; // ISO
 }
 

@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Upload, Image as ImageIcon, FileText, Trash2, Search,
-  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder, Video as VideoIcon,
+  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder, Video as VideoIcon, Pencil, Save,
 } from 'lucide-react';
 import { APISendFiles } from '@/src/shared-utils/functions';
 import { API } from '@/src/shared-utils/functions';
@@ -20,6 +20,8 @@ interface MediaFile {
   type: string;
   created_at: string;
   path?: string;
+  title?: string | null;
+  description?: string | null;
 }
 
 /** Normalize storage URLs to the frontend's backend base URL */
@@ -101,6 +103,11 @@ export default function MediaManager({
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   // File waiting for delete confirmation dialog
   const [deleteFile, setDeleteFile] = useState<MediaFile | null>(null);
+  // File being edited (title / description metadata)
+  const [editFile, setEditFile] = useState<MediaFile | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [savingMeta, setSavingMeta] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Drops stale async responses (rapid page clicks, reopen while a previous
@@ -251,6 +258,41 @@ export default function MediaManager({
   // Confirm delete — opens the confirmation dialog instead of native confirm()
   const askDelete = (file: MediaFile) => {
     setDeleteFile(file);
+  };
+
+  // Open the metadata edit dialog (title / description)
+  const openEdit = (file: MediaFile) => {
+    setEditFile(file);
+    setEditTitle(file.title || '');
+    setEditDescription(file.description || '');
+    setError(null);
+  };
+
+  // Save title / description metadata via PUT /media/{id}
+  const handleSaveMetadata = async () => {
+    if (!editFile) return;
+    setSavingMeta(true);
+    setError(null);
+    try {
+      const result = await API<{ data: MediaFile; message: string }>(
+        `media/${editFile.id}`,
+        {
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+        },
+        'PUT'
+      );
+      const updated = normalizeMediaFile(result.data);
+      setFiles(prev => prev.map(f => (f.id === editFile.id ? updated : f)));
+      if (selectedFile?.id === editFile.id) setSelectedFile(updated);
+      setEditFile(null);
+      setSuccessMsg(result.message || 'اطلاعات فایل با موفقیت ذخیره شد.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'خطا در ذخیره اطلاعات فایل');
+    } finally {
+      setSavingMeta(false);
+    }
   };
 
   // Handle drop
@@ -493,10 +535,24 @@ export default function MediaManager({
                     {/* Info */}
                     <div className="p-2 space-y-1">
                       <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate" title={file.name}>
-                        {file.name}
+                        {file.title || file.name}
                       </p>
                       <p className="text-[9px] text-gray-400 font-mono">{formatSize(file.size)}</p>
+                      {file.title && (
+                        <p className="text-[8px] text-teal-600 dark:text-teal-400 truncate" title={file.name}>
+                          {file.name}
+                        </p>
+                      )}
                     </div>
+
+                    {/* Edit metadata button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEdit(file); }}
+                      className="absolute bottom-2 left-2 p-1.5 rounded-full bg-slate-800/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-teal-600"
+                      title="ویرایش عنوان و توضیح"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
 
                     {/* Selection indicator */}
                     {selectedFile?.id === file.id && (
@@ -625,6 +681,77 @@ export default function MediaManager({
           )}
         </motion.div>
       </motion.div>
+
+      {/* Edit Metadata Dialog */}
+      <AnimatePresence>
+        {editFile && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setEditFile(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white dark:bg-[#161618] rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-white/10"
+            >
+              <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-4">
+                <Pencil className="w-5 h-5 text-teal-500" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">ویرایش اطلاعات فایل</h3>
+              <p className="text-xs text-gray-400 mb-5 truncate">{editFile.name}</p>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300">عنوان (نمایش در ویجت مخزن اسناد)</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder={editFile.name}
+                    className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                  {!editTitle.trim() && (
+                    <p className="text-[10px] text-gray-400">در صورت خالی بودن، نام فایل نمایش داده می‌شود.</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300">توضیح (اختیاری)</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    placeholder="توضیح کوتاه درباره فایل..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  onClick={() => setEditFile(null)}
+                  disabled={savingMeta}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={handleSaveMetadata}
+                  disabled={savingMeta}
+                  className="px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-black hover:bg-teal-500 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  ذخیره
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Dialog */}
       <AnimatePresence>

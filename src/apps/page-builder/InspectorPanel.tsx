@@ -1821,18 +1821,74 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت چیدمان و ساختار نمایش</label>
                       <select
-                        value={selectedWidget.settings.binding.displayMode || 'grid'}
+                        value={selectedWidget.settings.binding.displayMode || (activeDataSource === 'files' ? 'list' : 'grid')}
                         onChange={(e) => handleBindingChange('displayMode', e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                       >
-                        <option value="grid">شبکه‌ای (Grid)</option>
-                        <option value="list">لیست عمودی (List)</option>
-                        <option value="carousel">اسلایدر کروسل (Carousel)</option>
-                        <option value="masonry">موزاییکی (Masonry)</option>
-                        <option value="timeline">تایم‌لاین زمانی (Timeline)</option>
-                        <option value="table">جدول همراه با سورت (Table)</option>
+                        {activeDataSource === 'files' ? (
+                          <>
+                            <option value="list">لیست فایل‌ها (List)</option>
+                            <option value="grid">شبکه کارتی (Grid)</option>
+                            <option value="table">جدول کامل (Table)</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="grid">شبکه‌ای (Grid)</option>
+                            <option value="list">لیست عمودی (List)</option>
+                            <option value="carousel">اسلایدر کروسل (Carousel)</option>
+                            <option value="masonry">موزاییکی (Masonry)</option>
+                            <option value="timeline">تایم‌لاین زمانی (Timeline)</option>
+                            <option value="table">جدول همراه با سورت (Table)</option>
+                          </>
+                        )}
                       </select>
                     </div>
+
+                    {/* ── نوع فایل‌های نمایشی ویجت مخزن اسناد ── */}
+                    {activeDataSource === 'files' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          نوع فایل‌های نمایشی
+                        </label>
+                        <select
+                          value={selectedWidget.settings.binding.fileType || 'document'}
+                          onChange={(e) => handleBindingChange('fileType', e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                        >
+                          <option value="document">اسناد (غیر تصویری)</option>
+                          <option value="all">همه انواع فایل</option>
+                          <option value="image">فقط تصاویر</option>
+                          <option value="video">فقط ویدیوها</option>
+                          <option value="audio">فقط صداها</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* ── تعداد کارت در هر ردیف (حالت شبکه‌ای) ── */}
+                    {activeDataSource === 'files' &&
+                      (selectedWidget.settings.binding.displayMode || 'list') === 'grid' && (
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            تعداد کارت در هر ردیف
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            {[1, 2, 3, 4].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => handleBindingChange('columnsCount', n)}
+                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                                  (selectedWidget.settings.binding.columnsCount || 3) === n
+                                    ? 'bg-teal-600 text-white border-teal-600'
+                                    : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-teal-500/40'
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                     {/* ── گروه‌ها و دسته‌بندی‌ها از وب‌سرویس ── */}
                     {activeDataSource === 'news' && (

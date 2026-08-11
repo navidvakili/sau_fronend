@@ -14,7 +14,10 @@ import {
   Calendar,
   HardDrive,
   Tag as TagIcon,
-  Maximize
+  Maximize,
+  Pencil,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { GalleryAsset, Folder as FolderType, formatDate } from './types';
 import { VideoPlayer } from './VideoPlayer';
@@ -22,15 +25,19 @@ import { PdfViewer } from './PdfViewer';
 import { OfficePreview } from './OfficePreview';
 import { FullscreenModal } from './FullscreenModal';
 import { ImageViewer } from './ImageViewer';
-import { getMediaStreamUrl } from './api';
+import { getMediaStreamUrl, updateMediaMetadata } from './api';
 
 interface AssetDetailsDrawerProps {
   asset: GalleryAsset;
   folders: FolderType[];
   onClose: () => void;
   onDelete: (asset: GalleryAsset) => void;
-  onMove: (asset: GalleryAsset, folderId: number | null) => void;
+  /** ثبت فایل در یک یا چند پوشه مجازی — آرایه خالی یعنی بدون پوشه
+   *  می‌تواند Promise برگرداند؛ true یعنی موفق، false یعنی خطا (والد alert می‌کند) */
+  onMove: (asset: GalleryAsset, folderIds: number[]) => Promise<boolean> | void;
   onOpenEditor?: () => void;
+  /** بعد از ذخیره عنوان/توضیح — والد باید state خود را به‌روز کند */
+  onUpdateMetadata?: (asset: GalleryAsset) => void;
 }
 
 export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
@@ -39,15 +46,27 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
   onClose,
   onDelete,
   onMove,
-  onOpenEditor
+  onOpenEditor,
+  onUpdateMetadata
 }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'embed'>('info');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string>(
-    asset.folder_id !== null && asset.folder_id !== undefined ? String(asset.folder_id) : ''
-  );
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>(() => {
+    const ids = asset.folder_ids && asset.folder_ids.length > 0
+      ? asset.folder_ids
+      : asset.folder_id !== null && asset.folder_id !== undefined
+        ? [asset.folder_id]
+        : [];
+    return ids.map(String);
+  });
+  const [editTitle, setEditTitle] = useState(asset.title || '');
+  const [editDescription, setEditDescription] = useState(asset.description || '');
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [metaSaved, setMetaSaved] = useState(false);
+  const [savingGroups, setSavingGroups] = useState(false);
+  const [groupsSaved, setGroupsSaved] = useState(false);
 
   const handleCopyCode = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -55,7 +74,9 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const currentFolderName = folders.find((f) => String(f.id) === String(selectedFolderId))?.name;
+  const currentFolderNames = folders
+    .filter((f) => selectedFolderIds.includes(String(f.id)))
+    .map((f) => f.name);
 
   const isPdf =
     (asset.type || '').toLowerCase().includes('pdf') ||
@@ -66,9 +87,38 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
     !isPdf &&
     /\.(docx?|pptx?|xlsx?)$/i.test(asset.name || '');
 
-  const handleMoveClick = () => {
-    const target = selectedFolderId === '' ? null : Number(selectedFolderId);
-    onMove(asset, target);
+  const handleMoveClick = async () => {
+    if (savingGroups) return;
+    const targets = selectedFolderIds.map(Number);
+    setSavingGroups(true);
+    setGroupsSaved(false);
+    try {
+      const ok = await onMove(asset, targets);
+      if (ok !== false) {
+        setGroupsSaved(true);
+        setTimeout(() => setGroupsSaved(false), 3000);
+      }
+    } finally {
+      setSavingGroups(false);
+    }
+  };
+
+  const handleSaveMetadata = async () => {
+    setSavingMeta(true);
+    setMetaSaved(false);
+    try {
+      const res = await updateMediaMetadata(asset, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+      });
+      onUpdateMetadata?.({ ...asset, title: res.data.title, description: res.data.description });
+      setMetaSaved(true);
+      setTimeout(() => setMetaSaved(false), 2500);
+    } catch {
+      /* خطا در والد یا همین‌جا نادیده گرفته می‌شود — والد می‌تواند alert کند */
+    } finally {
+      setSavingMeta(false);
+    }
   };
 
   const htmlSnippet = `<img 
@@ -259,6 +309,51 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
               <span className="font-bold text-slate-900 dark:text-white break-all">{asset.name}</span>
             </div>
 
+            {/* Title / Description — نمایش در ویجت مخزن اسناد */}
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 block font-bold flex items-center gap-1">
+                  <Pencil className="w-3 h-3" />
+                  عنوان و توضیح (نمایش در ویجت مخزن اسناد)
+                </span>
+                {metaSaved && (
+                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    ذخیره شد
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder={asset.name}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+                {!editTitle.trim() && (
+                  <p className="text-[10px] text-slate-400 -mt-1">
+                    در صورت خالی بودن، نام فایل در ویجت نمایش داده می‌شود.
+                  </p>
+                )}
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  placeholder="توضیح کوتاه درباره فایل (اختیاری)..."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 resize-none"
+                />
+              </div>
+              <button
+                onClick={handleSaveMetadata}
+                disabled={savingMeta}
+                className="w-full px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {savingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                ذخیره عنوان و توضیح
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
@@ -289,36 +384,71 @@ export const AssetDetailsDrawer: React.FC<AssetDetailsDrawerProps> = ({
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
                 <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
                   <Folder className="w-3 h-3" />
-                  پوشه مجازی
+                  گروه‌ها (پوشه‌های مجازی)
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white">
-                  {currentFolderName || '— بدون پوشه —'}
+                  {currentFolderNames.length > 0 ? currentFolderNames.join('، ') : '— بدون پوشه —'}
                 </span>
               </div>
             </div>
 
-            {/* Move to folder */}
+            {/* Move to folders (multi-select — a file can belong to several groups) */}
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 space-y-2">
-              <span className="text-[10px] text-slate-400 block font-bold">انتقال به پوشه مجازی دیگر:</span>
+              <span className="text-[10px] text-slate-400 block font-bold">
+                ثبت در گروه‌ها (می‌توانید چند پوشه را انتخاب کنید):
+              </span>
+              {folders.length === 0 ? (
+                <p className="text-[11px] text-slate-400">هنوز پوشه‌ای ساخته نشده است.</p>
+              ) : (
+                <div className="max-h-44 overflow-y-auto space-y-1.5 pl-1">
+                  {folders.map((f) => {
+                    const checked = selectedFolderIds.includes(String(f.id));
+                    return (
+                      <label
+                        key={f.id}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-bold ${
+                          checked
+                            ? 'bg-teal-500/10 border-teal-500/40 text-teal-700 dark:text-teal-300'
+                            : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-teal-500/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedFolderIds((prev) =>
+                              checked
+                                ? prev.filter((id) => id !== String(f.id))
+                                : [...prev, String(f.id)]
+                            )
+                          }
+                          className="accent-teal-500 rounded cursor-pointer"
+                        />
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: f.color || '#0d9488' }}
+                        />
+                        <span className="truncate">{f.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               <div className="flex items-center gap-2">
-                <select
-                  value={selectedFolderId}
-                  onChange={(e) => setSelectedFolderId(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white"
-                >
-                  <option value="">— بدون پوشه (ریشه) —</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
                 <button
                   onClick={handleMoveClick}
-                  className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all cursor-pointer"
+                  disabled={savingGroups}
+                  className="flex-1 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
-                  انتقال
+                  {savingGroups ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  {savingGroups ? 'در حال ذخیره…' : 'ذخیره گروه‌ها'}
                 </button>
+                {groupsSaved && (
+                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 shrink-0">
+                    <Check className="w-3.5 h-3.5" />
+                    ذخیره شد
+                  </span>
+                )}
               </div>
             </div>
           </div>

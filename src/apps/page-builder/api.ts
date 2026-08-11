@@ -214,12 +214,14 @@ export const fetchDataSourceMedia = async (params: {
   per_page?: number;
   folder_id?: string | null;
   search?: string;
+  type?: 'all' | 'image' | 'video' | 'audio' | 'document';
 } = {}) => {
   const qs = new URLSearchParams();
   qs.set('page', '1');
   qs.set('per_page', String(params.per_page ?? 100));
   if (params.search) qs.set('search', params.search);
   if (params.folder_id) qs.set('folder_id', params.folder_id);
+  if (params.type && params.type !== 'all') qs.set('type', params.type);
   return API<{
     data: MediaFile[];
     current_page: number;
