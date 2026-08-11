@@ -83,12 +83,13 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [formSummary, setFormSummary] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formCategoryId, setFormCategoryId] = useState<number | null>(null);
+  const [formCategoryIds, setFormCategoryIds] = useState<number[]>([]);
   const [formStatus, setFormStatus] = useState<'published' | 'draft' | 'archived'>('published');
   const [formIsPinned, setFormIsPinned] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState('');
   const [showMediaSelector, setShowMediaSelector] = useState(false);
   const [formTags, setFormTags] = useState<string[]>([]);
-  const [formCommentsEnabled, setFormCommentsEnabled] = useState(true);
+  const [formCommentsMode, setFormCommentsMode] = useState<'auto' | 'approval' | 'disabled'>('approval');
   const [formIsPhotoReport, setFormIsPhotoReport] = useState(false);
   const [formPhotoReportImages, setFormPhotoReportImages] = useState<PhotoReportImage[]>([]);
   const [showPhotoImageSelector, setShowPhotoImageSelector] = useState(false);
@@ -235,10 +236,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormTitle(data.title);
       setFormSummary(data.summary || '');
       setFormContent(decodeHtmlEntities(data.content || ''));
-      setFormCategoryId(data.category_id ? Number(data.category_id) : (categories.length > 0 ? categories[0].id : null));
+      setFormCategoryId(data.category_id ? Number(data.category_id) : null);
+      setFormCategoryIds((data.category_ids && data.category_ids.length ? data.category_ids : (data.category_id ? [Number(data.category_id)] : [])).map((c: any) => Number(c)));
       setFormStatus(data.status);
       setFormIsPinned(data.is_pinned);
-      setFormCommentsEnabled(data.comments_enabled);
+      setFormCommentsMode(data.comments_mode || (data.comments_enabled === false ? 'disabled' : 'approval'));
       setFormIsPhotoReport(data.is_photo_report ?? false);
       setFormPhotoReportImages(data.photo_report_images ?? []);
       setFormImageUrl(data.image_url || '');
@@ -249,10 +251,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormTitle(item.title);
       setFormSummary(item.summary || '');
       setFormContent(decodeHtmlEntities(item.content || ''));
-      setFormCategoryId(item.category_id ? Number(item.category_id) : (categories.length > 0 ? categories[0].id : null));
+      setFormCategoryId(item.category_id ? Number(item.category_id) : null);
+      setFormCategoryIds(((item as any).category_ids && (item as any).category_ids.length ? (item as any).category_ids : (item.category_id ? [Number(item.category_id)] : [])).map((c: any) => Number(c)));
       setFormStatus(item.status);
       setFormIsPinned(item.is_pinned);
-      setFormCommentsEnabled(item.comments_enabled);
+      setFormCommentsMode((item as any).comments_mode || (item.comments_enabled === false ? 'disabled' : 'approval'));
       setFormIsPhotoReport((item as any).is_photo_report ?? false);
       setFormPhotoReportImages((item as any).photo_report_images ?? []);
       setFormImageUrl(item.image_url || '');
@@ -268,10 +271,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormTitle('');
     setFormSummary('');
     setFormContent('');
-    setFormCategoryId(categories.length > 0 ? categories[0].id : null);
+    setFormCategoryId(null);
+    setFormCategoryIds([]);
     setFormStatus('published');
     setFormIsPinned(false);
-    setFormCommentsEnabled(true);
+    setFormCommentsMode('approval');
     setFormIsPhotoReport(false);
     setFormPhotoReportImages([]);
     setFormImageUrl('');
@@ -290,16 +294,22 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormLoading(true);
 
     try {
+      const categoryIds = formCategoryIds.length
+        ? formCategoryIds
+        : (formCategoryId ? [formCategoryId] : []);
+
       const payload = {
         title: formTitle,
         summary: formSummary || formTitle.slice(0, 120),
         content: formContent,
         category_id: formCategoryId,
+        category_ids: categoryIds,
         image_url: formImageUrl || undefined,
         status: formStatus,
         target_audience: 'all' as const,
         is_pinned: formIsPinned,
-        comments_enabled: formCommentsEnabled,
+        comments_mode: formCommentsMode,
+        comments_enabled: formCommentsMode !== 'disabled',
         is_photo_report: formIsPhotoReport,
         photo_report_images: formIsPhotoReport ? formPhotoReportImages : undefined,
         tags: tagArray,
@@ -781,8 +791,15 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                       </div>
                     )}
 
-                    <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-teal-600/90 text-white font-bold text-[11px] backdrop-blur-md shadow-xs">
-                      {item.category_name || 'عمومی'}
+                    <div className="absolute bottom-3 right-3 flex flex-wrap gap-1 max-w-[70%]">
+                      {(item.category_names && item.category_names.length ? item.category_names : (item.category_name ? [item.category_name] : [])).slice(0, 2).map((cn, ci) => (
+                        <span key={ci} className="px-3 py-1 rounded-xl bg-teal-600/90 text-white font-bold text-[11px] backdrop-blur-md shadow-xs">
+                          {cn || 'عمومی'}
+                        </span>
+                      ))}
+                      {(item.category_names?.length ?? 0) > 2 && (
+                        <span className="px-2 py-1 rounded-xl bg-gray-900/70 text-white font-bold text-[11px] backdrop-blur-md">+{item.category_names!.length - 2}</span>
+                      )}
                     </div>
 
                     {item.status !== 'published' && (
@@ -897,9 +914,16 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px]">
-                          {item.category_name || 'عمومی'}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(item.category_names && item.category_names.length ? item.category_names : (item.category_name ? [item.category_name] : [])).slice(0, 2).map((cn, ci) => (
+                            <span key={ci} className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px]">
+                              {cn || 'عمومی'}
+                            </span>
+                          ))}
+                          {(item.category_names?.length ?? 0) > 2 && (
+                            <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 dark:text-gray-400 font-bold text-[10px]">+{item.category_names!.length - 2}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-gray-500 dark:text-gray-400">
                         {item.published_at ? new Date(item.published_at).toLocaleDateString('fa-IR') : '-'}
@@ -1089,15 +1113,62 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                 <h3 className="text-xs font-black text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-2">تنظیمات انتشار</h3>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">دسته‌بندی</label>
+                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">دسته‌بندی اصلی</label>
                   <select
-                    value={formCategoryId || ''} onChange={e => setFormCategoryId(e.target.value ? Number(e.target.value) : null)}
+                    value={formCategoryId || ''} onChange={e => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      setFormCategoryId(val);
+                      setFormCategoryIds(prev => {
+                        if (val === null) return [];
+                        return prev.includes(val) ? prev : [...prev, val];
+                      });
+                    }}
                     className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
+                    <option value="">بدون دسته‌بندی</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">
+                    دسته‌بندی‌های بیشتر <span className="text-[9px] text-gray-400 font-normal">(یک خبر می‌تواند در چند دسته ثبت شود)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map(cat => {
+                      const active = formCategoryIds.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setFormCategoryIds(prev => {
+                              const next = active ? prev.filter(c => c !== cat.id) : [...prev, cat.id];
+                              setFormCategoryId(prevId => {
+                                if (next.length === 0) return null;
+                                if (!prevId || !next.includes(prevId)) return next[0];
+                                return prevId;
+                              });
+                              return next;
+                            });
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                            active
+                              ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/40'
+                              : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-teal-400'
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                    {categories.length === 0 && (
+                      <p className="text-[10px] text-gray-400">دسته‌بندی‌ای برای انتخاب وجود ندارد.</p>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1.5">برای ثبت خبر بدون دسته‌بندی، هیچ گزینه‌ای را انتخاب نکنید.</p>
                 </div>
 
                 <div>
@@ -1128,15 +1199,24 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   </label>
                 </div>
 
-                <div className="pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={formCommentsEnabled} onChange={e => setFormCommentsEnabled(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                      <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
-                      فعال بودن بخش نظرات
-                    </span>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
+                    بخش نظرات
                   </label>
-                  <p className="text-[10px] text-gray-400 mt-1 mr-6">در صورت غیرفعال بودن، بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.</p>
+                  <select
+                    value={formCommentsMode} onChange={e => setFormCommentsMode(e.target.value as any)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="auto">نمایش خودکار نظرات</option>
+                    <option value="approval">نیاز به تایید مدیر</option>
+                    <option value="disabled">غیرفعال (نمایش داده نشود)</option>
+                  </select>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {formCommentsMode === 'auto' && 'نظرات کاربران بلافاصله پس از ثبت نمایش داده می‌شوند.'}
+                    {formCommentsMode === 'approval' && 'نظرات ابتدا توسط مدیر تایید شده و سپس نمایش داده می‌شوند.'}
+                    {formCommentsMode === 'disabled' && 'بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.'}
+                  </p>
                 </div>
 
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -1850,10 +1930,12 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   <X className="w-5 h-5" />
                 </button>
                 <div className="absolute bottom-6 right-6 left-6 space-y-2 text-white">
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-xl bg-teal-600 font-bold text-xs shadow-xs">
-                      {activeReaderItem.category_name || 'عمومی'}
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {(activeReaderItem.category_names && activeReaderItem.category_names.length ? activeReaderItem.category_names : (activeReaderItem.category_name ? [activeReaderItem.category_name] : [])).map((cn, ci) => (
+                      <span key={ci} className="px-3 py-1 rounded-xl bg-teal-600 font-bold text-xs shadow-xs">
+                        {cn || 'عمومی'}
+                      </span>
+                    ))}
                     {activeReaderItem.is_pinned && (
                       <span className="px-3 py-1 rounded-xl bg-amber-500 text-amber-950 font-black text-xs flex items-center gap-1 shadow-xs">
                         <Pin className="w-3.5 h-3.5" />خبر ویژه

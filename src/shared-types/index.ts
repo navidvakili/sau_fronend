@@ -88,7 +88,9 @@ export interface NewsItem {
   summary: string | null;
   content: string;
   category_id: number | null;
+  category_ids: number[];
   category_name: string | null;
+  category_names: (string | null)[];
   category_color: string | null;
   author_username: string;
   author_name: string | null;
@@ -98,6 +100,7 @@ export interface NewsItem {
   likes_count: number;
   is_pinned: boolean;
   comments_enabled: boolean;
+  comments_mode: 'auto' | 'approval' | 'disabled';
   is_photo_report: boolean;
   photo_report_images: PhotoReportImage[];
   comments_count: number;
