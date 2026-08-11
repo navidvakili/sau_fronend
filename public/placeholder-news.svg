@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#134e4a"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ccfbf1"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="650" cy="120" r="180" fill="#ffffff" opacity="0.06"/>
+  <circle cx="120" cy="520" r="220" fill="#ffffff" opacity="0.06"/>
+  <g transform="translate(400 300)">
+    <!-- graduation cap -->
+    <polygon points="-160,-10 0,-70 160,-10 0,50" fill="url(#cap)" opacity="0.95"/>
+    <rect x="-18" y="40" width="36" height="70" rx="8" fill="#99f6e4"/>
+    <polygon points="-160,-10 -140,60 -20,30" fill="#5eead4"/>
+    <polygon points="160,-10 140,60 20,30" fill="#5eead4"/>
+    <path d="M-40,-28 Q0,-46 40,-28" stroke="#0f766e" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <circle cx="0" cy="-80" r="22" fill="#f0fdfa"/>
+    <path d="M-10,-80 q10,-18 20,0" stroke="#0f766e" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+  <rect x="300" y="470" width="200" height="14" rx="7" fill="#ffffff" opacity="0.35"/>
+  <rect x="340" y="500" width="120" height="10" rx="5" fill="#ffffff" opacity="0.22"/>
+</svg>

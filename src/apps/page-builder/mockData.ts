@@ -396,7 +396,7 @@ export const INITIAL_SMART_PAGE: SmartPageSchema = {
               type: 'image',
               title: 'تصویر اصلی',
               content: 'تصویر پردیس',
-              imageUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80',
+              imageUrl: '/placeholder-news.svg',
               settings: {
                 style: {
                   borderRadius: 20,
@@ -605,7 +605,7 @@ export const PRESET_PAGE_TEMPLATES: PageTemplate[] = [
     title: 'قالب جامع پرتال اصلی دانشگاه',
     category: 'صفحه اصلی',
     description: 'ترکیبی کامل از اطلاعیه‌های فوری، اخبار علمی، کادر اساتید و مخزن فایل‌های دانلود.',
-    thumbnail: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=600&q=80',
+    thumbnail: '/placeholder-news.svg',
     schema: INITIAL_SMART_PAGE
   },
   {

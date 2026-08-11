@@ -250,17 +250,17 @@ const SmartSkeleton: React.FC<{
 
   if (variant === 'cards') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden"
+            className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 overflow-hidden"
           >
-            <div className={`h-36 ${shimmer}`} />
-            <div className="p-4 space-y-2.5">
-              <div className={`h-3.5 rounded w-3/4 ${shimmer}`} />
-              <div className={`h-3 rounded w-full ${shimmer}`} />
-              <div className={`h-3 rounded w-5/6 ${shimmer}`} />
+            <div className={`h-24 ${shimmer}`} />
+            <div className="p-3 space-y-2">
+              <div className={`h-2.5 rounded w-3/4 ${shimmer}`} />
+              <div className={`h-2 rounded w-full ${shimmer}`} />
+              <div className={`h-2 rounded w-5/6 ${shimmer}`} />
             </div>
           </div>
         ))}
@@ -270,9 +270,9 @@ const SmartSkeleton: React.FC<{
 
   if (variant === 'gallery') {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className={`h-32 rounded-xl ${shimmer}`} />
+          <div key={i} className={`h-20 rounded-lg ${shimmer}`} />
         ))}
       </div>
     );
@@ -284,14 +284,14 @@ const SmartSkeleton: React.FC<{
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-800 last:border-0"
+            className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-slate-800 last:border-0"
           >
-            <div className={`w-8 h-8 rounded-lg shrink-0 ${shimmer}`} />
+            <div className={`w-6 h-6 rounded-md shrink-0 ${shimmer}`} />
             <div className="flex-1 space-y-1.5">
-              <div className={`h-3 rounded w-2/5 ${shimmer}`} />
-              <div className={`h-2.5 rounded w-1/3 ${shimmer}`} />
+              <div className={`h-2.5 rounded w-2/5 ${shimmer}`} />
+              <div className={`h-2 rounded w-1/3 ${shimmer}`} />
             </div>
-            <div className={`w-16 h-3 rounded ${shimmer}`} />
+            <div className={`w-14 h-2.5 rounded ${shimmer}`} />
           </div>
         ))}
       </div>
@@ -300,16 +300,16 @@ const SmartSkeleton: React.FC<{
 
   // list / rows
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3"
+          className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-2.5"
         >
-          <div className={`w-9 h-9 rounded-lg shrink-0 ${shimmer}`} />
-          <div className="flex-1 space-y-2">
-            <div className={`h-3 rounded w-2/3 ${shimmer}`} />
-            <div className={`h-2.5 rounded w-1/2 ${shimmer}`} />
+          <div className={`w-7 h-7 rounded-lg shrink-0 ${shimmer}`} />
+          <div className="flex-1 space-y-1.5">
+            <div className={`h-2.5 rounded w-2/3 ${shimmer}`} />
+            <div className={`h-2 rounded w-1/2 ${shimmer}`} />
           </div>
         </div>
       ))}
@@ -547,7 +547,7 @@ const NewsFeedWidget: React.FC<{
         : 'grid grid-cols-1 md:grid-cols-2 gap-4';
 
   const fallbackImg =
-    'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80';
+    '/placeholder-news.svg';
   const newsImg = (n: NewsItem) => n.image_url || fallbackImg;
 
   if (error) {
@@ -797,7 +797,7 @@ const NewsCarousel: React.FC<{
     return () => clearInterval(t);
   }, [total]);
   const fallbackImg =
-    'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80';
+    '/placeholder-news.svg';
   if (!current) return null;
   return (
     <div className="space-y-4">
@@ -1574,7 +1574,11 @@ const ContainerBlock: React.FC<{
 
 /** اسلایدر تصویر — چرخش خودکار تصاویر */
 /** اسلایدر تصویر — منبع رسانه (با عنوان) یا آدرس دستی؛ حالت اسلایدشو یا فهرست بندانگشتی + لایت‌باکس */
-const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+const ImageSliderBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  isEditorPreview?: boolean;
+}> = ({ widget, containerStyle, isEditorPreview = false }) => {
   const props = widget.settings.customProps || {};
   const sliderMode = props.sliderMode === 'thumbs' ? 'thumbs' : 'slideshow';
   const source = props.sliderSource || 'media';
@@ -1608,10 +1612,10 @@ const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   useEffect(() => {
-    if (sliderMode !== 'slideshow' || slides.length < 2) return;
+    if (isEditorPreview || sliderMode !== 'slideshow' || slides.length < 2) return;
     const t = setInterval(() => setIndex((i) => (i + 1) % slides.length), 3500);
     return () => clearInterval(t);
-  }, [slides.length, sliderMode]);
+  }, [slides.length, sliderMode, isEditorPreview]);
 
   // بستن لایت‌باکس با کلید Escape
   useEffect(() => {
@@ -1747,24 +1751,28 @@ const ImageSliderBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
       </div>
       <button
         onClick={() => setIndex((index - 1 + slides.length) % slides.length)}
-        className="absolute top-1/2 right-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        className="absolute top-1/2 right-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors cursor-pointer"
         aria-label="اسلاید قبلی"
       >
-        <ChevronUp className="w-4 h-4 rotate-90" />
+        <ChevronUp className="w-5 h-5 rotate-90" />
       </button>
       <button
         onClick={() => setIndex((index + 1) % slides.length)}
-        className="absolute top-1/2 left-2 -translate-y-1/2 p-2 rounded-full bg-slate-950/40 hover:bg-slate-950/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        className="absolute top-1/2 left-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors cursor-pointer"
         aria-label="اسلاید بعدی"
       >
-        <ChevronDown className="w-4 h-4 rotate-90" />
+        <ChevronDown className="w-5 h-5 rotate-90" />
       </button>
     </div>
   );
 };
 
 /** شمارنده — عدد متحرک با پیشوند/پسوند + آیکون و استایل کامل (رنگ/اندازه عدد، کپشن) */
-const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+const CounterBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  isEditorPreview?: boolean;
+}> = ({ widget, containerStyle, isEditorPreview = false }) => {
   const props = widget.settings.customProps || {};
   const style = widget.settings.style || {};
   const target = Number(props.target ?? (parseFloat(widget.content) || 100));
@@ -1793,6 +1801,11 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   const [value, setValue] = useState(0);
 
   useEffect(() => {
+    // در ویرایشگر (استودیو) انیمیشن شمارش اجرا نمی‌شود — عدد نهایی بلافاصله نمایش داده می‌شود
+    if (isEditorPreview) {
+      setValue(target);
+      return;
+    }
     let raf: number;
     const start = performance.now();
     const tick = (now: number) => {
@@ -1802,7 +1815,7 @@ const CounterBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target]);
+  }, [target, isEditorPreview]);
 
   // عدد نهایی (شبح نامرئی) — باکس در طول انیمیشن کوچک/بزرگ نمی‌شود و از کارت بیرون نمی‌زند
   const finalStr = `${prefix}${target.toLocaleString('fa-IR')}${suffix}`;
@@ -1893,7 +1906,11 @@ const NavigatorBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.C
 };
 
 /** نوار راهبری — برند + لینک‌های منو با استایل کامل (رنگ/سایز/انیمیشن هر آیتم) */
-const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+const NavMenuBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  isEditorPreview?: boolean;
+}> = ({ widget, containerStyle, isEditorPreview = false }) => {
   const props = widget.settings.customProps || {};
   const brand = props.brand || widget.title;
   const brandColor = props.brandColor || '#ffffff';
@@ -1923,9 +1940,9 @@ const NavMenuBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
 .${uid} .nm-anim-underline:hover::after{width:100%}
 .${uid} .nm-anim-fade:hover{opacity:.6}
 .${uid} .nm-anim-slide:hover{transform:translateY(-2px)}
-.${uid} .nm-anim-pulse{animation:${uid}-pulse 2.2s ease-in-out infinite}
+${isEditorPreview ? '' : `.${uid} .nm-anim-pulse{animation:${uid}-pulse 2.2s ease-in-out infinite}
 @keyframes ${uid}-pulse{0%,100%{opacity:1}50%{opacity:.55}}
-`;
+`}`;
 
   // ترازبندی — برند در راست/وسط/چپ و تراز نوار منو
   let navCls = 'flex items-center gap-4 flex-wrap';
@@ -2401,7 +2418,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           }`}
         >
           <img
-            src={widget.imageUrl || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
+            src={widget.imageUrl || '/placeholder-news.svg'}
             alt={widget.title}
             className={`transition-transform duration-300 ${
               style.imageHoverZoom !== false ? 'hover:scale-[1.02]' : ''
@@ -2606,16 +2623,16 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
 
     case 'image-slider':
-      return <ImageSliderBlock widget={widget} containerStyle={containerStyle} />;
+      return <ImageSliderBlock widget={widget} containerStyle={containerStyle} isEditorPreview={isEditorPreview} />;
 
     case 'counter':
-      return <CounterBlock widget={widget} containerStyle={containerStyle} />;
+      return <CounterBlock widget={widget} containerStyle={containerStyle} isEditorPreview={isEditorPreview} />;
 
     case 'navigator':
       return <NavigatorBlock widget={widget} containerStyle={containerStyle} />;
 
     case 'nav-menu':
-      return <NavMenuBlock widget={widget} containerStyle={containerStyle} />;
+      return <NavMenuBlock widget={widget} containerStyle={containerStyle} isEditorPreview={isEditorPreview} />;
 
     case 'child-pages':
       return (
