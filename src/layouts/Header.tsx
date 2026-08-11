@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType } from '@/src/shared-types';
 import type { Tab } from '@/src/layouts/types';
 import type { RoleInfo } from '@/src/login/types';
-import type { MenuCategory, SubmenuItem } from './menuConfig';
+import type { MenuCategory } from './menuConfig';
 import ThemeToggle from './ThemeToggle';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import LanguageManagerModal from '@/src/shared-components/LanguageManagerModal';
@@ -19,6 +19,8 @@ interface HeaderProps {
   user: UserType | null;
   userRoles: RoleInfo[];
   menuCategories: MenuCategory[];
+  /** Supplemental searchable items — components that may be missing from the dynamic nav */
+  searchItems?: Array<{ targetId: string; title: string; iconName: string; category: string }>;
   tabs: Tab[];
   theme: 'light' | 'dark';
   handleOpenTab: (id: string, title: string, iconName: string, forceNewInstance?: boolean) => void;
@@ -29,8 +31,22 @@ interface HeaderProps {
   setIsMobileMenuOpen: (open: boolean) => void;
 }
 
+/**
+ * Persian search normalization — makes matching tolerant of common typing
+ * differences: removes ZWNJ (نیم‌فاصله), normalizes Arabic yeh/kaf to Persian,
+ * strips tatweel and leading/trailing whitespace.
+ */
+const normalizePersian = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/\u200c/g, '') // نیم‌فاصله
+    .replace(/ي/g, 'ی') // ی عربی
+    .replace(/ك/g, 'ک') // ک عربی
+    .replace(/ـ/g, '') // کشیدگی
+    .trim();
+
 export default function Header({
-  user, userRoles, menuCategories, tabs, theme,
+  user, userRoles, menuCategories, searchItems = [], tabs, theme,
   handleOpenTab, setSelectedMainCat,
   handleToggleTheme, handleChangeRole, setShowLogoutModal, setIsMobileMenuOpen,
 }: HeaderProps) {
@@ -90,14 +106,31 @@ export default function Header({
                 نتایج جستجو برای "{menuSearchQuery}":
               </span>
               {(() => {
-                const query = menuSearchQuery.toLowerCase().trim();
-                const matched: Array<{ category: string; categoryKey: string; submenu: SubmenuItem }> = [];
+                const query = normalizePersian(menuSearchQuery);
+                const matched: Array<{ category: string; categoryKey: string; targetId: string; title: string; iconName: string }> = [];
+                const seen = new Set<string>();
+                const push = (m: { category: string; categoryKey: string; targetId: string; title: string; iconName: string }) => {
+                  if (m.targetId && !seen.has(m.targetId)) {
+                    seen.add(m.targetId);
+                    matched.push(m);
+                  }
+                };
+                // 1) Submenus of each category + direct (no-children) categories
                 for (const cat of menuCategories) {
-                  const catMatches = cat.title.toLowerCase().includes(query);
+                  const catMatches = normalizePersian(cat.title).includes(query);
+                  if (cat.targetId && (catMatches || normalizePersian(cat.title).includes(query))) {
+                    push({ category: cat.title, categoryKey: cat.key, targetId: cat.targetId, title: cat.title, iconName: cat.iconName || 'Folder' });
+                  }
                   for (const sub of cat.submenus) {
-                    if (catMatches || sub.label.toLowerCase().includes(query) || sub.title.toLowerCase().includes(query)) {
-                      matched.push({ category: cat.title, categoryKey: cat.key, submenu: sub });
+                    if (catMatches || normalizePersian(sub.label).includes(query) || normalizePersian(sub.title).includes(query)) {
+                      push({ category: cat.title, categoryKey: cat.key, targetId: sub.targetId, title: sub.title, iconName: sub.iconName });
                     }
+                  }
+                }
+                // 2) Supplemental items (components missing from the dynamic nav)
+                for (const item of searchItems) {
+                  if (normalizePersian(item.title).includes(query) || normalizePersian(item.category).includes(query)) {
+                    push({ category: item.category, categoryKey: '', targetId: item.targetId, title: item.title, iconName: item.iconName });
                   }
                 }
                 if (matched.length === 0) {
@@ -106,20 +139,20 @@ export default function Header({
                 return (
                   <div className="flex flex-col gap-0.5 mt-1">
                     {matched.map((item, idx) => {
-                      const isTabOpen = tabs.some(t => t.id === item.submenu.targetId || t.moduleType === item.submenu.targetId);
+                      const isTabOpen = tabs.some(t => t.id === item.targetId || t.moduleType === item.targetId);
                       return (
                         <button
                           key={idx}
                           onClick={() => {
-                            handleOpenTab(item.submenu.targetId, item.submenu.title, item.submenu.iconName);
-                            setSelectedMainCat(item.categoryKey);
+                            handleOpenTab(item.targetId, item.title, item.iconName);
+                            if (item.categoryKey) setSelectedMainCat(item.categoryKey);
                             setMenuSearchQuery('');
                           }}
                           className="px-3 py-2 text-right text-[11px] hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg flex items-center justify-between cursor-pointer w-full group transition-colors duration-150"
                         >
                           <span className="flex items-center gap-2">
                             <span className="font-sans font-medium text-gray-800 dark:text-gray-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                              {item.submenu.label}
+                              {item.title}
                             </span>
                             {isTabOpen && (
                               <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-sans bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold">تب باز</span>

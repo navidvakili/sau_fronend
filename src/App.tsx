@@ -201,6 +201,23 @@ export default function App() {
     return items;
   }, [menuCategories]);
 
+  // Supplemental search items — components that may be missing from the dynamic
+  // API navigation but are valid moduleIds (see moduleToAppMap).
+  const supplementalSearchItems = useMemo(() => [
+    { targetId: 'news-create', title: 'ایجاد اخبار', iconName: 'Plus', category: 'اخبار' },
+    { targetId: 'news-categories', title: 'دسته‌بندی اخبار', iconName: 'Folder', category: 'اخبار' },
+    { targetId: 'news-analytics', title: 'آمار اخبار', iconName: 'FileText', category: 'اخبار' },
+    { targetId: 'announcements-create', title: 'ایجاد اطلاعیه', iconName: 'Plus', category: 'اطلاعیه‌ها' },
+    { targetId: 'achievements-create', title: 'ایجاد افتخار', iconName: 'Plus', category: 'افتخارات' },
+    { targetId: 'smart-page-builder', title: 'صفحه‌ساز هوشمند', iconName: 'LayoutDashboard', category: 'صفحه‌ساز' },
+    { targetId: 'dam-studio', title: 'استودیو دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
+    { targetId: 'dam-assets', title: 'دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
+    { targetId: 'finance', title: 'حسابداری و مالی', iconName: 'DollarSign', category: 'مالی' },
+    { targetId: 'profile', title: 'پروفایل کاربری', iconName: 'User', category: 'کاربری' },
+    { targetId: 'change-password', title: 'تغییر رمز عبور', iconName: 'Lock', category: 'کاربری' },
+    { targetId: 'admin-sessions', title: 'نشست‌های مدیریتی', iconName: 'Clock', category: 'کاربری' },
+  ], []);
+
   // ========== Handlers ==========
   const handleLoginSuccess = (userProfile: UserType) => {
     setUser(userProfile);
@@ -385,6 +402,7 @@ export default function App() {
         user={user}
         userRoles={userRoles}
         menuCategories={menuCategories}
+        searchItems={supplementalSearchItems}
         tabs={tabs}
         theme={theme}
         handleOpenTab={handleOpenTab}
