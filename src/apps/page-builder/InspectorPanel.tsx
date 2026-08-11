@@ -2430,6 +2430,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">شعاع گوشه‌ها روی خود تصویر اعمال می‌شود (نه روی بلوک)</p>
                   </div>
+
+                  {/* انیمیشن زوم هنگام هاور — تصویر */}
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedWidget.settings.style.imageHoverZoom !== false}
+                      onChange={(e) => handleStyleChange('imageHoverZoom', e.target.checked)}
+                      className="accent-teal-600 w-4 h-4"
+                    />
+                    انیمیشن زوم هنگام هاور
+                  </label>
                 </>
               )}
 

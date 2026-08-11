@@ -1719,9 +1719,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           <img
             src={widget.imageUrl || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'}
             alt={widget.title}
-            className={`transition-transform duration-300 hover:scale-[1.02] ${
-              squaredFrame ? 'w-full h-full' : 'w-full h-auto'
-            }`}
+            className={`transition-transform duration-300 ${
+              style.imageHoverZoom !== false ? 'hover:scale-[1.02]' : ''
+            } ${squaredFrame ? 'w-full h-full' : 'w-full h-auto'}`}
             style={{
               objectFit: style.objectFit || 'cover',
               borderRadius:

@@ -133,6 +133,8 @@ export interface WidgetStyle {
   objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
   /** کادر تصویر — خودکار/مستطیل | مربع | دایره */
   imageFrame?: 'rounded' | 'square' | 'circle';
+  /** انیمیشن زوم هنگام هاور روی تصویر — پیش‌فرض روشن */
+  imageHoverZoom?: boolean;
   maxWidth?: number; // px — caps widget width
   fullWidth?: boolean; // button stretches to full column width
   /** 'full' (default) | 'auto' (fit-content) | 'center' (fit-content + centered) */
