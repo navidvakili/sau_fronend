@@ -224,10 +224,16 @@ export default function App() {
     // Convert roles from login response (string[]) to RoleInfo[] format
     // fetchNavigation() will later replace with proper labeled data from API
     if (userProfile.roles && userProfile.roles.length > 0) {
+      const ROLE_LABELS: Record<string, string> = {
+        support: 'پشتیبان',
+        admin: 'مدیر سامانه',
+        editor: 'ویرایشگر محتوا',
+        user: 'کاربر',
+      };
       setUserRoles(userProfile.roles.map((r, i) => ({
         id: i,
         role: r,
-        label: r,
+        label: ROLE_LABELS[r] ?? r,
         active: r === userProfile.role ? 1 : 0,
       })));
     }

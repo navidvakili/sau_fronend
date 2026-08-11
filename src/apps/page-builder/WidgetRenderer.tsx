@@ -2626,8 +2626,11 @@ const ImageSliderBlock: React.FC<{
             <button
               key={`${s.url}-${i}`}
               type="button"
-              onClick={() => setLightbox(i)}
-              className="group relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 shadow-xs hover:border-teal-500/50 hover:shadow-md transition-all cursor-pointer focus:outline-none"
+              onClick={() => {
+                if (isEditorPreview) return; // در پیش‌نمایش ویرایشگر غیرفعال است
+                setLightbox(i);
+              }}
+              className={`group relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 shadow-xs transition-all focus:outline-none ${isEditorPreview ? 'cursor-default' : 'hover:border-teal-500/50 hover:shadow-md cursor-pointer'}`}
               title={s.title}
             >
               <img
@@ -2716,22 +2719,31 @@ const ImageSliderBlock: React.FC<{
         {slides.map((_, i) => (
           <button
             key={i}
-            onClick={() => setIndex(i)}
-            className={`h-1.5 rounded-full transition-all cursor-pointer ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+            onClick={() => {
+              if (isEditorPreview) return; // در پیش‌نمایش ویرایشگر غیرفعال است
+              setIndex(i);
+            }}
+            className={`h-1.5 rounded-full transition-all ${isEditorPreview ? 'cursor-default' : 'cursor-pointer'} ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
             aria-label={`اسلاید ${i + 1}`}
           />
         ))}
       </div>
       <button
-        onClick={() => setIndex((index - 1 + slides.length) % slides.length)}
-        className="absolute top-1/2 right-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors cursor-pointer"
+        onClick={() => {
+          if (isEditorPreview) return; // در پیش‌نمایش ویرایشگر غیرفعال است
+          setIndex((index - 1 + slides.length) % slides.length);
+        }}
+        className={`absolute top-1/2 right-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors ${isEditorPreview ? 'cursor-default' : 'cursor-pointer'}`}
         aria-label="اسلاید قبلی"
       >
         <ChevronUp className="w-5 h-5 rotate-90" />
       </button>
       <button
-        onClick={() => setIndex((index + 1) % slides.length)}
-        className="absolute top-1/2 left-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors cursor-pointer"
+        onClick={() => {
+          if (isEditorPreview) return; // در پیش‌نمایش ویرایشگر غیرفعال است
+          setIndex((index + 1) % slides.length);
+        }}
+        className={`absolute top-1/2 left-2 -translate-y-1/2 p-2.5 rounded-full bg-slate-950/50 hover:bg-slate-950/75 text-white backdrop-blur-sm shadow-md transition-colors ${isEditorPreview ? 'cursor-default' : 'cursor-pointer'}`}
         aria-label="اسلاید بعدی"
       >
         <ChevronDown className="w-5 h-5 rotate-90" />
