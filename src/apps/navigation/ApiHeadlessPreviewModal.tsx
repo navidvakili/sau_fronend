@@ -4,13 +4,13 @@ import {
   Code,
   Copy,
   Check,
-  Globe,
   Shield,
   Layers,
   Terminal,
   Server
 } from 'lucide-react';
-import { NavigationMenu, MenuLocation, LanguageCode, AccessRole } from './types';
+import { NavigationMenu, MenuLocation, AccessRole } from './types';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface ApiHeadlessPreviewModalProps {
   menus: NavigationMenu[];
@@ -21,20 +21,20 @@ export const ApiHeadlessPreviewModal: React.FC<ApiHeadlessPreviewModalProps> = (
   menus,
   onClose
 }) => {
-  const [selectedEndpoint, setSelectedEndpoint] = useState<'/api/navigation/header' | '/api/navigation/footer' | '/api/navigation/mobile'>('/api/navigation/header');
-  const [selectedLang, setSelectedLang] = useState<LanguageCode>('fa');
+  const { currentLang } = useLanguage();
+  const [selectedEndpoint, setSelectedEndpoint] = useState<'/api/v1/navigation/header-main-menu/public' | '/api/v1/navigation/footer-menu-1/public' | '/api/v1/navigation/mobile-menu/public'>('/api/v1/navigation/header-main-menu/public');
   const [selectedRole, setSelectedRole] = useState<AccessRole>('Public User');
   const [copied, setCopied] = useState(false);
 
   // Map endpoint to location
   const locationMap: Record<string, MenuLocation> = {
-    '/api/navigation/header': 'Header Main Menu',
-    '/api/navigation/footer': 'Footer Menu 1',
-    '/api/navigation/mobile': 'Mobile Menu'
+    '/api/v1/navigation/header-main-menu/public': 'Header Main Menu',
+    '/api/v1/navigation/footer-menu-1/public': 'Footer Menu 1',
+    '/api/v1/navigation/mobile-menu/public': 'Mobile Menu'
   };
 
   const targetMenu = menus.find(
-    m => m.location === locationMap[selectedEndpoint] && m.language === selectedLang
+    m => m.location === locationMap[selectedEndpoint]
   ) || menus[0];
 
   // Generate Headless JSON Payload
@@ -44,7 +44,7 @@ export const ApiHeadlessPreviewModal: React.FC<ApiHeadlessPreviewModalProps> = (
     meta: {
       endpoint: selectedEndpoint,
       location: targetMenu?.location || 'Header Main Menu',
-      language: selectedLang,
+      language: currentLang,
       role: selectedRole,
       menuId: targetMenu?.id,
       version: targetMenu?.version,
@@ -95,9 +95,9 @@ export const ApiHeadlessPreviewModal: React.FC<ApiHeadlessPreviewModalProps> = (
             <span className="font-bold text-slate-300">Endpoint:</span>
             <div className="flex items-center bg-slate-900 rounded-xl p-1 border border-slate-800 dir-ltr font-mono">
               {[
-                '/api/navigation/header',
-                '/api/navigation/footer',
-                '/api/navigation/mobile'
+                '/api/v1/navigation/header-main-menu/public',
+                '/api/v1/navigation/footer-menu-1/public',
+                '/api/v1/navigation/mobile-menu/public'
               ].map(ep => (
                 <button
                   key={ep}
@@ -114,19 +114,7 @@ export const ApiHeadlessPreviewModal: React.FC<ApiHeadlessPreviewModalProps> = (
 
           {/* Query Params Filters */}
           <div className="flex items-center gap-3">
-            {/* Language filter */}
-            <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
-              <Globe className="w-3.5 h-3.5 text-teal-400" />
-              <select
-                value={selectedLang}
-                onChange={e => setSelectedLang(e.target.value as LanguageCode)}
-                className="bg-transparent font-bold text-white focus:outline-none cursor-pointer"
-              >
-                <option value="fa" className="bg-slate-900">فارسی (fa)</option>
-                <option value="en" className="bg-slate-900">English (en)</option>
-                <option value="ar" className="bg-slate-900">العربية (ar)</option>
-              </select>
-            </div>
+            {/* زبان از ساختار اصلی سیستم (چندزبانه) — بدون فیلتر داخلی */}
 
             {/* Role Filter */}
             <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">

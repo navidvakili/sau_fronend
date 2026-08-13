@@ -22,7 +22,8 @@ import {
   Megaphone,
   BookOpen,
   Info,
-  LayoutGrid
+  LayoutGrid,
+  Loader2
 } from 'lucide-react';
 import {
   NavigationItem,
@@ -35,10 +36,13 @@ import {
   AccessRole,
   NavigationItemSettings
 } from './types';
-import { sampleCmsSources } from './mockData';
 
 interface MenuItemEditorModalProps {
   item: NavigationItem;
+  /** منابع CMS واقعی سایت اصلی که از وب‌سرویس بک‌اند دریافت شده‌اند */
+  cmsSources: CmsSourceItem[];
+  /** وضعیت بارگذاری منابع از وب‌سرویس */
+  sourcesLoading?: boolean;
   onSave: (updatedItem: NavigationItem) => void;
   onClose: () => void;
 }
@@ -55,6 +59,8 @@ const ACCESS_ROLES: AccessRole[] = [
 
 export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
   item,
+  cmsSources,
+  sourcesLoading = false,
   onSave,
   onClose
 }) => {
@@ -96,7 +102,8 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
   // Search filter for internal source items
   const [sourceSearch, setSourceSearch] = useState('');
 
-  const filteredSources = sampleCmsSources.filter(s => {
+  // منابع از وب‌سرویس (داده‌های واقعی سایت اصلی) دریافت می‌شوند — بدون اتصال مستقیم به سایت اصلی
+  const filteredSources = cmsSources.filter(s => {
     const matchesSource = internalSource === 'ALL' || s.type === internalSource;
     const matchesScope = scopeFilter === 'all' || s.scope === scopeFilter;
     const matchesSearch =
@@ -339,11 +346,16 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
                     />
                   </div>
 
-                  {/* Source List with Badges & Metadata */}
+                  {/* Source List with Badges & Metadata — از وب‌سرویس */}
                   <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
-                    {filteredSources.length === 0 ? (
+                    {sourcesLoading ? (
+                      <p className="p-4 text-center text-slate-400 text-[11px] flex items-center justify-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        در حال دریافت منابع از وب‌سرویس...
+                      </p>
+                    ) : filteredSources.length === 0 ? (
                       <p className="p-4 text-center text-slate-400 text-[11px]">
-                        هیچ محتوایی مطابق با فیلتر انتخابی یافت نشد.
+                        هیچ محتوایی مطابق با فیلتر انتخابی از وب‌سرویس یافت نشد.
                       </p>
                     ) : (
                       filteredSources.map(s => {

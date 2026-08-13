@@ -4,12 +4,7 @@ export type MenuLocation =
   | 'Footer Menu 1'
   | 'Footer Menu 2'
   | 'Footer Menu 3'
-  | 'Mobile Menu'
-  | 'Sidebar Menu'
-  | 'Dashboard Menu'
-  | 'Breadcrumb Navigation';
-
-export type LanguageCode = 'fa' | 'en' | 'ar';
+  | 'Mobile Menu';
 
 export type ItemType = 'internal' | 'external' | 'custom';
 
@@ -152,16 +147,17 @@ export interface NavigationItem {
 }
 
 export interface NavigationMenu {
-  id: string;
+  id: number | string;
   name: string;
   slug: string;
   location: MenuLocation;
-  language: LanguageCode;
+  /** زبان از ساختار اصلی چندزبانه سیستم مدیریت تعیین می‌شود */
+  language: string;
   status: 'active' | 'draft' | 'archived';
   version: number;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
   mobileBehavior?: MobileBehavior;
   items: NavigationItem[];
 }

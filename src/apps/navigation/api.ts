@@ -1,0 +1,241 @@
+// ============================================================
+// Site Navigation API — ارتباط ماژول ناوبری با وب‌سرویس
+// ============================================================
+// این ماژول منوهای پوسته سایت اصلی را تعریف می‌کند. داده‌ها از همان
+// وب‌سرویس بک‌اند (که سایت اصلی نیز از آن استفاده می‌کند) دریافت
+// می‌شود؛ یعنی مستقیماً به سایت اصلی متصل نمی‌شویم و همه‌چیز از
+// طریق API مدیریت برقرار می‌شود.
+
+import { API } from '@/src/shared-utils/functions';
+import type { NavigationMenu, CmsSourceItem, MenuLocation } from './types';
+import { fetchNews, fetchCategories } from '../news/api';
+import { fetchAnnouncements, fetchAnnouncementCategories } from '../announcements/api';
+import { fetchSmartPages } from '../page-builder/api';
+import { fetchDepartments } from '../departments/api';
+import { fetchFields } from '../fields/api';
+
+// ==================== Site Navigation (وب‌سرویس منوها) ====================
+
+/**
+ * دریافت همه منوهای سایت برای زبان جاری
+ */
+export async function fetchSiteMenus(lang: string): Promise<NavigationMenu[]> {
+  const res = await API<{ data: NavigationMenu[] }>(`site-navigation?lang=${encodeURIComponent(lang)}`);
+  return res.data || [];
+}
+
+/**
+ * دریافت منوی یک موقعیت خاص (در صورت نبود، در بک‌اند ساخته می‌شود)
+ */
+export async function fetchMenuByLocation(location: string, lang: string): Promise<NavigationMenu> {
+  const res = await API<{ data: NavigationMenu }>(
+    `site-navigation/location/${encodeURIComponent(location)}?lang=${encodeURIComponent(lang)}`
+  );
+  return res.data;
+}
+
+/**
+ * ذخیره منو (ایجاد در صورت نداشتن id، در غیر این صورت به‌روزرسانی)
+ */
+export async function saveSiteMenu(menu: NavigationMenu, lang: string): Promise<NavigationMenu> {
+  const payload = {
+    location: menu.location,
+    name: menu.name,
+    slug: menu.slug,
+    items: menu.items,
+    status: menu.status,
+    lang,
+  };
+
+  if (menu.id && typeof menu.id === 'number') {
+    const res = await API<{ data: NavigationMenu; message?: string }>(
+      `site-navigation/${menu.id}`,
+      payload,
+      'PUT'
+    );
+    return res.data;
+  }
+
+  const res = await API<{ data: NavigationMenu; message?: string }>('site-navigation', payload, 'POST');
+  return res.data;
+}
+
+/**
+ * انتشار منو (نسخه جدید + فعال شدن برای نمایش عمومی)
+ */
+export async function publishSiteMenu(id: number): Promise<NavigationMenu> {
+  const res = await API<{ data: NavigationMenu; message?: string }>(
+    `site-navigation/${id}/publish`,
+    {},
+    'POST'
+  );
+  return res.data;
+}
+
+/**
+ * حذف منو
+ */
+export async function deleteSiteMenu(id: number): Promise<void> {
+  await API<{ message: string }>(`site-navigation/${id}`, {}, 'DELETE');
+}
+
+// ==================== منابع محتوایی سایت اصلی (CMS Source Palette) ====================
+
+interface Paginated<T> {
+  data: T[];
+}
+
+/**
+ * دریافت منابع محتوایی واقعی سایت اصلی از وب‌سرویس بک‌اند
+ * (اخبار، اطلاعیه‌ها، صفحات، دانشکده‌ها، رشته‌ها و ...)
+ */
+export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
+  const per_page = 30;
+  const sources: CmsSourceItem[] = [];
+
+  // صفحات هوشمند (صفحه‌ساز / صفحات اصلی)
+  try {
+    const res = await fetchSmartPages({ per_page, lang });
+    const pages = (res as Paginated<{ id: number; title: string; slug: string }>).data || [];
+    pages.forEach(p => {
+      sources.push({
+        id: `page_${p.id}`,
+        title: `صفحه: ${p.title}`,
+        type: 'Page Builder',
+        url: `/page/${p.slug}`,
+        category: 'صفحات سایت',
+        categoryPath: 'صفحات > صفحه‌ساز',
+        scope: 'page_builder',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت صفحات هوشمند:', e);
+  }
+
+  // اخبار منفرد
+  try {
+    const res = await fetchNews({ per_page, lang });
+    const news = (res as Paginated<{ id: number; title: string; category_name: string | null }>).data || [];
+    news.forEach(n => {
+      sources.push({
+        id: `news_${n.id}`,
+        title: `خبر: ${n.title}`,
+        type: 'News',
+        url: `/news/${n.id}`,
+        category: 'اخبار',
+        categoryPath: n.category_name ? `اخبار > ${n.category_name}` : 'اخبار',
+        scope: 'single_item',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت اخبار:', e);
+  }
+
+  // دسته‌بندی اخبار
+  try {
+    const res = await fetchCategories(lang);
+    const cats = (res as { data: { id: number; name: string; slug: string; news_count?: number }[] }).data || [];
+    cats.forEach(c => {
+      sources.push({
+        id: `news_cat_${c.id}`,
+        title: `دسته‌بندی اخبار: ${c.name}`,
+        type: 'News Categories',
+        url: `/news?category=${c.slug}`,
+        category: 'گروه اخبار',
+        categoryPath: 'اخبار > دسته‌بندی',
+        scope: 'category_group',
+        itemCount: c.news_count,
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت دسته‌بندی اخبار:', e);
+  }
+
+  // اطلاعیه‌های منفرد
+  try {
+    const res = await fetchAnnouncements({ per_page, lang });
+    const anns = (res as Paginated<{ id: number; title: string }>).data || [];
+    anns.forEach(a => {
+      sources.push({
+        id: `ann_${a.id}`,
+        title: `اطلاعیه: ${a.title}`,
+        type: 'Announcements',
+        url: `/announcements/${a.id}`,
+        category: 'اطلاعیه‌ها',
+        categoryPath: 'اطلاعیه‌ها',
+        scope: 'single_item',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت اطلاعیه‌ها:', e);
+  }
+
+  // دسته‌بندی اطلاعیه‌ها
+  try {
+    const cats = await fetchAnnouncementCategories(lang);
+    (cats as { id: number; name: string; slug?: string }[]).forEach(c => {
+      sources.push({
+        id: `ann_cat_${c.id}`,
+        title: `دسته‌بندی اطلاعیه: ${c.name}`,
+        type: 'Announcement Categories',
+        url: `/announcements?category=${c.slug || c.id}`,
+        category: 'گروه اطلاعیه‌ها',
+        categoryPath: 'اطلاعیه‌ها > دسته‌بندی',
+        scope: 'category_group',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت دسته‌بندی اطلاعیه‌ها:', e);
+  }
+
+  // دانشکده‌ها / گروه‌های آموزشی
+  try {
+    const res = await fetchDepartments({ per_page, lang });
+    const deps = (res as Paginated<{ id: number; name: string; slug: string }>).data || [];
+    deps.forEach(d => {
+      sources.push({
+        id: `dept_${d.id}`,
+        title: `گروه آموزشی: ${d.name}`,
+        type: 'Categories',
+        url: `/departments/${d.slug}`,
+        category: 'دانشکده‌ها و گروه‌ها',
+        categoryPath: 'گروه‌های آموزشی',
+        scope: 'category_group',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت گروه‌های آموزشی:', e);
+  }
+
+  // رشته‌های تحصیلی
+  try {
+    const res = await fetchFields({ per_page, lang });
+    const fields = (res as Paginated<{ id: number; name: string; slug: string }>).data || [];
+    fields.forEach(f => {
+      sources.push({
+        id: `field_${f.id}`,
+        title: `رشته تحصیلی: ${f.name}`,
+        type: 'Categories',
+        url: `/fields/${f.slug}`,
+        category: 'رشته‌های تحصیلی',
+        categoryPath: 'رشته‌ها',
+        scope: 'single_item',
+      });
+    });
+  } catch (e) {
+    console.warn('خطا در دریافت رشته‌ها:', e);
+  }
+
+  return sources;
+}
+
+// ==================== موقعیت‌های مجاز منو در پوسته سایت ====================
+
+export const SITE_MENU_LOCATIONS: MenuLocation[] = [
+  'Header Main Menu',
+  'Header Top Menu',
+  'Footer Menu 1',
+  'Footer Menu 2',
+  'Footer Menu 3',
+  'Mobile Menu',
+];

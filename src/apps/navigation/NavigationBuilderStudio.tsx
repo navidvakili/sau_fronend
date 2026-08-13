@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Layers,
   Plus,
   Search,
-  Globe,
   History,
   Eye,
   Code,
@@ -11,13 +10,10 @@ import {
   Copy,
   Trash2,
   FolderTree,
-  ChevronRight,
-  ChevronDown,
   Sparkles,
   Shield,
   Save,
   Sliders,
-  LayoutGrid,
   FileText,
   Newspaper,
   BookOpen,
@@ -29,44 +25,62 @@ import {
   RotateCcw,
   PlusCircle,
   Check,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  RefreshCw,
+  Globe2
 } from 'lucide-react';
 
 import {
   NavigationMenu,
   NavigationItem,
   MenuLocation,
-  LanguageCode,
   InternalSource,
   CmsSourceScope,
   MenuVersionHistory,
   CmsSourceItem
 } from './types';
-import { sampleNavigationMenus, sampleCmsSources, sampleVersionHistory } from './mockData';
+import { sampleVersionHistory } from './mockData';
 import { NavigationTreeItem } from './NavigationTreeItem';
 import { MenuItemEditorModal } from './MenuItemEditorModal';
 import { MegaMenuDesignerModal } from './MegaMenuDesignerModal';
 import { LiveNavigationPreview } from './LiveNavigationPreview';
 import { ApiHeadlessPreviewModal } from './ApiHeadlessPreviewModal';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
+import {
+  fetchSiteMenus,
+  fetchMenuByLocation,
+  saveSiteMenu,
+  publishSiteMenu,
+  fetchCmsSources
+} from './api';
 
+// موقعیت‌های منو در پوسته سایت اصلی (فقط منوهای سایت — بدون خرده‌نانی/کناری/داشبورد)
 const MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
   { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
   { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
   { id: 'Footer Menu 1', label: 'فوتر - ستون ۱', icon: FolderTree },
   { id: 'Footer Menu 2', label: 'فوتر - ستون ۲', icon: FolderTree },
   { id: 'Footer Menu 3', label: 'فوتر - ستون ۳', icon: FolderTree },
-  { id: 'Mobile Menu', label: 'منوی کشویی موبایل', icon: Sliders },
-  { id: 'Sidebar Menu', label: 'منوی کناری (Sidebar)', icon: FolderTree },
-  { id: 'Dashboard Menu', label: 'منوی داشبورد کاربران', icon: LayoutGrid },
-  { id: 'Breadcrumb Navigation', label: 'ناوبری خرده‌نانی (Breadcrumb)', icon: ChevronRight }
+  { id: 'Mobile Menu', label: 'منوی کشویی موبایل', icon: Sliders }
 ];
 
 export const NavigationBuilderStudio: React.FC = () => {
+  // زبان سیستم از ساختار اصلی مدیریت (چندزبانه) گرفته می‌شود — بدون سوییچر داخلی
+  const { currentLang } = useLanguage();
+
   // Navigation Menus State
-  const [menus, setMenus] = useState<NavigationMenu[]>(sampleNavigationMenus);
+  const [menus, setMenus] = useState<NavigationMenu[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
-  const [activeLanguage, setActiveLanguage] = useState<LanguageCode>('fa');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
+
+  // CMS Source Palette (داده‌های واقعی از وب‌سرویس)
+  const [cmsSources, setCmsSources] = useState<CmsSourceItem[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
+
+  // نقشه‌ی شناسه‌ی سرور برای هر موقعیت منو (برای جلوگیری از رکورد تکراری)
+  const serverIdsRef = useRef<Record<string, number>>({});
 
   // Modals & Panels State
   const [editingItem, setEditingItem] = useState<NavigationItem | null>(null);
@@ -85,29 +99,122 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
-  };
+  }, []);
+
+  // بارگذاری منوها و منابع CMS از وب‌سرویس با تغییر زبان
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setSourcesLoading(true);
+    setMenus([]);
+    setCmsSources([]);
+    serverIdsRef.current = {};
+
+    (async () => {
+      try {
+        const [menuData, sourcesData] = await Promise.all([
+          fetchSiteMenus(currentLang),
+          fetchCmsSources(currentLang)
+        ]);
+        if (cancelled) return;
+        setMenus(menuData);
+        menuData.forEach(m => {
+          if (typeof m.id === 'number') serverIdsRef.current[m.location] = m.id;
+        });
+        setCmsSources(sourcesData);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) showToast('خطا در دریافت داده‌ها از وب‌سرویس');
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setSourcesLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLang, showToast]);
+
+  // اگر برای موقعیت فعال هنوز منویی وجود نداشته باشد، از وب‌سرویس گرفته می‌شود (ایجاد خودکار)
+  useEffect(() => {
+    if (loading) return;
+    const exists = menus.some(
+      m => m.location === activeLocation && (m.language === currentLang || !m.language)
+    );
+    if (exists) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const menu = await fetchMenuByLocation(activeLocation, currentLang);
+        if (cancelled) return;
+        if (typeof menu.id === 'number') serverIdsRef.current[menu.location] = menu.id;
+        setMenus(prev => {
+          if (prev.some(m => (typeof m.id === 'number' && m.id === menu.id))) return prev;
+          if (prev.some(m => m.location === menu.location && (m.language === currentLang || !m.language))) return prev;
+          return [...prev, menu];
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLocation, currentLang, loading, menus]);
 
   // Get or initialize active menu for current location & language
   const activeMenu = menus.find(
-    m => m.location === activeLocation && m.language === activeLanguage
+    m => m.location === activeLocation && (m.language === currentLang || !m.language)
   ) || {
-    id: `menu_${Date.now()}`,
+    id: '' as string | number,
     name: `منوی ${activeLocation}`,
     slug: activeLocation.toLowerCase().replace(/ /g, '-'),
     location: activeLocation,
-    language: activeLanguage,
-    status: 'active',
+    language: currentLang,
+    status: 'draft',
     version: 1,
-    createdBy: 'مدیر CMS',
-    createdAt: new Date().toLocaleDateString('fa-IR'),
-    updatedAt: new Date().toLocaleDateString('fa-IR'),
     items: []
   };
 
-  // Helper to update items in active menu
+  // ذخیره‌ی منو در وب‌سرویس (ایجاد خودکار رکورد در صورت نبودن)
+  const persistMenu = useCallback(
+    async (menu: NavigationMenu) => {
+      try {
+        let id = typeof menu.id === 'number' ? menu.id : serverIdsRef.current[menu.location];
+        if (!id) {
+          const existing = await fetchMenuByLocation(menu.location, currentLang);
+          id = existing.id as number;
+          serverIdsRef.current[menu.location] = id;
+        }
+        const saved = await saveSiteMenu({ ...menu, id }, currentLang);
+        if (typeof saved.id === 'number') serverIdsRef.current[menu.location] = saved.id;
+        setMenus(prev =>
+          prev.map(m =>
+            (typeof m.id === 'number' && m.id === id) ||
+            (typeof m.id !== 'number' && m.location === saved.location)
+              ? { ...m, ...saved, items: m.items }
+              : m
+          )
+        );
+        return saved;
+      } catch (e: any) {
+        console.error(e);
+        showToast(e?.message || 'خطا در ذخیره‌ی منو در وب‌سرویس');
+        return null;
+      }
+    },
+    [currentLang, showToast]
+  );
+
+  // Helper to update items in active menu (با ذخیره‌ی خودکار)
   const updateActiveMenuItems = (newItems: NavigationItem[]) => {
     const updatedMenu: NavigationMenu = {
       ...activeMenu,
@@ -115,19 +222,28 @@ export const NavigationBuilderStudio: React.FC = () => {
       items: newItems
     };
 
-    const exists = menus.some(m => m.id === activeMenu.id);
-    if (exists) {
-      setMenus(menus.map(m => (m.id === activeMenu.id ? updatedMenu : m)));
-    } else {
-      setMenus([...menus, updatedMenu]);
-    }
+    setMenus(prev => {
+      const exists = prev.some(
+        m => m.id === activeMenu.id || (m.location === activeLocation && (m.language === currentLang || !m.language))
+      );
+      return exists
+        ? prev.map(m =>
+            m.id === activeMenu.id || (m.location === activeLocation && (m.language === currentLang || !m.language))
+              ? { ...m, ...updatedMenu }
+              : m
+          )
+        : [...prev, updatedMenu];
+    });
+
+    // ذخیره‌ی خودکار در پس‌زمینه (بدون مسدود کردن رابط کاربری)
+    void persistMenu(updatedMenu);
   };
 
   // Add Item to Menu (Root level or child)
   const handleAddItem = (parentId: string | null = null, defaultTitle?: string, defaultUrl?: string, defaultSource?: InternalSource) => {
     const newItem: NavigationItem = {
       id: `item_${Date.now()}`,
-      menuId: activeMenu.id,
+      menuId: String(activeMenu.id),
       parentId,
       title: defaultTitle || 'آیتم جدید منو',
       itemType: defaultSource ? 'internal' : 'custom',
@@ -285,33 +401,71 @@ export const NavigationBuilderStudio: React.FC = () => {
     showToast('آیتم در سطح اصلی قرار دارد');
   };
 
-  // Save & Publish Menu Version
-  const handlePublishMenu = () => {
-    const newVer = activeMenu.version + 1;
-    const updatedMenu: NavigationMenu = {
-      ...activeMenu,
-      version: newVer,
-      updatedAt: new Date().toLocaleDateString('fa-IR')
-    };
+  // Save & Publish Menu Version (ذخیره در وب‌سرویس + انتشار)
+  const handlePublishMenu = async () => {
+    try {
+      let id = typeof activeMenu.id === 'number' ? activeMenu.id : serverIdsRef.current[activeLocation];
+      if (!id) {
+        const existing = await fetchMenuByLocation(activeLocation, currentLang);
+        id = existing.id as number;
+        serverIdsRef.current[activeLocation] = id;
+      }
+      const saved = await saveSiteMenu({ ...activeMenu, id }, currentLang);
+      if (typeof saved.id === 'number') serverIdsRef.current[activeLocation] = saved.id;
+      const published = await publishSiteMenu(saved.id as number);
 
-    setMenus(menus.map(m => (m.id === activeMenu.id ? updatedMenu : m)));
+      const newVer = published.version || activeMenu.version + 1;
+      const publishedMenu: NavigationMenu = {
+        ...published,
+        items: activeMenu.items
+      };
 
-    const newHistoryEntry: MenuVersionHistory = {
-      id: `ver_${Date.now()}`,
-      menuId: activeMenu.id,
-      version: newVer,
-      changedBy: 'مدیر کل CMS',
-      timestamp: `${new Date().toLocaleDateString('fa-IR')} - ${new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`,
-      changeSummary: `انتشار نسخه ${newVer} با ${activeMenu.items.length} آیتم ناوبری`,
-      itemsSnapshot: activeMenu.items
-    };
+      setMenus(prev =>
+        prev.map(m =>
+          (typeof m.id === 'number' && m.id === published.id) ||
+          (m.location === activeLocation && (m.language === currentLang || !m.language))
+            ? publishedMenu
+            : m
+        )
+      );
 
-    setVersionHistory([newHistoryEntry, ...versionHistory]);
-    showToast(`نسخه جدید منو (${newVer}) با موفقیت ذخیره و منتشر شد!`);
+      const newHistoryEntry: MenuVersionHistory = {
+        id: `ver_${Date.now()}`,
+        menuId: String(published.id),
+        version: newVer,
+        changedBy: 'مدیر کل CMS',
+        timestamp: `${new Date().toLocaleDateString('fa-IR')} - ${new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`,
+        changeSummary: `انتشار نسخه ${newVer} با ${activeMenu.items.length} آیتم ناوبری`,
+        itemsSnapshot: activeMenu.items
+      };
+
+      setVersionHistory([newHistoryEntry, ...versionHistory]);
+      showToast(`نسخه جدید منو (${newVer}) با موفقیت در وب‌سرویس منتشر شد!`);
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.message || 'خطا در انتشار منو در وب‌سرویس');
+    }
   };
 
-  // Filtered CMS Sources for Palette
-  const filteredPaletteSources = sampleCmsSources.filter(s => {
+  // ذخیره‌ی پیش‌نویس منو (بدون انتشار)
+  const handleSaveDraft = async () => {
+    try {
+      let id = typeof activeMenu.id === 'number' ? activeMenu.id : serverIdsRef.current[activeLocation];
+      if (!id) {
+        const existing = await fetchMenuByLocation(activeLocation, currentLang);
+        id = existing.id as number;
+        serverIdsRef.current[activeLocation] = id;
+      }
+      await saveSiteMenu({ ...activeMenu, id, status: 'draft' }, currentLang);
+      showToast('پیش‌نویس منو با موفقیت ذخیره شد');
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.message || 'خطا در ذخیره‌ی پیش‌نویس');
+    }
+  };
+
+  // Filtered CMS Sources for Palette (از داده‌های واقعی وب‌سرویس)
+  const filteredPaletteSources = cmsSources.filter(s => {
     const matchesCategory = cmsSourceCategory === 'ALL' || s.type === cmsSourceCategory;
     const matchesScope = paletteScopeFilter === 'all' || s.scope === paletteScopeFilter;
     const matchesSearch =
@@ -346,13 +500,20 @@ export const NavigationBuilderStudio: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مدیریت یکپارچه منوهای هدر، فوتر، مگامنوها، موبایل با پشتیبانی از چندزبانه، نسخه دراگ اند دراپ و API
+              مدیریت یکپارچه منوهای هدر، فوتر، مگامنوها و موبایل — زبان بر اساس ساختار چندزبانه‌ی اصلی سیستم تعیین می‌شود
             </p>
           </div>
         </div>
 
         {/* Global Action Buttons */}
         <div className="flex items-center gap-2">
+          {loading && (
+            <span className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px] font-bold flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              همگام‌سازی با وب‌سرویس...
+            </span>
+          )}
+
           {/* Version History Button */}
           <button
             onClick={() => setIsVersionHistoryOpen(!isVersionHistoryOpen)}
@@ -380,46 +541,39 @@ export const NavigationBuilderStudio: React.FC = () => {
             <span>پیش‌نمایش فرانت‌اند</span>
           </button>
 
+          {/* Save Draft */}
+          <button
+            onClick={handleSaveDraft}
+            disabled={loading}
+            className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Save className="w-4 h-4 text-slate-500" />
+            <span>ذخیره پیش‌نویس</span>
+          </button>
+
           {/* Publish Changes */}
           <button
             onClick={handlePublishMenu}
-            className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all"
+            disabled={loading}
+            className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
+            <CheckCircle className="w-4 h-4" />
             <span>ذخیره و انتشار منو</span>
           </button>
         </div>
       </div>
 
-      {/* Menu Locations & Language Selector Bar */}
+      {/* Menu Locations Bar (بدون سوییچر زبان — زبان از ساختار اصلی سیستم) */}
       <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <FolderTree className="w-4 h-4 text-teal-600" />
             موقعیت منو در پوسته سایت (Navigation Location):
           </span>
-
-          {/* Multi-Language Selector */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-            <Globe className="w-3.5 h-3.5 text-teal-600 mr-2" />
-            {[
-              { code: 'fa', label: 'فارسی (FA)' },
-              { code: 'en', label: 'English (EN)' },
-              { code: 'ar', label: 'العربية (AR)' }
-            ].map(lang => (
-              <button
-                key={lang.code}
-                onClick={() => setActiveLanguage(lang.code as LanguageCode)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                  activeLanguage === lang.code
-                    ? 'bg-teal-600 text-white shadow'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                {lang.label}
-              </button>
-            ))}
-          </div>
+          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <Globe2 className="w-3.5 h-3.5" />
+            زبان فعال: {currentLang === 'fa' ? 'فارسی' : currentLang === 'en' ? 'English' : currentLang === 'ar' ? 'العربية' : currentLang}
+          </span>
         </div>
 
         {/* Location Tabs Slider */}
@@ -518,7 +672,12 @@ export const NavigationBuilderStudio: React.FC = () => {
 
             {/* List of Palette Items */}
             <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-              {filteredPaletteSources.length === 0 ? (
+              {sourcesLoading && filteredPaletteSources.length === 0 ? (
+                <div className="p-8 text-center space-y-2">
+                  <Loader2 className="w-6 h-6 text-teal-600 mx-auto animate-spin" />
+                  <p className="text-[11px] text-slate-400">در حال دریافت منابع CMS از وب‌سرویس...</p>
+                </div>
+              ) : filteredPaletteSources.length === 0 ? (
                 <p className="p-4 text-center text-slate-400 text-[11px]">
                   محتوایی یافت نشد
                 </p>
@@ -605,7 +764,12 @@ export const NavigationBuilderStudio: React.FC = () => {
             </div>
 
             {/* Tree Items List */}
-            {activeMenu.items.length === 0 ? (
+            {loading ? (
+              <div className="p-12 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                <Loader2 className="w-8 h-8 text-teal-600 mx-auto animate-spin" />
+                <p className="text-xs font-bold text-slate-500">در حال بارگذاری منوها از وب‌سرویس...</p>
+              </div>
+            ) : activeMenu.items.length === 0 ? (
               <div className="p-12 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
                 <Layers className="w-10 h-10 text-slate-300 mx-auto" />
                 <p className="text-xs font-bold text-slate-500">
@@ -642,10 +806,12 @@ export const NavigationBuilderStudio: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL 1: MenuItemEditorModal */}
+      {/* MODAL 1: MenuItemEditorModal — منابع CMS از وب‌سرویس (داده‌های سایت اصلی) */}
       {editingItem && (
         <MenuItemEditorModal
           item={editingItem}
+          cmsSources={cmsSources}
+          sourcesLoading={sourcesLoading}
           onSave={handleSaveItemModal}
           onClose={() => setEditingItem(null)}
         />
@@ -664,7 +830,7 @@ export const NavigationBuilderStudio: React.FC = () => {
       {isLivePreviewOpen && (
         <LiveNavigationPreview
           menus={menus}
-          activeMenuId={activeMenu.id}
+          activeMenuId={String(activeMenu.id)}
           onClose={() => setIsLivePreviewOpen(false)}
         />
       )}
