@@ -1,6 +1,7 @@
 export type MenuLocation =
   | 'Header Main Menu'
   | 'Header Top Menu'
+  | 'Faculty Menu'
   | 'Footer Menu 1'
   | 'Footer Menu 2'
   | 'Footer Menu 3'

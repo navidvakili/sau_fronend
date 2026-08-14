@@ -56,14 +56,16 @@ import {
   fetchMenuByLocation,
   saveSiteMenu,
   publishSiteMenu,
-  fetchCmsSources
+  fetchCmsSources,
+  deleteSiteMenu
 } from './api';
 import { BACKEND_API_URL } from '@/src/shared-constants';
 
 // موقعیت‌های منو در پوسته سایت اصلی (فقط منوهای سایت — بدون خرده‌نانی/کناری/داشبورد)
-const MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
+const DEFAULT_MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
   { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
   { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
+  { id: 'Faculty Menu', label: 'منوی دانشکده‌ها', icon: Building2 },
   { id: 'Footer Menu 1', label: 'فوتر - ستون اطلاعات', icon: FolderTree },
   { id: 'Footer Menu 2', label: 'فوتر - دسترسی سریع', icon: FolderTree },
   { id: 'Footer Menu 3', label: 'فوتر - پیوندها', icon: FolderTree },
@@ -78,7 +80,9 @@ export const NavigationBuilderStudio: React.FC = () => {
   // Navigation Menus State
   const [menus, setMenus] = useState<NavigationMenu[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menuLocations, setMenuLocations] = useState(DEFAULT_MENU_LOCATIONS);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
+  const [newLocationName, setNewLocationName] = useState('');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
 
   // CMS Source Palette (داده‌های واقعی از وب‌سرویس)
@@ -189,6 +193,68 @@ export const NavigationBuilderStudio: React.FC = () => {
     status: 'draft',
     version: 1,
     items: []
+  };
+
+  const handleAddMenuLocation = () => {
+    const rawName = newLocationName.trim();
+    if (!rawName) return;
+    const generatedLocation = rawName.replace(/\s+/g, ' ');
+    const normalizedLocation = generatedLocation.length > 0 ? generatedLocation : 'New Menu';
+
+    const exists = menuLocations.some(loc => loc.id === normalizedLocation as MenuLocation);
+    if (exists) {
+      setActiveLocation(normalizedLocation as MenuLocation);
+      setNewLocationName('');
+      return;
+    }
+
+    const newLocation = {
+      id: normalizedLocation as MenuLocation,
+      label: normalizedLocation,
+      icon: FolderTree,
+    };
+
+    setMenuLocations(prev => [...prev, newLocation]);
+    setActiveLocation(normalizedLocation as MenuLocation);
+    setNewLocationName('');
+    showToast(`موقعیت جدید «${normalizedLocation}» اضافه شد`);
+  };
+
+  const handleRemoveCurrentMenuLocation = async () => {
+    if (menuLocations.length <= 1) {
+      showToast('حداقل باید یک موقعیت منو وجود داشته باشد');
+      return;
+    }
+
+    const targetMenu = menus.find(
+      m => m.location === activeLocation && (m.language === currentLang || !m.language)
+    );
+
+    const confirmed = window.confirm(
+      `آیا از حذف موقعیت «${activeLocation}» و رکورد مرتبط آن در دیتابیس مطمئن هستید؟`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      if (targetMenu && typeof targetMenu.id === 'number') {
+        await deleteSiteMenu(targetMenu.id);
+      }
+
+      const remaining = menuLocations.filter(loc => loc.id !== activeLocation);
+      if (remaining.length === 0) return;
+
+      setMenus(prev => prev.filter(
+        m => !(m.location === activeLocation && (m.language === currentLang || !m.language))
+      ));
+      setMenuLocations(remaining);
+      setActiveLocation(remaining[0].id);
+      delete serverIdsRef.current[activeLocation];
+      showToast(`موقعیت «${activeLocation}» حذف شد`);
+    } catch (error: any) {
+      console.error(error);
+      showToast(error?.message || 'حذف موقعیت منو با خطا مواجه شد');
+    }
   };
 
   // ذخیره‌ی منو در وب‌سرویس (ایجاد خودکار رکورد در صورت نبودن)
@@ -587,7 +653,7 @@ export const NavigationBuilderStudio: React.FC = () => {
 
         {/* Location Tabs Slider */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-          {MENU_LOCATIONS.map(loc => {
+          {menuLocations.map(loc => {
             const isSelected = activeLocation === loc.id;
             return (
               <button
@@ -604,6 +670,30 @@ export const NavigationBuilderStudio: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <input
+            type="text"
+            value={newLocationName}
+            onChange={e => setNewLocationName(e.target.value)}
+            placeholder="نام موقعیت جدید منو ..."
+            className="flex-1 min-w-[180px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+          />
+          <button
+            type="button"
+            onClick={handleAddMenuLocation}
+            className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold"
+          >
+            افزودن موقعیت جدید
+          </button>
+          <button
+            type="button"
+            onClick={handleRemoveCurrentMenuLocation}
+            className="px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold"
+          >
+            حذف موقعیت فعلی
+          </button>
         </div>
       </div>
 
