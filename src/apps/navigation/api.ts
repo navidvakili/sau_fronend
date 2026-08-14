@@ -21,7 +21,13 @@ import { fetchFields } from '../fields/api';
  */
 export async function fetchSiteMenus(lang: string): Promise<NavigationMenu[]> {
   const res = await API<{ data: NavigationMenu[] }>(`site-navigation?lang=${encodeURIComponent(lang)}`);
-  return res.data || [];
+  const items = res.data || [];
+  return [...items].sort((a, b) => {
+    const aOrder = Number(a.sortOrder ?? a.sort_order ?? 0);
+    const bOrder = Number(b.sortOrder ?? b.sort_order ?? 0);
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return String(a.location).localeCompare(String(b.location), 'fa');
+  });
 }
 
 /**
@@ -44,6 +50,7 @@ export async function saveSiteMenu(menu: NavigationMenu, lang: string): Promise<
     slug: menu.slug,
     items: menu.items,
     status: menu.status,
+    sort_order: Number(menu.sortOrder ?? menu.sort_order ?? 0),
     lang,
   };
 

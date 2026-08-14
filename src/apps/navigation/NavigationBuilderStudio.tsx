@@ -69,8 +69,9 @@ export const NavigationBuilderStudio: React.FC = () => {
   // Navigation Menus State
   const [menus, setMenus] = useState<NavigationMenu[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menuLocations, setMenuLocations] = useState<{ id: MenuLocation; label: string; icon: any }[]>([]);
+  const [menuLocations, setMenuLocations] = useState<{ id: MenuLocation; label: string; icon: any; sortOrder?: number }[]>([]);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
+  const [draggedLocation, setDraggedLocation] = useState<MenuLocation | null>(null);
   const [newLocationName, setNewLocationName] = useState('');
   const [locationLabelDraft, setLocationLabelDraft] = useState('');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
@@ -128,11 +129,21 @@ export const NavigationBuilderStudio: React.FC = () => {
           if (typeof m.id === 'number') serverIdsRef.current[m.location] = m.id;
         });
 
-        setMenuLocations(menuData.map(menu => ({
-          id: menu.location as MenuLocation,
-          label: menu.name || menu.location,
-          icon: FolderTree,
-        })));
+        setMenuLocations(
+          [...menuData]
+            .sort((a, b) => {
+              const aOrder = Number(a.sortOrder ?? a.sort_order ?? 0);
+              const bOrder = Number(b.sortOrder ?? b.sort_order ?? 0);
+              if (aOrder !== bOrder) return aOrder - bOrder;
+              return String(a.location).localeCompare(String(b.location), 'fa');
+            })
+            .map(menu => ({
+              id: menu.location as MenuLocation,
+              label: menu.name || menu.location,
+              icon: FolderTree,
+              sortOrder: Number(menu.sortOrder ?? menu.sort_order ?? 0),
+            }))
+        );
 
         setCmsSources(sourcesData);
       } catch (e) {
@@ -211,17 +222,70 @@ export const NavigationBuilderStudio: React.FC = () => {
       return;
     }
 
+    const nextSortOrder = menuLocations.reduce((max, loc) => Math.max(max, Number(loc.sortOrder ?? 0)), 0) + 1;
     const newLocation = {
       id: normalizedLocation as MenuLocation,
       label: normalizedLocation,
       icon: FolderTree,
+      sortOrder: nextSortOrder,
     };
 
-    setMenuLocations(prev => [...prev, newLocation]);
+    setMenuLocations(prev => [...prev, newLocation].sort((a, b) => (Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))));
     setActiveLocation(normalizedLocation as MenuLocation);
     setNewLocationName('');
     showToast(`موقعیت جدید «${normalizedLocation}» اضافه شد`);
   };
+
+  const reorderMenuLocations = useCallback((fromId: MenuLocation, toId: MenuLocation) => {
+    if (!fromId || !toId || fromId === toId) return;
+
+    const currentIndex = menuLocations.findIndex(loc => loc.id === fromId);
+    const targetIndex = menuLocations.findIndex(loc => loc.id === toId);
+    if (currentIndex < 0 || targetIndex < 0) return;
+
+    const reordered = [...menuLocations];
+    const [draggedItem] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, draggedItem);
+
+    const normalized = reordered.map((loc, index) => ({
+      ...loc,
+      sortOrder: index + 1,
+    }));
+
+    setMenuLocations(normalized);
+
+    void (async () => {
+      try {
+        await Promise.all(
+          normalized.map(async (loc, index) => {
+            const found = menus.find(m => m.location === loc.id && (m.language === currentLang || !m.language));
+            if (!found) return null;
+            const updated: NavigationMenu = {
+              ...found,
+              sortOrder: index + 1,
+              sort_order: index + 1,
+            };
+            return saveSiteMenu(updated, currentLang);
+          })
+        );
+
+        setMenus(prev => prev.map(menu => {
+          const index = normalized.findIndex(loc => loc.id === menu.location && (menu.language === currentLang || !menu.language));
+          if (index < 0) return menu;
+          return {
+            ...menu,
+            sortOrder: index + 1,
+            sort_order: index + 1,
+          };
+        }));
+
+        showToast('ترتیب موقعیت‌ها با Drag & Drop به‌روزرسانی شد');
+      } catch (error: any) {
+        console.error(error);
+        showToast(error?.message || 'به‌روزرسانی ترتیب موقعیت‌ها با خطا مواجه شد');
+      }
+    })();
+  }, [currentLang, menuLocations, menus, showToast]);
 
   const handleRenameCurrentMenuLabel = async () => {
     const trimmed = locationLabelDraft.trim();
@@ -706,12 +770,23 @@ export const NavigationBuilderStudio: React.FC = () => {
             return (
               <button
                 key={loc.id}
+                type="button"
+                draggable
+                onDragStart={() => setDraggedLocation(loc.id)}
+                onDragOver={event => event.preventDefault()}
+                onDrop={() => {
+                  if (draggedLocation && draggedLocation !== loc.id) {
+                    reorderMenuLocations(draggedLocation, loc.id);
+                  }
+                  setDraggedLocation(null);
+                }}
+                onDragEnd={() => setDraggedLocation(null)}
                 onClick={() => setActiveLocation(loc.id)}
                 className={`px-4 py-2.5 rounded-2xl font-bold flex items-center gap-2 whitespace-nowrap transition-all border ${
                   isSelected
                     ? 'bg-teal-600 text-white border-teal-600 shadow-md'
                     : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
-                }`}
+                } ${draggedLocation === loc.id ? 'opacity-60 scale-[0.98]' : ''}`}
               >
                 <loc.icon className="w-4 h-4" />
                 <span>{loc.label}</span>

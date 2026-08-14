@@ -191,6 +191,8 @@ export interface NavigationMenu {
   language: string;
   status: 'active' | 'draft' | 'archived';
   version: number;
+  sortOrder?: number;
+  sort_order?: number;
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
