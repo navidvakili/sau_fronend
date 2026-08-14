@@ -108,9 +108,9 @@ export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
               )}
 
               {/* Badge if present */}
-              {item.settings.badge?.enabled && (
+              {item.settings?.badge?.enabled && (
                 <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-300">
-                  {item.settings.badge.text}
+                  {item.settings?.badge?.text}
                 </span>
               )}
             </div>
@@ -171,7 +171,7 @@ export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
           {/* Access Rules Indicator */}
           <div
             className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500"
-            title={`نقش‌های مجاز: ${item.settings.accessRules.join(', ')}`}
+            title={`نقش‌های مجاز: ${item.settings?.accessRules?.join ? item.settings.accessRules.join(', ') : ''}`}
           >
             <Shield className="w-3.5 h-3.5 text-teal-600" />
           </div>

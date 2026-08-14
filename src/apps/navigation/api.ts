@@ -237,5 +237,6 @@ export const SITE_MENU_LOCATIONS: MenuLocation[] = [
   'Footer Menu 1',
   'Footer Menu 2',
   'Footer Menu 3',
+  'Footer Menu 4',
   'Mobile Menu',
 ];

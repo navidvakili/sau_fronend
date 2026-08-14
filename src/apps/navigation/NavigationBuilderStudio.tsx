@@ -28,7 +28,9 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
-  Globe2
+  Globe2,
+  MapPin,
+  Building2
 } from 'lucide-react';
 
 import {
@@ -43,9 +45,12 @@ import {
 import { sampleVersionHistory } from './mockData';
 import { NavigationTreeItem } from './NavigationTreeItem';
 import { MenuItemEditorModal } from './MenuItemEditorModal';
+import { FooterAddressEditorModal } from './FooterAddressEditorModal';
 import { MegaMenuDesignerModal } from './MegaMenuDesignerModal';
 import { LiveNavigationPreview } from './LiveNavigationPreview';
 import { ApiHeadlessPreviewModal } from './ApiHeadlessPreviewModal';
+import { FooterAddressTreeItem } from './FooterAddressTreeItem';
+import { createFooterAddressItem, isFooterAddressItem } from './footerAddressUtils';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import {
   fetchSiteMenus,
@@ -54,14 +59,16 @@ import {
   publishSiteMenu,
   fetchCmsSources
 } from './api';
+import { BACKEND_API_URL } from '@/src/shared-constants';
 
 // موقعیت‌های منو در پوسته سایت اصلی (فقط منوهای سایت — بدون خرده‌نانی/کناری/داشبورد)
 const MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
   { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
   { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
-  { id: 'Footer Menu 1', label: 'فوتر - ستون ۱', icon: FolderTree },
-  { id: 'Footer Menu 2', label: 'فوتر - ستون ۲', icon: FolderTree },
-  { id: 'Footer Menu 3', label: 'فوتر - ستون ۳', icon: FolderTree },
+  { id: 'Footer Menu 1', label: 'فوتر - آدرس دانشکده‌ها', icon: FolderTree },
+  { id: 'Footer Menu 2', label: 'فوتر - دسترسی سریع', icon: FolderTree },
+  { id: 'Footer Menu 3', label: 'فوتر - پیوندها', icon: FolderTree },
+  { id: 'Footer Menu 4', label: 'فوتر - شبکه‌های اجتماعی', icon: FolderTree },
   { id: 'Mobile Menu', label: 'منوی کشویی موبایل', icon: Sliders }
 ];
 
@@ -86,6 +93,7 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [editingItem, setEditingItem] = useState<NavigationItem | null>(null);
   const [megaMenuEditingItem, setMegaMenuEditingItem] = useState<NavigationItem | null>(null);
   const [isLivePreviewOpen, setIsLivePreviewOpen] = useState(false);
+  const [publicBrandName, setPublicBrandName] = useState<string | null>(null);
   const [isApiPreviewOpen, setIsApiPreviewOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
 
@@ -287,6 +295,15 @@ export const NavigationBuilderStudio: React.FC = () => {
   const handleAddFromCmsSource = (source: CmsSourceItem) => {
     handleAddItem(null, source.title, source.url, source.type);
   };
+
+  const handleAddFooterFaculty = () => {
+    const newItem = createFooterAddressItem(activeMenu.id, (activeMenu.items.length || 0) + 1);
+    updateActiveMenuItems([...activeMenu.items, newItem]);
+    setEditingItem(newItem);
+    showToast('دانشکده جدید اضافه شد — اطلاعات را تکمیل کنید');
+  };
+
+  const isFooterAddressMenu = activeLocation === 'Footer Menu 1';
 
   // Save Item from MenuItemEditorModal
   const handleSaveItemModal = (updatedItem: NavigationItem) => {
@@ -600,8 +617,37 @@ export const NavigationBuilderStudio: React.FC = () => {
 
       {/* Main Studio Grid: Left CMS Palette, Center Tree Builder, Right Version Drawer */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT COLUMN: CMS Source Link Palette */}
+        {/* LEFT COLUMN: CMS Source Link Palette / Footer Address Palette */}
         <div className="lg:col-span-3 space-y-4">
+          {isFooterAddressMenu ? (
+            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-extrabold text-xs text-slate-900 dark:text-white">
+                  ستون آدرس دانشکده‌ها
+                </h3>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                هر دانشکده شامل آدرس، تلفن، فکس و دکمه «نمایش روی نقشه» با آیکون است.
+                زیرمجموعه‌ها به‌صورت خودکار از اطلاعات هر دانشکده ساخته می‌شوند.
+              </p>
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-[10px] text-blue-800 dark:text-blue-200 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <MapPin className="w-3.5 h-3.5" /> آدرس پستی
+                </div>
+                <div className="flex items-center gap-1.5 font-bold">
+                  <MapPin className="w-3.5 h-3.5" /> لینک نمایش روی نقشه
+                </div>
+              </div>
+              <button
+                onClick={handleAddFooterFaculty}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                افزودن دانشکده جدید
+              </button>
+            </div>
+          ) : (
           <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-2">
@@ -736,6 +782,7 @@ export const NavigationBuilderStudio: React.FC = () => {
               افزودن آیتم جدید سفارشی
             </button>
           </div>
+          )}
         </div>
 
         {/* CENTER COLUMN: Interactive Drag & Drop Tree Structure Builder */}
@@ -755,10 +802,27 @@ export const NavigationBuilderStudio: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleAddItem(null)}
+                  onClick={() => (isFooterAddressMenu ? handleAddFooterFaculty() : handleAddItem(null))}
                   className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
                 >
-                  <Plus className="w-4 h-4" /> افزودن به ریشه منو
+                  <Plus className="w-4 h-4" /> {isFooterAddressMenu ? 'افزودن دانشکده' : 'افزودن به ریشه منو'}
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${BACKEND_API_URL}/api/site-metadata`);
+                      const json = await res.json();
+                      setPublicBrandName(json?.title || null);
+                      setIsLivePreviewOpen(true);
+                    } catch (e) {
+                      console.error(e);
+                      showToast('خطا در دریافت عنوان وب‌سایت عمومی');
+                    }
+                  }}
+                  title="نمایش هدر عمومی"
+                  className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5"
+                >
+                  <Eye className="w-4 h-4 text-teal-600" /> پیش‌نمایش هدر عمومی
                 </button>
               </div>
             </div>
@@ -781,33 +845,54 @@ export const NavigationBuilderStudio: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeMenu.items.map((item, idx) => (
-                  <NavigationTreeItem
-                    key={item.id}
-                    item={item}
-                    level={0}
-                    onEdit={setEditingItem}
-                    onEditMegaMenu={setMegaMenuEditingItem}
-                    onDelete={handleDeleteItem}
-                    onDuplicate={handleDuplicateItem}
-                    onAddChild={parentId => handleAddItem(parentId)}
-                    onToggleStatus={handleToggleStatus}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
-                    onIndent={handleIndent}
-                    onOutdent={handleOutdent}
-                    isFirst={idx === 0}
-                    isLast={idx === activeMenu.items.length - 1}
-                  />
-                ))}
+                {activeMenu.items.map((item, idx) =>
+                  isFooterAddressMenu || isFooterAddressItem(item) ? (
+                    <FooterAddressTreeItem
+                      key={item.id ?? `menu_${activeMenu.location}_${idx}`}
+                      item={item}
+                      onEdit={setEditingItem}
+                      onDelete={handleDeleteItem}
+                      onDuplicate={handleDuplicateItem}
+                      onToggleStatus={handleToggleStatus}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      isFirst={idx === 0}
+                      isLast={idx === activeMenu.items.length - 1}
+                    />
+                  ) : (
+                    <NavigationTreeItem
+                      key={item.id ?? `menu_${activeMenu.location}_${idx}`}
+                      item={item}
+                      level={0}
+                      onEdit={setEditingItem}
+                      onEditMegaMenu={setMegaMenuEditingItem}
+                      onDelete={handleDeleteItem}
+                      onDuplicate={handleDuplicateItem}
+                      onAddChild={parentId => handleAddItem(parentId)}
+                      onToggleStatus={handleToggleStatus}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      onIndent={handleIndent}
+                      onOutdent={handleOutdent}
+                      isFirst={idx === 0}
+                      isLast={idx === activeMenu.items.length - 1}
+                    />
+                  )
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* MODAL 1: MenuItemEditorModal — منابع CMS از وب‌سرویس (داده‌های سایت اصلی) */}
-      {editingItem && (
+      {/* MODAL 1: MenuItemEditorModal / FooterAddressEditorModal */}
+      {editingItem && (isFooterAddressItem(editingItem) ? (
+        <FooterAddressEditorModal
+          item={editingItem}
+          onSave={handleSaveItemModal}
+          onClose={() => setEditingItem(null)}
+        />
+      ) : (
         <MenuItemEditorModal
           item={editingItem}
           cmsSources={cmsSources}
@@ -815,7 +900,7 @@ export const NavigationBuilderStudio: React.FC = () => {
           onSave={handleSaveItemModal}
           onClose={() => setEditingItem(null)}
         />
-      )}
+      ))}
 
       {/* MODAL 2: MegaMenuDesignerModal */}
       {megaMenuEditingItem && (
@@ -831,7 +916,11 @@ export const NavigationBuilderStudio: React.FC = () => {
         <LiveNavigationPreview
           menus={menus}
           activeMenuId={String(activeMenu.id)}
-          onClose={() => setIsLivePreviewOpen(false)}
+          brandName={publicBrandName || undefined}
+          onClose={() => {
+            setIsLivePreviewOpen(false);
+            setPublicBrandName(null);
+          }}
         />
       )}
 

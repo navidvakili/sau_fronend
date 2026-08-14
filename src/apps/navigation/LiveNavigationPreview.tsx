@@ -23,19 +23,24 @@ import {
   Activity,
   Layers,
   PhoneCall,
-  GraduationCap
+  MapPin,
+  Phone,
+  Printer
 } from 'lucide-react';
 import { NavigationMenu, NavigationItem, AccessRole } from './types';
+import { getFooterAddressDetailRows, isFooterAddressItem } from './footerAddressUtils';
 
 interface LiveNavigationPreviewProps {
   menus: NavigationMenu[];
   activeMenuId: string;
+  brandName?: string;
   onClose: () => void;
 }
 
 export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
   menus,
   activeMenuId,
+  brandName,
   onClose
 }) => {
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -51,6 +56,9 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
     menus.find(m => m.location === 'Header Main Menu') || menus[0];
   const headerTopMenu = menus.find(m => m.location === 'Header Top Menu');
   const footer1 = menus.find(m => m.location === 'Footer Menu 1');
+  const footer2 = menus.find(m => m.location === 'Footer Menu 2');
+  const footer3 = menus.find(m => m.location === 'Footer Menu 3');
+  const footer4 = menus.find(m => m.location === 'Footer Menu 4');
   const mobileMenu = menus.find(m => m.location === 'Mobile Menu') || headerMainMenu;
 
   // Filter items by access rules
@@ -70,6 +78,9 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
   const visibleHeaderItems = headerMainMenu ? filterByRole(headerMainMenu.items) : [];
   const visibleTopItems = headerTopMenu ? filterByRole(headerTopMenu.items) : [];
   const visibleFooter1Items = footer1 ? filterByRole(footer1.items) : [];
+  const visibleFooter2Items = footer2 ? filterByRole(footer2.items) : [];
+  const visibleFooter3Items = footer3 ? filterByRole(footer3.items) : [];
+  const visibleFooter4Items = footer4 ? filterByRole(footer4.items) : [];
   const visibleMobileItems = mobileMenu ? filterByRole(mobileMenu.items) : [];
 
   const toggleMobileAccordion = (id: string) => {
@@ -199,14 +210,23 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
           </div>
 
           {/* 2. MAIN HEADER NAVBAR */}
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between relative z-30">
+          {/* onMouseLeave on the header closes panels when the pointer leaves the whole
+              header — the mega panel is a DOM descendant, so moving from a link into the
+              panel (across the gap below the links) never triggers this leave. */}
+          <header
+            onMouseLeave={() => {
+              setActiveMegaMenuId(null);
+              setActiveDropdownId(null);
+            }}
+            className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between relative z-30"
+          >
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black shadow-lg">
                 CMS
               </div>
               <div>
-                <h1 className="font-extrabold text-sm text-slate-900 dark:text-white">دانشگاه بین‌المللی علوم و فناوری</h1>
+                <h1 className="font-extrabold text-sm text-slate-900 dark:text-white">{brandName || ''}</h1>
                 <p className="text-[10px] text-slate-400">International University Portal</p>
               </div>
             </div>
@@ -223,14 +243,21 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className="relative"
+                      className={isMega ? '' : 'relative'}
                       onMouseEnter={() => {
-                        if (isMega) setActiveMegaMenuId(item.id);
-                        if (isDropdown) setActiveDropdownId(item.id);
-                      }}
-                      onMouseLeave={() => {
-                        if (isMega) setActiveMegaMenuId(null);
-                        if (isDropdown) setActiveDropdownId(null);
+                        // Only one panel type can be open at a time — opening one closes the other.
+                        // No onMouseLeave here: the mega panel is anchored below the links with a
+                        // small gap, so a wrapper-level leave would close it while the pointer is
+                        // still travelling from the link into the panel. Closing is handled by the
+                        // header's onMouseLeave + the panel's own onMouseLeave.
+                        if (isMega) {
+                          setActiveMegaMenuId(item.id);
+                          setActiveDropdownId(null);
+                        }
+                        if (isDropdown) {
+                          setActiveDropdownId(item.id);
+                          setActiveMegaMenuId(null);
+                        }
                       }}
                     >
                       <button
@@ -285,9 +312,13 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
                         </div>
                       )}
 
-                      {/* MEGA MENU OVERLAY */}
+                      {/* MEGA MENU OVERLAY — anchored below the navbar links, spanning the header width */}
                       {isMega && isMegaOpen && item.megaMenuConfig && (
-                        <div className="fixed right-0 left-0 top-[130px] mx-auto max-w-5xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl p-6 z-50">
+                        <div
+                          onMouseEnter={() => setActiveMegaMenuId(item.id)}
+                          onMouseLeave={() => setActiveMegaMenuId(null)}
+                          className="absolute top-full left-0 right-0 z-50 mx-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl p-6"
+                        >
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {item.megaMenuConfig.columns.map(col => (
                               <div key={col.id} className="space-y-3">
@@ -426,34 +457,93 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
 
           {/* 4. FOOTER PREVIEW */}
           <footer className="bg-slate-900 text-slate-300 p-8 border-t border-slate-800 rounded-b-3xl space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-xs">
+              {/* Column 1: Faculty Addresses */}
               <div className="space-y-3">
-                <h4 className="font-extrabold text-white text-sm">دسترسی سریع</h4>
-                <div className="space-y-1.5 text-slate-400">
+                <h4 className="font-extrabold text-white text-sm relative inline-block after:content-[''] after:absolute after:-bottom-1 after:right-0 after:w-1/2 after:h-0.5 after:bg-teal-500">
+                  {footer1?.name || 'آدرس دانشکده‌ها'}
+                </h4>
+                <div className="space-y-4">
                   {visibleFooter1Items.map(f => (
-                    <a key={f.id} href={f.targetUrl} onClick={e => e.preventDefault()} className="block hover:text-teal-400">
+                    <div key={f.id} className="border-b border-slate-800 pb-3 last:border-0">
+                      <h5 className="text-yellow-500 font-bold mb-2 text-[11px]">{f.title}</h5>
+                      {isFooterAddressItem(f) ? (
+                        <>
+                          {getFooterAddressDetailRows(f)
+                            .filter(row => !row.isLink)
+                            .map(row => (
+                              <div key={row.id} className="flex items-start gap-1.5 text-[10px] text-slate-400 mb-1">
+                                {row.icon === 'Phone' ? (
+                                  <Phone size={11} className="shrink-0 mt-0.5 text-emerald-400" />
+                                ) : row.icon === 'Printer' ? (
+                                  <Printer size={11} className="shrink-0 mt-0.5" />
+                                ) : (
+                                  <MapPin size={11} className="shrink-0 mt-0.5 text-blue-400" />
+                                )}
+                                <span>{row.value}</span>
+                              </div>
+                            ))}
+                          {f.settings.mapButton?.text && (
+                            <a
+                              href={f.settings.mapButton.url || '#'}
+                              onClick={e => e.preventDefault()}
+                              className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-teal-600 text-white py-1 px-2 rounded transition mt-1"
+                            >
+                              <MapPin size={10} />
+                              {f.settings.mapButton.text}
+                            </a>
+                          )}
+                        </>
+                      ) : (
+                        <a href={f.targetUrl} onClick={e => e.preventDefault()} className="block hover:text-teal-400">
+                          • {f.title}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Column 2: Quick Access */}
+              <div className="space-y-3">
+                <h4 className="font-extrabold text-white text-sm relative inline-block after:content-[''] after:absolute after:-bottom-1 after:right-0 after:w-1/2 after:h-0.5 after:bg-teal-500">
+                  {footer2?.name || 'دسترسی سریع'}
+                </h4>
+                <div className="space-y-1.5 text-slate-400">
+                  {visibleFooter2Items.map(f => (
+                    <a key={f.id} href={f.targetUrl} onClick={e => e.preventDefault()} className="block hover:text-teal-400 hover:ps-1 transition-all">
                       • {f.title}
                     </a>
                   ))}
                 </div>
               </div>
 
+              {/* Column 3: Links */}
               <div className="space-y-3">
-                <h4 className="font-extrabold text-white text-sm">سامانه‌های الکترونیک</h4>
+                <h4 className="font-extrabold text-white text-sm relative inline-block after:content-[''] after:absolute after:-bottom-1 after:right-0 after:w-1/2 after:h-0.5 after:bg-teal-500">
+                  {footer3?.name || 'پیوندها'}
+                </h4>
                 <div className="space-y-1.5 text-slate-400">
-                  <a href="#" onClick={e => e.preventDefault()} className="block hover:text-teal-400">• سامانه سما (انتخاب واحد)</a>
-                  <a href="#" onClick={e => e.preventDefault()} className="block hover:text-teal-400">• سامانه تغذیه و رزرو غذا</a>
-                  <a href="#" onClick={e => e.preventDefault()} className="block hover:text-teal-400">• اتوماسیون اداری و دبیرخانه</a>
+                  {visibleFooter3Items.map(f => (
+                    <a key={f.id} href={f.targetUrl} onClick={e => e.preventDefault()} className="block hover:text-teal-400 hover:ps-1 transition-all">
+                      • {f.title}
+                    </a>
+                  ))}
                 </div>
               </div>
 
+              {/* Column 4: Social */}
               <div className="space-y-3">
-                <h4 className="font-extrabold text-white text-sm">ارتباط با دانشگاه</h4>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  تهران، خیابان آزادی، پردیس مرکزی دانشگاه علوم و فناوری
-                  <br />
-                  تلفن: ۰۲۱-۶۶۵۵۴۴۳۳
-                </p>
+                <h4 className="font-extrabold text-white text-sm">
+                  {footer4?.name || 'شبکه‌های اجتماعی'}
+                </h4>
+                <div className="space-y-1.5 text-slate-400">
+                  {visibleFooter4Items.map(f => (
+                    <a key={f.id} href={f.targetUrl} onClick={e => e.preventDefault()} className="block hover:text-teal-400">
+                      • {f.title}
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
 

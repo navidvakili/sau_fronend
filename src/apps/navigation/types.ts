@@ -4,6 +4,7 @@ export type MenuLocation =
   | 'Footer Menu 1'
   | 'Footer Menu 2'
   | 'Footer Menu 3'
+  | 'Footer Menu 4'
   | 'Mobile Menu';
 
 export type ItemType = 'internal' | 'external' | 'custom';
@@ -58,6 +59,20 @@ export interface SchedulingConfig {
   status: 'active' | 'inactive';
 }
 
+export type FooterItemType =
+  | 'address'
+  | 'link'
+  | 'social'
+  | 'email'
+  | 'certificate';
+
+export interface FooterMapButton {
+  text: string;
+  icon: string;
+  action: 'show_map' | 'open_url';
+  url?: string;
+}
+
 export interface NavigationItemSettings {
   icon?: string;
   svgIcon?: string;
@@ -69,6 +84,17 @@ export interface NavigationItemSettings {
   badge?: BadgeConfig;
   accessRules: AccessRole[];
   scheduling?: SchedulingConfig;
+  /** نوع آیتم فوتر — برای ستون‌های تخصصی فوتر */
+  footerItemType?: FooterItemType;
+  address?: string;
+  phone?: string;
+  fax?: string;
+  mapButton?: FooterMapButton;
+  platform?: string;
+  hoverColor?: string;
+  emailAddress?: string;
+  certificateType?: string;
+  certificateImage?: string | null;
 }
 
 export interface MegaMenuLinkItem {
