@@ -7,10 +7,10 @@ export function isFooterAddressItem(item: NavigationItem): boolean {
 export function createFooterAddressItem(
   menuId: string | number,
   sortOrder: number,
-  title = 'دانشکده جدید'
+  title = 'بلوک فوتر جدید'
 ): NavigationItem {
   return {
-    id: `faculty_${Date.now()}`,
+    id: `footer_block_${Date.now()}`,
     menuId: String(menuId),
     parentId: null,
     title,
@@ -23,6 +23,7 @@ export function createFooterAddressItem(
     settings: {
       accessRules: ['Public User'],
       footerItemType: 'address',
+      description: '',
       address: '',
       phone: '',
       fax: '',
@@ -32,6 +33,7 @@ export function createFooterAddressItem(
         action: 'show_map',
         url: '/campus-map',
       },
+      socialLinks: [],
     },
   };
 }
@@ -48,6 +50,15 @@ export interface FooterAddressDetailRow {
 export function getFooterAddressDetailRows(item: NavigationItem): FooterAddressDetailRow[] {
   const settings = item.settings;
   const rows: FooterAddressDetailRow[] = [];
+
+  if (settings.description) {
+    rows.push({
+      id: `${item.id}_description`,
+      icon: 'ExternalLink',
+      label: 'توضیح',
+      value: settings.description,
+    });
+  }
 
   if (settings.address) {
     rows.push({
@@ -82,9 +93,20 @@ export function getFooterAddressDetailRows(item: NavigationItem): FooterAddressD
     rows.push({
       id: `${item.id}_map`,
       icon: 'MapPin',
-      label: 'نقشه',
+      label: 'دکمه',
       value: mapButton.text,
       href: mapButton.url || '#',
+      isLink: true,
+    });
+  }
+
+  if (settings.buttonText && settings.buttonUrl) {
+    rows.push({
+      id: `${item.id}_button`,
+      icon: 'ExternalLink',
+      label: 'دکمه',
+      value: settings.buttonText,
+      href: settings.buttonUrl,
       isLink: true,
     });
   }

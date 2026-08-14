@@ -60,9 +60,12 @@ export interface SchedulingConfig {
 }
 
 export type FooterItemType =
+  | 'text'
   | 'address'
   | 'link'
   | 'social'
+  | 'image'
+  | 'button'
   | 'email'
   | 'certificate';
 
@@ -71,6 +74,14 @@ export interface FooterMapButton {
   icon: string;
   action: 'show_map' | 'open_url';
   url?: string;
+}
+
+export interface FooterSocialLink {
+  id: string;
+  label: string;
+  url: string;
+  icon: string;
+  hoverColor?: string;
 }
 
 export interface NavigationItemSettings {
@@ -84,17 +95,23 @@ export interface NavigationItemSettings {
   badge?: BadgeConfig;
   accessRules: AccessRole[];
   scheduling?: SchedulingConfig;
-  /** نوع آیتم فوتر — برای ستون‌های تخصصی فوتر */
+  /** نوع آیتم فوتر — برای بلوک‌هایgeneral فوتر */
   footerItemType?: FooterItemType;
   address?: string;
   phone?: string;
   fax?: string;
   mapButton?: FooterMapButton;
+  buttonText?: string;
+  buttonUrl?: string;
+  buttonIcon?: string;
   platform?: string;
   hoverColor?: string;
+  imageUrl?: string;
+  imageAlt?: string;
   emailAddress?: string;
   certificateType?: string;
   certificateImage?: string | null;
+  socialLinks?: FooterSocialLink[];
 }
 
 export interface MegaMenuLinkItem {

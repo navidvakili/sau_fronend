@@ -45,12 +45,11 @@ import {
 import { sampleVersionHistory } from './mockData';
 import { NavigationTreeItem } from './NavigationTreeItem';
 import { MenuItemEditorModal } from './MenuItemEditorModal';
-import { FooterAddressEditorModal } from './FooterAddressEditorModal';
 import { MegaMenuDesignerModal } from './MegaMenuDesignerModal';
 import { LiveNavigationPreview } from './LiveNavigationPreview';
 import { ApiHeadlessPreviewModal } from './ApiHeadlessPreviewModal';
 import { FooterAddressTreeItem } from './FooterAddressTreeItem';
-import { createFooterAddressItem, isFooterAddressItem } from './footerAddressUtils';
+import { isFooterAddressItem } from './footerAddressUtils';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import {
   fetchSiteMenus,
@@ -65,7 +64,7 @@ import { BACKEND_API_URL } from '@/src/shared-constants';
 const MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
   { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
   { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
-  { id: 'Footer Menu 1', label: 'فوتر - آدرس دانشکده‌ها', icon: FolderTree },
+  { id: 'Footer Menu 1', label: 'فوتر - ستون اطلاعات', icon: FolderTree },
   { id: 'Footer Menu 2', label: 'فوتر - دسترسی سریع', icon: FolderTree },
   { id: 'Footer Menu 3', label: 'فوتر - پیوندها', icon: FolderTree },
   { id: 'Footer Menu 4', label: 'فوتر - شبکه‌های اجتماعی', icon: FolderTree },
@@ -296,14 +295,7 @@ export const NavigationBuilderStudio: React.FC = () => {
     handleAddItem(null, source.title, source.url, source.type);
   };
 
-  const handleAddFooterFaculty = () => {
-    const newItem = createFooterAddressItem(activeMenu.id, (activeMenu.items.length || 0) + 1);
-    updateActiveMenuItems([...activeMenu.items, newItem]);
-    setEditingItem(newItem);
-    showToast('دانشکده جدید اضافه شد — اطلاعات را تکمیل کنید');
-  };
-
-  const isFooterAddressMenu = activeLocation === 'Footer Menu 1';
+  const isFooterAddressMenu = activeLocation.includes('Footer');
 
   // Save Item from MenuItemEditorModal
   const handleSaveItemModal = (updatedItem: NavigationItem) => {
@@ -624,27 +616,19 @@ export const NavigationBuilderStudio: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-blue-600" />
                 <h3 className="font-extrabold text-xs text-slate-900 dark:text-white">
-                  ستون آدرس دانشکده‌ها
+                  محتوای فوتر به‌صورت دستی
                 </h3>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                هر دانشکده شامل آدرس، تلفن، فکس و دکمه «نمایش روی نقشه» با آیکون است.
-                زیرمجموعه‌ها به‌صورت خودکار از اطلاعات هر دانشکده ساخته می‌شوند.
+                هر آیتم فوتر را به‌صورت دستی با متن، آیکون، لینک، دکمه و تصویر تعریف کنید؛ بدون نیاز به بلوک‌های از پیش‌ساخته.
               </p>
               <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-[10px] text-blue-800 dark:text-blue-200 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <MapPin className="w-3.5 h-3.5" /> آدرس پستی
-                </div>
-                <div className="flex items-center gap-1.5 font-bold">
-                  <MapPin className="w-3.5 h-3.5" /> لینک نمایش روی نقشه
-                </div>
+                <div className="flex items-center gap-1.5 font-bold"><MapPin className="w-3.5 h-3.5" /> متن با آیکون</div>
+                <div className="flex items-center gap-1.5 font-bold"><MapPin className="w-3.5 h-3.5" /> دکمه و لینک</div>
+                <div className="flex items-center gap-1.5 font-bold"><MapPin className="w-3.5 h-3.5" /> تصویر و شبکه اجتماعی</div>
               </div>
-              <button
-                onClick={handleAddFooterFaculty}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                افزودن دانشکده جدید
+              <button onClick={() => handleAddItem(null)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> افزودن آیتم فوتر
               </button>
             </div>
           ) : (
@@ -802,10 +786,10 @@ export const NavigationBuilderStudio: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => (isFooterAddressMenu ? handleAddFooterFaculty() : handleAddItem(null))}
+                  onClick={() => handleAddItem(null)}
                   className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
                 >
-                  <Plus className="w-4 h-4" /> {isFooterAddressMenu ? 'افزودن دانشکده' : 'افزودن به ریشه منو'}
+                  <Plus className="w-4 h-4" /> افزودن به ریشه منو
                 </button>
                 <button
                   onClick={async () => {
@@ -846,7 +830,7 @@ export const NavigationBuilderStudio: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {activeMenu.items.map((item, idx) =>
-                  isFooterAddressMenu || isFooterAddressItem(item) ? (
+                  isFooterAddressMenu && isFooterAddressItem(item) ? (
                     <FooterAddressTreeItem
                       key={item.id ?? `menu_${activeMenu.location}_${idx}`}
                       item={item}
@@ -886,21 +870,16 @@ export const NavigationBuilderStudio: React.FC = () => {
       </div>
 
       {/* MODAL 1: MenuItemEditorModal / FooterAddressEditorModal */}
-      {editingItem && (isFooterAddressItem(editingItem) ? (
-        <FooterAddressEditorModal
-          item={editingItem}
-          onSave={handleSaveItemModal}
-          onClose={() => setEditingItem(null)}
-        />
-      ) : (
+      {editingItem && (
         <MenuItemEditorModal
           item={editingItem}
+          menuLocation={activeLocation}
           cmsSources={cmsSources}
           sourcesLoading={sourcesLoading}
           onSave={handleSaveItemModal}
           onClose={() => setEditingItem(null)}
         />
-      ))}
+      )}
 
       {/* MODAL 2: MegaMenuDesignerModal */}
       {megaMenuEditingItem && (

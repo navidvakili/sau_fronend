@@ -23,8 +23,12 @@ import {
   BookOpen,
   Info,
   LayoutGrid,
-  Loader2
+  Loader2,
+  MapPin,
+  Phone,
+  Printer
 } from 'lucide-react';
+import IconPicker from '@/src/apps/page-builder/components/IconPicker';
 import {
   NavigationItem,
   ItemType,
@@ -34,11 +38,14 @@ import {
   DisplayMode,
   BadgeType,
   AccessRole,
-  NavigationItemSettings
+  NavigationItemSettings,
+  MenuLocation,
+  FooterItemType
 } from './types';
 
 interface MenuItemEditorModalProps {
   item: NavigationItem;
+  menuLocation?: MenuLocation;
   /** منابع CMS واقعی سایت اصلی که از وب‌سرویس بک‌اند دریافت شده‌اند */
   cmsSources: CmsSourceItem[];
   /** وضعیت بارگذاری منابع از وب‌سرویس */
@@ -59,6 +66,7 @@ const ACCESS_ROLES: AccessRole[] = [
 
 export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
   item,
+  menuLocation,
   cmsSources,
   sourcesLoading = false,
   onSave,
@@ -79,10 +87,22 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
   const [displayType, setDisplayType] = useState<DisplayMode>(item.displayType);
 
   // Settings
-  const [icon, setIcon] = useState(item.settings.icon || 'Link');
+  const [icon, setIcon] = useState(item.settings.icon || item.settings.buttonIcon || 'link');
   const [description, setDescription] = useState(item.settings.description || '');
   const [cssClass, setCssClass] = useState(item.settings.cssClass || '');
   const [customStyle, setCustomStyle] = useState(item.settings.customStyle || '');
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconPickerTarget, setIconPickerTarget] = useState<'general' | 'footerButton'>('general');
+  const [footerItemType, setFooterItemType] = useState<FooterItemType>(item.settings.footerItemType || 'text');
+  const [footerText, setFooterText] = useState(item.settings.description || item.title || '');
+  const [footerButtonText, setFooterButtonText] = useState(item.settings.buttonText || '');
+  const [footerButtonUrl, setFooterButtonUrl] = useState(item.settings.buttonUrl || '');
+  const [footerButtonIcon, setFooterButtonIcon] = useState(item.settings.buttonIcon || item.settings.icon || 'link');
+  const [footerAddress, setFooterAddress] = useState(item.settings.address || '');
+  const [footerPhone, setFooterPhone] = useState(item.settings.phone || '');
+  const [footerFax, setFooterFax] = useState(item.settings.fax || '');
+  const [footerImageUrl, setFooterImageUrl] = useState(item.settings.imageUrl || '');
+  const [footerImageAlt, setFooterImageAlt] = useState(item.settings.imageAlt || '');
 
   // Badge
   const [badgeEnabled, setBadgeEnabled] = useState(item.settings.badge?.enabled || false);
@@ -120,6 +140,17 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
     }
   };
 
+  const handleIconSelect = (iconName: string) => {
+    if (iconPickerTarget === 'footerButton') {
+      setFooterButtonIcon(iconName || 'link');
+      setIcon(iconName || icon || 'link');
+    } else {
+      setIcon(iconName || 'link');
+    }
+    setIconPickerOpen(false);
+    setIconPickerTarget('general');
+  };
+
   const toggleAccessRole = (role: AccessRole) => {
     if (accessRules.includes(role)) {
       setAccessRules(accessRules.filter(r => r !== role));
@@ -134,7 +165,7 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
     const updatedSettings: NavigationItemSettings = {
       ...item.settings,
       icon,
-      description,
+      description: menuLocation && menuLocation.includes('Footer') ? footerText : description,
       cssClass,
       customStyle,
       badge: badgeEnabled
@@ -143,7 +174,19 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
       accessRules,
       scheduling: scheduleEnabled
         ? { enabled: true, startDate, endDate, status: 'active' }
-        : undefined
+        : undefined,
+      footerItemType: menuLocation && menuLocation.includes('Footer') ? footerItemType : item.settings.footerItemType,
+      address: menuLocation && menuLocation.includes('Footer') ? footerAddress : item.settings.address,
+      phone: menuLocation && menuLocation.includes('Footer') ? footerPhone : item.settings.phone,
+      fax: menuLocation && menuLocation.includes('Footer') ? footerFax : item.settings.fax,
+      buttonText: menuLocation && menuLocation.includes('Footer') ? footerButtonText : item.settings.buttonText,
+      buttonUrl: menuLocation && menuLocation.includes('Footer') ? footerButtonUrl : item.settings.buttonUrl,
+      buttonIcon: menuLocation && menuLocation.includes('Footer') ? footerButtonIcon : item.settings.buttonIcon,
+      imageUrl: menuLocation && menuLocation.includes('Footer') ? footerImageUrl : item.settings.imageUrl,
+      imageAlt: menuLocation && menuLocation.includes('Footer') ? footerImageAlt : item.settings.imageAlt,
+      mapButton: menuLocation && menuLocation.includes('Footer') && footerButtonUrl
+        ? { text: footerButtonText || title, icon: footerButtonIcon || 'link', action: 'open_url', url: footerButtonUrl }
+        : item.settings.mapButton,
     };
 
     const updatedItem: NavigationItem = {
@@ -572,15 +615,19 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                    نام آیکون (Lucide Icon Name)
+                    انتخاب آیکون
                   </label>
-                  <input
-                    type="text"
-                    value={icon}
-                    onChange={e => setIcon(e.target.value)}
-                    placeholder="Home, GraduationCap, Users, ..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIconPickerTarget('general');
+                      setIconPickerOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-right"
+                  >
+                    <span>{icon || 'انتخاب آیکون'}</span>
+                    <Sparkles className="w-4 h-4 text-teal-600" />
+                  </button>
                 </div>
 
                 <div>
@@ -609,6 +656,107 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
                 />
               </div>
+
+              {menuLocation && menuLocation.includes('Footer') && (
+                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-4">
+                  <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-extrabold">
+                    <Sparkles className="w-4 h-4" />
+                    <span>ساخت محتوای فوتر به‌صورت دستی</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">نوع محتوا</label>
+                    <select
+                      value={footerItemType}
+                      onChange={e => setFooterItemType(e.target.value as FooterItemType)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                    >
+                      <option value="text">متن با آیکون</option>
+                      <option value="address">آدرس / اطلاعات تماس</option>
+                      <option value="button">دکمه / لینک</option>
+                      <option value="image">تصویر</option>
+                      <option value="social">شبکه اجتماعی</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">متن / توضیح</label>
+                    <textarea
+                      value={footerText}
+                      onChange={e => setFooterText(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">آیکون فوتر</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIconPickerTarget('footerButton');
+                          setIconPickerOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                      >
+                        <span>{footerButtonIcon || icon || 'انتخاب آیکون'}</span>
+                        <Sparkles className="w-4 h-4 text-teal-600" />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">متن دکمه</label>
+                      <input
+                        value={footerButtonText}
+                        onChange={e => setFooterButtonText(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">لینک دکمه</label>
+                    <input
+                      value={footerButtonUrl}
+                      onChange={e => setFooterButtonUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
+                    />
+                  </div>
+
+                  {(footerItemType === 'address' || footerItemType === 'button') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-blue-500" /> آدرس</label>
+                        <textarea value={footerAddress} onChange={e => setFooterAddress(e.target.value)} rows={2} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-emerald-500" /> تلفن</label>
+                        <input value={footerPhone} onChange={e => setFooterPhone(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                      </div>
+                    </div>
+                  )}
+
+                  {footerItemType === 'address' && (
+                    <div>
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5"><Printer className="w-3.5 h-3.5 text-slate-500" /> فکس</label>
+                      <input value={footerFax} onChange={e => setFooterFax(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                    </div>
+                  )}
+
+                  {(footerItemType === 'image' || footerItemType === 'social') && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">URL تصویر</label>
+                        <input value={footerImageUrl} onChange={e => setFooterImageUrl(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left" />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">متن جایگزین تصویر</label>
+                        <input value={footerImageAlt} onChange={e => setFooterImageAlt(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Badge Configuration */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
@@ -756,6 +904,16 @@ export const MenuItemEditorModal: React.FC<MenuItemEditorModalProps> = ({
           </div>
         </form>
       </div>
+      <IconPicker
+        open={iconPickerOpen}
+        onClose={() => {
+          setIconPickerOpen(false);
+          setIconPickerTarget('general');
+        }}
+        onSelect={handleIconSelect}
+        title="انتخاب آیکون"
+        value={iconPickerTarget === 'footerButton' ? (footerButtonIcon || icon || '') : (icon || '')}
+      />
     </div>
   );
 };
