@@ -109,6 +109,7 @@ export const NavigationBuilderStudio: React.FC = () => {
   // Bulk selection for tree items
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deleteMenuDialog, setDeleteMenuDialog] = useState<{ location: MenuLocation; menuId?: number } | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -220,7 +221,7 @@ export const NavigationBuilderStudio: React.FC = () => {
     showToast(`موقعیت جدید «${normalizedLocation}» اضافه شد`);
   };
 
-  const handleRemoveCurrentMenuLocation = async () => {
+  const handleRemoveCurrentMenuLocation = () => {
     if (menuLocations.length <= 1) {
       showToast('حداقل باید یک موقعیت منو وجود داشته باشد');
       return;
@@ -230,30 +231,40 @@ export const NavigationBuilderStudio: React.FC = () => {
       m => m.location === activeLocation && (m.language === currentLang || !m.language)
     );
 
-    const confirmed = window.confirm(
-      `آیا از حذف موقعیت «${activeLocation}» و رکورد مرتبط آن در دیتابیس مطمئن هستید؟`
-    );
+    setDeleteMenuDialog({
+      location: activeLocation,
+      menuId: typeof targetMenu?.id === 'number' ? targetMenu.id : undefined,
+    });
+  };
 
-    if (!confirmed) return;
+  const confirmDeleteMenuLocation = async () => {
+    if (!deleteMenuDialog) return;
+
+    const { location, menuId } = deleteMenuDialog;
 
     try {
-      if (targetMenu && typeof targetMenu.id === 'number') {
-        await deleteSiteMenu(targetMenu.id);
+      if (typeof menuId === 'number') {
+        await deleteSiteMenu(menuId);
       }
 
-      const remaining = menuLocations.filter(loc => loc.id !== activeLocation);
-      if (remaining.length === 0) return;
+      const remaining = menuLocations.filter(loc => loc.id !== location);
+      if (remaining.length === 0) {
+        setDeleteMenuDialog(null);
+        return;
+      }
 
       setMenus(prev => prev.filter(
-        m => !(m.location === activeLocation && (m.language === currentLang || !m.language))
+        m => !(m.location === location && (m.language === currentLang || !m.language))
       ));
       setMenuLocations(remaining);
       setActiveLocation(remaining[0].id);
-      delete serverIdsRef.current[activeLocation];
-      showToast(`موقعیت «${activeLocation}» حذف شد`);
+      delete serverIdsRef.current[location];
+      showToast(`موقعیت «${location}» حذف شد`);
     } catch (error: any) {
       console.error(error);
       showToast(error?.message || 'حذف موقعیت منو با خطا مواجه شد');
+    } finally {
+      setDeleteMenuDialog(null);
     }
   };
 
@@ -978,6 +989,43 @@ export const NavigationBuilderStudio: React.FC = () => {
           onSave={handleSaveMegaMenuModal}
           onClose={() => setMegaMenuEditingItem(null)}
         />
+      )}
+
+      {deleteMenuDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">حذف موقعیت منو</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">این عملیات غیرقابل بازگشت است</p>
+              </div>
+            </div>
+
+            <p className="text-sm leading-7 text-slate-700 dark:text-slate-300">
+              آیا از حذف موقعیت «{deleteMenuDialog.location}» و رکورد مرتبط آن در دیتابیس مطمئن هستید؟
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteMenuDialog(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMenuLocation}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
+              >
+                حذف موقعیت
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL 3: Live Frontend Preview */}
