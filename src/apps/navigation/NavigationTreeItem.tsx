@@ -27,7 +27,7 @@ interface NavigationTreeItemProps {
   level: number;
   onEdit: (item: NavigationItem) => void;
   onEditMegaMenu: (item: NavigationItem) => void;
-  onDelete: (itemId: string) => void;
+  onDelete: (itemId: string, itemTitle?: string) => void;
   onDuplicate: (item: NavigationItem) => void;
   onAddChild: (parentId: string) => void;
   onToggleStatus: (itemId: string) => void;
@@ -247,7 +247,7 @@ export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
 
           {/* Delete Item */}
           <button
-            onClick={() => onDelete(item.id)}
+            onClick={() => onDelete(item.id, item.title)}
             className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             title="حذف آیتم"
           >

@@ -110,6 +110,7 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deleteMenuDialog, setDeleteMenuDialog] = useState<{ location: MenuLocation; menuId?: number } | null>(null);
+  const [deleteItemDialog, setDeleteItemDialog] = useState<{ itemId: string; itemTitle: string } | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -415,6 +416,16 @@ export const NavigationBuilderStudio: React.FC = () => {
     showToast('آیتم از ساختار منو حذف شد');
   };
 
+  const openDeleteItemDialog = (itemId: string, itemTitle: string) => {
+    setDeleteItemDialog({ itemId, itemTitle });
+  };
+
+  const confirmDeleteItem = () => {
+    if (!deleteItemDialog) return;
+    handleDeleteItem(deleteItemDialog.itemId);
+    setDeleteItemDialog(null);
+  };
+
   // Duplicate Item
   const handleDuplicateItem = (item: NavigationItem) => {
     const duplicated: NavigationItem = {
@@ -558,6 +569,11 @@ export const NavigationBuilderStudio: React.FC = () => {
       s.title.toLowerCase().includes(sourceSearch.toLowerCase()) ||
       (s.categoryPath && s.categoryPath.toLowerCase().includes(sourceSearch.toLowerCase()));
     return matchesCategory && matchesScope && matchesSearch;
+  });
+
+  const filteredVersionHistory = versionHistory.filter(entry => {
+    if (!activeMenu.id) return true;
+    return String(entry.menuId) === String(activeMenu.id) || !entry.menuId;
   });
 
   return (
@@ -936,7 +952,7 @@ export const NavigationBuilderStudio: React.FC = () => {
                       key={item.id ?? `menu_${activeMenu.location}_${idx}`}
                       item={item}
                       onEdit={setEditingItem}
-                      onDelete={handleDeleteItem}
+                      onDelete={(itemId, itemTitle) => openDeleteItemDialog(itemId, itemTitle || 'این آیتم')}
                       onDuplicate={handleDuplicateItem}
                       onToggleStatus={handleToggleStatus}
                       onMoveUp={handleMoveUp}
@@ -951,7 +967,7 @@ export const NavigationBuilderStudio: React.FC = () => {
                       level={0}
                       onEdit={setEditingItem}
                       onEditMegaMenu={setMegaMenuEditingItem}
-                      onDelete={handleDeleteItem}
+                      onDelete={(itemId, itemTitle) => openDeleteItemDialog(itemId, itemTitle || 'این آیتم')}
                       onDuplicate={handleDuplicateItem}
                       onAddChild={parentId => handleAddItem(parentId)}
                       onToggleStatus={handleToggleStatus}
@@ -1024,6 +1040,92 @@ export const NavigationBuilderStudio: React.FC = () => {
                 حذف موقعیت
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {deleteItemDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">حذف آیتم منو</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">این عملیات غیرقابل بازگشت است</p>
+              </div>
+            </div>
+
+            <p className="text-sm leading-7 text-slate-700 dark:text-slate-300">
+              آیا از حذف آیتم «{deleteItemDialog.itemTitle}» مطمئن هستید؟
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteItemDialog(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteItem}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"
+              >
+                حذف آیتم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isVersionHistoryOpen && (
+        <div className="fixed left-4 top-4 bottom-4 z-50 w-[360px] max-w-[calc(100vw-2rem)] rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">تاریخچه نسخه‌ها</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">{activeMenu.name}</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsVersionHistoryOpen(false)}
+              className="rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              بستن
+            </button>
+          </div>
+
+          <div className="space-y-3 overflow-y-auto pr-1 max-h-[calc(100vh-8rem)]">
+            {filteredVersionHistory.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[11px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                هنوز نسخه‌ای برای این منو ثبت نشده است.
+              </div>
+            ) : (
+              filteredVersionHistory.map(entry => (
+                <div key={entry.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-extrabold text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                      نسخه {entry.version}
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{entry.timestamp}</span>
+                  </div>
+
+                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">{entry.changeSummary}</p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                    <span>تغییر دهنده: {entry.changedBy}</span>
+                    <span className="font-mono">#{entry.id}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

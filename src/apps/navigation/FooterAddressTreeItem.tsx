@@ -20,7 +20,7 @@ import { getFooterAddressDetailRows } from './footerAddressUtils';
 interface FooterAddressTreeItemProps {
   item: NavigationItem;
   onEdit: (item: NavigationItem) => void;
-  onDelete: (itemId: string) => void;
+  onDelete: (itemId: string, itemTitle?: string) => void;
   onDuplicate: (item: NavigationItem) => void;
   onToggleStatus: (itemId: string) => void;
   onMoveUp: (itemId: string) => void;
@@ -81,7 +81,7 @@ export const FooterAddressTreeItem: React.FC<FooterAddressTreeItemProps> = ({
             </div>
             <button onClick={() => onDuplicate(item)} className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700" title="تکثیر"><Copy className="w-3.5 h-3.5" /></button>
             <button onClick={() => onEdit(item)} className="p-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700" title="ویرایش بلوک"><Edit2 className="w-3.5 h-3.5" /></button>
-            <button onClick={() => onDelete(item.id)} className="p-1.5 rounded-xl text-slate-400 hover:text-red-600" title="حذف"><Trash2 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onDelete(item.id, item.title)} className="p-1.5 rounded-xl text-slate-400 hover:text-red-600" title="حذف"><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
         </div>
 
