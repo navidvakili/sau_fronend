@@ -61,18 +61,6 @@ import {
 } from './api';
 import { BACKEND_API_URL } from '@/src/shared-constants';
 
-// پیش‌فرض‌های اولیه برای موقعیت‌های منو. در واقعیت، لیست نهایی از داده‌های وب‌سرویس
-// و منوهای ذخیره‌شده در دیتابیس ساخته می‌شود؛ اینجا فقط برای اولین بار استفاده می‌شود.
-const DEFAULT_MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
-  { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
-  { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
-  { id: 'Faculty Menu', label: 'منوی دانشکده‌ها', icon: Building2 },
-  { id: 'Footer Menu 1', label: 'فوتر - ستون اطلاعات', icon: FolderTree },
-  { id: 'Footer Menu 2', label: 'فوتر - دسترسی سریع', icon: FolderTree },
-  { id: 'Footer Menu 3', label: 'فوتر - پیوندها', icon: FolderTree },
-  { id: 'Footer Menu 4', label: 'فوتر - شبکه‌های اجتماعی', icon: FolderTree },
-  { id: 'Mobile Menu', label: 'منوی کشویی موبایل', icon: Sliders }
-];
 
 export const NavigationBuilderStudio: React.FC = () => {
   // زبان سیستم از ساختار اصلی مدیریت (چندزبانه) گرفته می‌شود — بدون سوییچر داخلی
@@ -81,7 +69,7 @@ export const NavigationBuilderStudio: React.FC = () => {
   // Navigation Menus State
   const [menus, setMenus] = useState<NavigationMenu[]>([]);
   const [loading, setLoading] = useState(true);
-  const [menuLocations, setMenuLocations] = useState(DEFAULT_MENU_LOCATIONS);
+  const [menuLocations, setMenuLocations] = useState<{ id: MenuLocation; label: string; icon: any }[]>([]);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
   const [newLocationName, setNewLocationName] = useState('');
   const [locationLabelDraft, setLocationLabelDraft] = useState('');
@@ -140,17 +128,11 @@ export const NavigationBuilderStudio: React.FC = () => {
           if (typeof m.id === 'number') serverIdsRef.current[m.location] = m.id;
         });
 
-        setMenuLocations(prev => {
-          const existing = menuData.map(m => ({
-            id: m.location as MenuLocation,
-            label: m.name || m.location,
-            icon: FolderTree,
-          }));
-
-          const merged = [...DEFAULT_MENU_LOCATIONS, ...existing];
-          const unique = merged.filter((loc, index, arr) => arr.findIndex(l => l.id === loc.id) === index);
-          return unique;
-        });
+        setMenuLocations(menuData.map(menu => ({
+          id: menu.location as MenuLocation,
+          label: menu.name || menu.location,
+          icon: FolderTree,
+        })));
 
         setCmsSources(sourcesData);
       } catch (e) {
