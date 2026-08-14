@@ -61,7 +61,8 @@ import {
 } from './api';
 import { BACKEND_API_URL } from '@/src/shared-constants';
 
-// موقعیت‌های منو در پوسته سایت اصلی (فقط منوهای سایت — بدون خرده‌نانی/کناری/داشبورد)
+// پیش‌فرض‌های اولیه برای موقعیت‌های منو. در واقعیت، لیست نهایی از داده‌های وب‌سرویس
+// و منوهای ذخیره‌شده در دیتابیس ساخته می‌شود؛ اینجا فقط برای اولین بار استفاده می‌شود.
 const DEFAULT_MENU_LOCATIONS: { id: MenuLocation; label: string; icon: any }[] = [
   { id: 'Header Main Menu', label: 'هدر اصلی (Main Navbar)', icon: Layers },
   { id: 'Header Top Menu', label: 'هدر بالایی (Top Bar)', icon: Sliders },
@@ -83,6 +84,7 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [menuLocations, setMenuLocations] = useState(DEFAULT_MENU_LOCATIONS);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
   const [newLocationName, setNewLocationName] = useState('');
+  const [locationLabelDraft, setLocationLabelDraft] = useState('');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
 
   // CMS Source Palette (داده‌های واقعی از وب‌سرویس)
@@ -137,6 +139,19 @@ export const NavigationBuilderStudio: React.FC = () => {
         menuData.forEach(m => {
           if (typeof m.id === 'number') serverIdsRef.current[m.location] = m.id;
         });
+
+        setMenuLocations(prev => {
+          const existing = menuData.map(m => ({
+            id: m.location as MenuLocation,
+            label: m.name || m.location,
+            icon: FolderTree,
+          }));
+
+          const merged = [...DEFAULT_MENU_LOCATIONS, ...existing];
+          const unique = merged.filter((loc, index, arr) => arr.findIndex(l => l.id === loc.id) === index);
+          return unique;
+        });
+
         setCmsSources(sourcesData);
       } catch (e) {
         console.error(e);
@@ -197,6 +212,10 @@ export const NavigationBuilderStudio: React.FC = () => {
     items: []
   };
 
+  useEffect(() => {
+    setLocationLabelDraft(activeMenu.name || activeLocation);
+  }, [activeLocation, activeMenu.name]);
+
   const handleAddMenuLocation = () => {
     const rawName = newLocationName.trim();
     if (!rawName) return;
@@ -220,6 +239,26 @@ export const NavigationBuilderStudio: React.FC = () => {
     setActiveLocation(normalizedLocation as MenuLocation);
     setNewLocationName('');
     showToast(`موقعیت جدید «${normalizedLocation}» اضافه شد`);
+  };
+
+  const handleRenameCurrentMenuLabel = async () => {
+    const trimmed = locationLabelDraft.trim();
+    if (!trimmed) return;
+
+    try {
+      const menuToSave = {
+        ...activeMenu,
+        name: trimmed,
+      } as NavigationMenu;
+
+      const saved = await saveSiteMenu(menuToSave, currentLang);
+      setMenus(prev => prev.map(m => (m.id === saved.id || (m.location === activeLocation && (m.language === currentLang || !m.language))) ? { ...m, ...saved, name: trimmed } : m));
+      setMenuLocations(prev => prev.map(loc => loc.id === activeLocation ? { ...loc, label: trimmed } : loc));
+      showToast(`عنوان موقعیت «${trimmed}» ذخیره شد`);
+    } catch (error: any) {
+      console.error(error);
+      showToast(error?.message || 'ذخیره عنوان موقعیت با خطا مواجه شد');
+    }
   };
 
   const handleRemoveCurrentMenuLocation = () => {
@@ -720,6 +759,23 @@ export const NavigationBuilderStudio: React.FC = () => {
             className="px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold"
           >
             حذف موقعیت فعلی
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <input
+            type="text"
+            value={locationLabelDraft}
+            onChange={e => setLocationLabelDraft(e.target.value)}
+            placeholder="عنوان نمایش داده‌شده برای این موقعیت..."
+            className="flex-1 min-w-[220px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+          />
+          <button
+            type="button"
+            onClick={handleRenameCurrentMenuLabel}
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
+          >
+            ذخیره عنوان
           </button>
         </div>
       </div>
