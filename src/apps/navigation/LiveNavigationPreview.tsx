@@ -33,6 +33,7 @@ import { getFooterAddressDetailRows, isFooterAddressItem } from './footerAddress
 interface LiveNavigationPreviewProps {
   menus: NavigationMenu[];
   activeMenuId: string;
+  activeMenu?: NavigationMenu;
   brandName?: string;
   onClose: () => void;
 }
@@ -40,6 +41,7 @@ interface LiveNavigationPreviewProps {
 export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
   menus,
   activeMenuId,
+  activeMenu,
   brandName,
   onClose
 }) => {
@@ -51,9 +53,12 @@ export const LiveNavigationPreview: React.FC<LiveNavigationPreviewProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [expandedMobileAccordions, setExpandedMobileAccordions] = useState<string[]>([]);
 
-  // Find header main menu
+  // Use the active editor menu as the primary header menu when available so the preview
+  // reflects the current navigation being edited instead of a stale hard-coded location.
   const headerMainMenu =
-    menus.find(m => m.location === 'Header Main Menu') || menus[0];
+    activeMenu && activeMenu.items
+      ? activeMenu
+      : menus.find(m => m.location === 'Header Main Menu') || menus[0];
   const headerTopMenu = menus.find(m => m.location === 'Header Top Menu');
   const footer1 = menus.find(m => m.location === 'Footer Menu 1');
   const footer2 = menus.find(m => m.location === 'Footer Menu 2');

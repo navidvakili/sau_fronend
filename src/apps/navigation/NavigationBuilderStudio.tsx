@@ -812,6 +812,14 @@ export const NavigationBuilderStudio: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={() => setIsLivePreviewOpen(true)}
+            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+          >
+            <Eye className="w-4 h-4" />
+            پیش‌نمایش زنده
+          </button>
+          <button
+            type="button"
             onClick={handleRemoveCurrentMenuLocation}
             className="px-3 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold"
           >
@@ -1020,23 +1028,6 @@ export const NavigationBuilderStudio: React.FC = () => {
                   className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
                 >
                   <Plus className="w-4 h-4" /> افزودن به ریشه منو
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`${BACKEND_API_URL}/api/site-metadata`);
-                      const json = await res.json();
-                      setPublicBrandName(json?.title || null);
-                      setIsLivePreviewOpen(true);
-                    } catch (e) {
-                      console.error(e);
-                      showToast('خطا در دریافت عنوان وب‌سایت عمومی');
-                    }
-                  }}
-                  title="نمایش هدر عمومی"
-                  className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5"
-                >
-                  <Eye className="w-4 h-4 text-teal-600" /> پیش‌نمایش هدر عمومی
                 </button>
               </div>
             </div>
@@ -1248,6 +1239,7 @@ export const NavigationBuilderStudio: React.FC = () => {
         <LiveNavigationPreview
           menus={menus}
           activeMenuId={String(activeMenu.id)}
+          activeMenu={activeMenu}
           brandName={publicBrandName || undefined}
           onClose={() => {
             setIsLivePreviewOpen(false);
