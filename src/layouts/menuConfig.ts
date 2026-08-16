@@ -42,6 +42,7 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-dollar': 'DollarSign',
   'fa fa-money': 'DollarSign',
   'fa fa-file-text': 'FileText',
+  'fa fa-file-text-o': 'FileText',
   'fa fa-calendar': 'Calendar',
   'fa fa-home': 'Home',
   'fa fa-building': 'Building',

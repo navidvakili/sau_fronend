@@ -23,6 +23,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   gallery: lazy(() => import('./gallery')),
   forms: lazy(() => import('./forms')),
   navigation: lazy(() => import('./navigation')),
+  'dedicated-pages': lazy(() => import('./dedicated_pages')),
 };
 
 /**
@@ -89,6 +90,12 @@ export const moduleToAppMap: Record<string, string> = {
   'navigation-builder': 'navigation',
   'nav-builder': 'navigation',
   'menu-builder': 'navigation',
+
+  // Dedicated Pages App (صفحات اختصاصی و مستقل)
+  'dedicated-pages': 'dedicated-pages',
+  'dedicated_pages': 'dedicated-pages',
+  'special-pages': 'dedicated-pages',
+  'portal-pages': 'dedicated-pages',
 
 };
 

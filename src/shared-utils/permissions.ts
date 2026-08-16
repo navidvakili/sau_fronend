@@ -81,4 +81,5 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   gallery: { view: 'gallery.view', create: 'gallery.create', edit: 'gallery.edit', delete: 'gallery.delete', approve: 'gallery.approve' },
   forms: { view: 'forms.view', create: 'forms.create', edit: 'forms.edit', delete: 'forms.delete', approve: 'forms.approve' },
   navigation: { view: 'navigation.view', create: 'navigation.create', edit: 'navigation.edit', delete: 'navigation.delete', approve: 'navigation.approve' },
+  'dedicated-pages': { view: 'dedicated-pages.view', create: 'dedicated-pages.create', edit: 'dedicated-pages.edit', delete: 'dedicated-pages.delete', approve: 'dedicated-pages.approve' },
 };

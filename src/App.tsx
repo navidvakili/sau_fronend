@@ -212,6 +212,7 @@ export default function App() {
     { targetId: 'smart-page-builder', title: 'صفحه‌ساز هوشمند', iconName: 'LayoutDashboard', category: 'صفحه‌ساز' },
     { targetId: 'dam-studio', title: 'استودیو دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
     { targetId: 'dam-assets', title: 'دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
+    { targetId: 'dedicated-pages', title: 'صفحات اختصاصی و مستقل', iconName: 'FileText', category: 'صفحات اختصاصی' },
     { targetId: 'finance', title: 'حسابداری و مالی', iconName: 'DollarSign', category: 'مالی' },
     { targetId: 'profile', title: 'پروفایل کاربری', iconName: 'User', category: 'کاربری' },
     { targetId: 'change-password', title: 'تغییر رمز عبور', iconName: 'Lock', category: 'کاربری' },
