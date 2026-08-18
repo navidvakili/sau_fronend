@@ -50,8 +50,8 @@ export default function IsolatedManagerPortal({
   // Filter pages that this persona is authorized to manage
   const authorizedPages = allPages.filter(
     p =>
-      p.owner.name === currentPersonaName ||
-      p.authorizedUsers.some(u => u.name === currentPersonaName) ||
+      p.owner?.name === currentPersonaName ||
+      p.authorizedUsers?.some(u => u.name === currentPersonaName) ||
       p.id === page.id
   );
 
@@ -60,7 +60,7 @@ export default function IsolatedManagerPortal({
   // New content inline state
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<'news' | 'event' | 'document' | 'article'>('news');
-  const [newCatSlug, setNewCatSlug] = useState(page.taxonomies[0]?.slug || 'general');
+  const [newCatSlug, setNewCatSlug] = useState(page.taxonomies?.[0]?.slug || 'general');
   const [newSummary, setNewSummary] = useState('');
 
   // Contact messages mockup for this isolated page
@@ -89,7 +89,7 @@ export default function IsolatedManagerPortal({
     e.preventDefault();
     if (!newTitle) return;
 
-    const matchedTax = page.taxonomies.find(t => t.slug === newCatSlug);
+    const matchedTax = page.taxonomies?.find(t => t.slug === newCatSlug);
     const categoryTitle = matchedTax ? matchedTax.title : 'عمومی';
 
     const newItem: PageContentItem = {

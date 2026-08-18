@@ -42,13 +42,13 @@ export default function PageContentModerationModal({
   const [isAddingContent, setIsAddingContent] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<'news' | 'announcement' | 'event' | 'document' | 'article'>('news');
-  const [newCategorySlug, setNewCategorySlug] = useState(page.taxonomies[0]?.slug || 'general');
+  const [newCategorySlug, setNewCategorySlug] = useState(page.taxonomies?.[0]?.slug || 'general');
   const [newSummary, setNewSummary] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newFileUrl, setNewFileUrl] = useState('');
   const [newFileSize, setNewFileSize] = useState('');
-  const [newAuthor, setNewAuthor] = useState(page.owner.name);
+  const [newAuthor, setNewAuthor] = useState(page.owner?.name || '');
 
   if (!isOpen) return null;
 
@@ -88,7 +88,7 @@ export default function PageContentModerationModal({
     e.preventDefault();
     if (!newTitle) return;
 
-    const matchedTax = page.taxonomies.find(t => t.slug === newCategorySlug);
+    const matchedTax = page.taxonomies?.find(t => t.slug === newCategorySlug);
     const categoryTitle = matchedTax ? matchedTax.title : 'عمومی';
 
     const newItem: PageContentItem = {

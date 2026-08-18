@@ -3,7 +3,17 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils/functions';
-import type { DedicatedPage, PageContentItem, PageType } from './types';
+import type { DedicatedPage, PageContentItem, PageType, ProfessorProfileData } from './types';
+
+// ==================== Professors Data ====================
+
+/**
+ * دریافت لیست اساتید و اطلاعات پروفایل آنها از وب‌سرویس
+ */
+export async function fetchProfessors(): Promise<ProfessorProfileData[]> {
+  const res = await API<{ data: ProfessorProfileData[] }>('professors');
+  return res.data || [];
+}
 
 // ==================== Dedicated Pages CRUD ====================
 
@@ -71,35 +81,36 @@ export async function fetchPageContents(pageId: string, filters?: {
   type?: string;
   status?: 'published' | 'draft' | 'archived';
 }): Promise<PageContentItem[]> {
-  const params = new URLSearchParams({ pageId });
+  const params = new URLSearchParams();
   if (filters?.type) params.append('type', filters.type);
   if (filters?.status) params.append('status', filters.status);
 
-  const res = await API<{ data: PageContentItem[] }>(`page-contents?${params.toString()}`);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const res = await API<{ data: PageContentItem[] }>(`dedicated-pages/${pageId}/contents${queryString}`);
   return res.data || [];
 }
 
 /**
  * ایجاد محتوای جدید برای صفحه
  */
-export async function createPageContent(content: Omit<PageContentItem, 'id'>): Promise<PageContentItem> {
-  const res = await API<{ data: PageContentItem }>('page-contents', content, 'POST');
+export async function createPageContent(pageId: string, content: Omit<PageContentItem, 'id'>): Promise<PageContentItem> {
+  const res = await API<{ data: PageContentItem }>(`dedicated-pages/${pageId}/contents`, content, 'POST');
   return res.data;
 }
 
 /**
  * به‌روزرسانی محتوای صفحه
  */
-export async function updatePageContent(contentId: string, updates: Partial<PageContentItem>): Promise<PageContentItem> {
-  const res = await API<{ data: PageContentItem }>(`page-contents/${contentId}`, updates, 'PUT');
+export async function updatePageContent(pageId: string, contentId: string, updates: Partial<PageContentItem>): Promise<PageContentItem> {
+  const res = await API<{ data: PageContentItem }>(`dedicated-pages/${pageId}/contents/${contentId}`, updates, 'PUT');
   return res.data;
 }
 
 /**
  * حذف محتوای صفحه
  */
-export async function deletePageContent(contentId: string): Promise<{ message: string }> {
-  const res = await API<{ message: string }>(`page-contents/${contentId}`, {}, 'DELETE');
+export async function deletePageContent(pageId: string, contentId: string): Promise<{ message: string }> {
+  const res = await API<{ message: string }>(`dedicated-pages/${pageId}/contents/${contentId}`, {}, 'DELETE');
   return res;
 }
 
@@ -124,7 +135,13 @@ export async function unpublishDedicatedPage(pageId: string): Promise<{ message:
 /**
  * مدیریت دسترسی‌های کاربری برای صفحه
  */
-export async function updatePageAuthorizations(pageId: string, authorizedUsers: any[]): Promise<{ message: string }> {
-  const res = await API<{ message: string }>(`dedicated-pages/${pageId}/authorizations`, { authorizedUsers }, 'PUT');
+export async function updatePageAuthorizations(pageId: string, authorizationData: {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_phone?: string;
+  user_role_title?: string;
+}): Promise<{ message: string }> {
+  const res = await API<{ message: string }>(`dedicated-pages/${pageId}/authorizations`, authorizationData, 'POST');
   return res;
 }

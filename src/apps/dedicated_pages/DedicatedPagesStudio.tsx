@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Layers,
@@ -31,10 +31,11 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ArrowUpDown,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
-import { DedicatedPage, PageType, PageContentItem } from './types';
-import { PAGE_TYPE_REGISTRY, INITIAL_DEDICATED_PAGES, INITIAL_PAGE_CONTENTS } from './mockData';
+import { DedicatedPage, PageType, PageContentItem, PageTypeDefinition, DEDICATED_PAGE_TYPES } from './types';
+import { fetchDedicatedPages, fetchPageContents, createDedicatedPage, updateDedicatedPage, deleteDedicatedPage, publishDedicatedPage, unpublishDedicatedPage } from './api';
 import PageWizardModal from './PageWizardModal';
 import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
@@ -46,8 +47,42 @@ interface DedicatedPagesStudioProps {
 
 export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudioProps) {
   // Primary State
-  const [pages, setPages] = useState<DedicatedPage[]>(INITIAL_DEDICATED_PAGES);
-  const [contents, setContents] = useState<PageContentItem[]>(INITIAL_PAGE_CONTENTS);
+  const [pages, setPages] = useState<DedicatedPage[]>([]);
+  const [contents, setContents] = useState<PageContentItem[]>([]);
+  const [pageTypeRegistry] = useState<PageTypeDefinition[]>(DEDICATED_PAGE_TYPES);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load data from API
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const pagesData = await fetchDedicatedPages();
+
+      // Load contents for all pages
+      const allContents: PageContentItem[] = [];
+      for (const page of pagesData) {
+        try {
+          const pageContents = await fetchPageContents(page.id);
+          allContents.push(...pageContents);
+        } catch (e) {
+          console.error(`Error loading contents for page ${page.id}:`, e);
+        }
+      }
+      setContents(allContents);
+      setPages(pagesData);
+    } catch (e) {
+      console.error('Error loading data:', e);
+      setError('خطا در بارگذاری اطلاعات. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Persona / Access Simulation (Super Admin vs. Isolated Page Manager)
   const [currentPersona, setCurrentPersona] = useState<string>('super_admin');
@@ -101,9 +136,9 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         p.title.toLowerCase().includes(term) ||
         p.shortTitle.toLowerCase().includes(term) ||
         p.slug.toLowerCase().includes(term) ||
-        p.owner.name.toLowerCase().includes(term) ||
-        (p.owner.roleTitle && p.owner.roleTitle.toLowerCase().includes(term)) ||
-        (p.owner.username && p.owner.username.toLowerCase().includes(term));
+        (p.owner?.name && p.owner.name.toLowerCase().includes(term)) ||
+        (p.owner?.roleTitle && p.owner.roleTitle.toLowerCase().includes(term)) ||
+        (p.owner?.username && p.owner.username.toLowerCase().includes(term));
       const matchesType = selectedTypeFilter === 'all' || p.pageType === selectedTypeFilter;
       const matchesStatus = selectedStatusFilter === 'all' || p.status === selectedStatusFilter;
       return matchesSearch && matchesType && matchesStatus;
@@ -118,7 +153,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         return countB - countA;
       }
       // 'newest' default
-      return b.id.localeCompare(a.id);
+      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
     });
 
   const activeFiltersCount =
@@ -134,40 +169,101 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     setSortBy('newest');
   };
 
-  // Page CRUD Operations
-  const handleSavePage = (savedPage: DedicatedPage) => {
-    const exists = pages.some(p => p.id === savedPage.id);
-    if (exists) {
-      setPages(pages.map(p => (p.id === savedPage.id ? savedPage : p)));
-    } else {
-      setPages([savedPage, ...pages]);
+  // Page CRUD Operations (connected to backend API)
+  const handleSavePage = async (savedPage: DedicatedPage) => {
+    try {
+      const exists = pages.some(p => p.id === savedPage.id);
+      let result: DedicatedPage;
+      if (exists) {
+        result = await updateDedicatedPage(savedPage.id, savedPage);
+      } else {
+        result = await createDedicatedPage(savedPage);
+      }
+      if (exists) {
+        setPages(pages.map(p => (p.id === result.id ? result : p)));
+      } else {
+        setPages([result, ...pages]);
+      }
+      setEditingPage(null);
+    } catch (e) {
+      console.error('Error saving page:', e);
+      alert('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.');
     }
-    setEditingPage(null);
   };
 
-  const handleDeletePage = (id: string, e?: React.MouseEvent) => {
+  const handleDeletePage = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (confirm('آیا از حذف این صفحه اختصاصی و تمام تنظیمات آن اطمینان دارید؟')) {
-      setPages(pages.filter(p => p.id !== id));
-      setContents(contents.filter(c => c.pageId !== id));
-      if (previewPage?.id === id) setPreviewPage(null);
-      if (moderationPage?.id === id) setModerationPage(null);
-      if (isolatedViewPage?.id === id) setIsolatedViewPage(null);
+      try {
+        await deleteDedicatedPage(id);
+        setPages(pages.filter(p => p.id !== id));
+        setContents(contents.filter(c => c.pageId !== id));
+        if (previewPage?.id === id) setPreviewPage(null);
+        if (moderationPage?.id === id) setModerationPage(null);
+        if (isolatedViewPage?.id === id) setIsolatedViewPage(null);
+      } catch (e) {
+        console.error('Error deleting page:', e);
+        alert('خطا در حذف صفحه. لطفاً دوباره تلاش کنید.');
+      }
     }
   };
 
-  const handleToggleStatus = (id: string, e?: React.MouseEvent) => {
+  const handleToggleStatus = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setPages(
-      pages.map(p => {
-        if (p.id === id) {
-          const newStatus = p.status === 'active' ? 'draft' : 'active';
-          return { ...p, status: newStatus as any };
-        }
-        return p;
-      })
-    );
+    try {
+      const page = pages.find(p => p.id === id);
+      if (!page) return;
+      if (page.status === 'active') {
+        await unpublishDedicatedPage(id);
+      } else {
+        await publishDedicatedPage(id);
+      }
+      const newStatus = page.status === 'active' ? 'draft' : 'active';
+      setPages(
+        pages.map(p => {
+          if (p.id === id) {
+            return { ...p, status: newStatus as any };
+          }
+          return p;
+        })
+      );
+    } catch (e) {
+      console.error('Error toggling status:', e);
+      alert('خطا در تغییر وضعیت. لطفاً دوباره تلاش کنید.');
+    }
   };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">در حال بارگذاری اطلاعات...</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">لطفاً صبر کنید</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <AlertCircle className="w-12 h-12 text-red-500" />
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">{error}</h3>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            تلاش مجدد
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // If in Isolated Tenant View, render IsolatedManagerPortal
   if (isolatedViewPage && currentPersona !== 'super_admin') {
@@ -442,7 +538,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
               </span>
             </button>
 
-            {PAGE_TYPE_REGISTRY.map(type => {
+            {DEDICATED_PAGE_TYPES.map(type => {
               const count = pages.filter(p => p.pageType === type.id).length;
               const isSelected = selectedTypeFilter === type.id;
               return (
@@ -508,7 +604,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
             {selectedTypeFilter !== 'all' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-medium border border-blue-200 dark:border-blue-800">
                 <span>
-                  نوع: {PAGE_TYPE_REGISTRY.find(t => t.id === selectedTypeFilter)?.title || selectedTypeFilter}
+                  نوع: {pageTypeRegistry.find(t => t.id === selectedTypeFilter)?.title || selectedTypeFilter}
                 </span>
                 <button onClick={() => setSelectedTypeFilter('all')} className="hover:text-blue-900">
                   <X className="w-3 h-3" />
@@ -572,7 +668,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           </div>
         ) : (
           filteredPages.map(page => {
-            const pageTypeObj = PAGE_TYPE_REGISTRY.find(t => t.id === page.pageType);
+            const pageTypeObj = pageTypeRegistry.find(t => t.id === page.pageType);
             const contentCount = contents.filter(c => c.pageId === page.id).length;
             const isActive = page.status === 'active';
 
@@ -593,7 +689,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                     ) : (
                       <div
                         className="w-full h-full"
-                        style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+                        style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -636,7 +732,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                         ) : (
                           <div
                             className="w-full h-full rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                            style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+                            style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
                           >
                             {page.shortTitle ? page.shortTitle.slice(0, 2) : 'صف'}
                           </div>
@@ -661,11 +757,11 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                         <User className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         <div>
                           <span className="text-slate-400 text-[11px] block">مسئول / مالک:</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">{page.owner.name}</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{page.owner?.name || 'تعریف نشده'}</span>
                         </div>
                       </div>
                       <span className="text-[11px] px-2 py-0.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                        {page.owner.roleTitle}
+                        {page.owner?.roleTitle || 'بدون نقش'}
                       </span>
                     </div>
 
@@ -678,7 +774,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                       <div>
                         <span className="text-slate-400 text-[10px] block">دسته‌ها</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                          {page.taxonomies.length}
+                          {page.taxonomies?.length || 0}
                         </span>
                       </div>
                       <div>

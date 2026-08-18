@@ -127,8 +127,8 @@ const Component = AppModules[appName]; // Loads the component
 
 ### API Endpoints Expected
 - `GET/POST /api/dedicated-pages` — Page CRUD
-- `GET/POST /api/page-contents` — Content management
-- `PUT /api/dedicated-pages/{id}/authorizations` — Permission management
+- `GET/POST /api/dedicated-pages/{pageId}/contents` — Content management
+- `POST /api/dedicated-pages/{pageId}/authorizations` — Permission management
 - `POST /api/dedicated-pages/{id}/publish` — Publishing
 
 See **PERMISSIONS.md** for complete database schema reference.

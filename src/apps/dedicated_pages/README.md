@@ -156,10 +156,10 @@ Non-admin page managers see an "Isolated Manager Portal" view:
 - `POST /api/dedicated-pages/{id}/unpublish` — Unpublish page
 
 ### Page Content
-- `GET /api/page-contents?pageId={pageId}` — List page contents
-- `POST /api/page-contents` — Create content
-- `PUT /api/page-contents/{id}` — Update content
-- `DELETE /api/page-contents/{id}` — Delete content
+- `GET /api/dedicated-pages/{pageId}/contents` — List page contents
+- `POST /api/dedicated-pages/{pageId}/contents` — Create content
+- `PUT /api/dedicated-pages/{pageId}/contents/{id}` — Update content
+- `DELETE /api/dedicated-pages/{pageId}/contents/{id}` — Delete content
 
 ### Permissions
 - `PUT /api/dedicated-pages/{id}/authorizations` — Update user access
