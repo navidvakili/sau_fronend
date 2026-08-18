@@ -46,6 +46,7 @@ import Pagination from '@/src/shared-components/Pagination';
 import { getDedicatedPagePublicUrl } from './utils';
 import type { DedicatedPagesStats } from './types';
 import { getSmartPageForDedicatedPage, createSmartPage } from '../page-builder/api';
+import { INITIAL_SMART_PAGE } from '../page-builder/mockData';
 
 const PER_PAGE = 12;
 const EMPTY_STATS: DedicatedPagesStats = { total: 0, active: 0, total_contents: 0, total_authorized_users: 0, by_type: {} };
@@ -249,7 +250,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           title: `لایوت — ${page.shortTitle || page.title}`,
           slug: `layout-${page.slug}`,
           status: 'draft',
-          schema: { sections: [] },
+          schema: { sections: [], globalStyles: INITIAL_SMART_PAGE.globalStyles },
           dedicated_page_id: Number(page.id)
         });
         layoutPageId = created.data.id;

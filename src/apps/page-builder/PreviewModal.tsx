@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SmartPageSchema, Breakpoint, SectionInstance, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
+import { SmartPageSchema, Breakpoint, SectionInstance, DEFAULT_GLOBAL_STYLES, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
 import {
   X,
@@ -34,7 +34,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
     }
   };
 
-  const globalStyles = pageSchema.globalStyles;
+  const globalStyles = pageSchema.globalStyles || DEFAULT_GLOBAL_STYLES;
 
   /**
    * پس‌زمینهٔ لایه‌ای سکشن — دقیقاً همان منطق Canvas (ویرایشگر) و سایت عمومی:

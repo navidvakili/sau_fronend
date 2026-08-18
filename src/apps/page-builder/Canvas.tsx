@@ -6,6 +6,7 @@ import {
   WidgetInstance,
   Breakpoint,
   UserRoleCondition,
+  DEFAULT_GLOBAL_STYLES,
   getColumnWidth,
   getWidgetTypeLabel,
   getColumnBlocks,
@@ -664,7 +665,9 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
-  const globalStyles = pageSchema.globalStyles;
+  // فال‌بک دفاعی — اگر شمای صفحه (مثلاً یک صفحهٔ لایوت تازه‌ساز) بدون globalStyles
+  // بارگذاری شود، بوم نباید کرش کند
+  const globalStyles = pageSchema.globalStyles || DEFAULT_GLOBAL_STYLES;
 
   return (
     <>

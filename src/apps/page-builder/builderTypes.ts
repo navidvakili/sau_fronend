@@ -343,6 +343,18 @@ export interface GlobalStyles {
   baseRadius: number;
 }
 
+/** فال‌بک وقتی شمای صفحه فاقد globalStyles است (مثلاً یک صفحهٔ لایوت تازه‌ساز یا داده‌های ناقص) */
+export const DEFAULT_GLOBAL_STYLES: GlobalStyles = {
+  primaryColor: '#0d9488',
+  secondaryColor: '#4f46e5',
+  accentColor: '#f59e0b',
+  backgroundColor: '#ffffff',
+  textColor: '#1e293b',
+  fontFamily: 'Vazirmatn, sans-serif',
+  containerMaxWidth: 1240,
+  baseRadius: 16
+};
+
 export interface PageVersion {
   id: string;
   timestamp: string;
