@@ -160,13 +160,13 @@ export default function PageWizardModal({
   useEffect(() => {
     if (initialPage) {
       setPageType(initialPage.pageType);
-      setTitle(initialPage.title);
-      setShortTitle(initialPage.shortTitle);
-      setSlug(initialPage.slug);
-      setShortDescription(initialPage.shortDescription);
-      setFullDescription(initialPage.fullDescription);
-      setLogo(initialPage.logo);
-      setFeaturedImage(initialPage.featuredImage);
+      setTitle(initialPage.title || '');
+      setShortTitle(initialPage.shortTitle || '');
+      setSlug(initialPage.slug || '');
+      setShortDescription(initialPage.shortDescription || '');
+      setFullDescription(initialPage.fullDescription || '');
+      setLogo(initialPage.logo || '');
+      setFeaturedImage(initialPage.featuredImage || '');
       setAccentColor(initialPage.layoutConfig?.accentColor || '#0284c7');
 
       // Manager User Identity
