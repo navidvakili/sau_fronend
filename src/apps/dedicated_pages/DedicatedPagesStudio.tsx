@@ -40,6 +40,7 @@ import PageWizardModal from './PageWizardModal';
 import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
 import IsolatedManagerPortal from './IsolatedManagerPortal';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface DedicatedPagesStudioProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
@@ -94,6 +95,8 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   const [previewPage, setPreviewPage] = useState<DedicatedPage | null>(null);
   const [moderationPage, setModerationPage] = useState<DedicatedPage | null>(null);
   const [isolatedViewPage, setIsolatedViewPage] = useState<DedicatedPage | null>(null);
+  const [pageToDelete, setPageToDelete] = useState<DedicatedPage | null>(null);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,14 +104,18 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'title' | 'contents'>('newest');
 
-  // Available Personas for Access Simulation
+  // Available Personas for Access Simulation — derived from real page owners in the database
   const PERSONA_OPTIONS = [
-    { id: 'super_admin', label: 'مدیر کل سیستم (Super Admin - دسترسی نامحدود)', role: 'admin', pageId: null },
-    { id: 'u_ali_mohammadi', label: 'علی محمدی (دبیر انجمن علمی کامپیوتر)', role: 'student', pageId: 'page_assoc_ce' },
-    { id: 'u_dr_sedghi', label: 'دکتر علیرضا صدقی (استاد دانشکده مهندسی)', role: 'professor', pageId: 'page_prof_sedghi' },
-    { id: 'u_sara_abbasi', label: 'سارا عباسی (مدیر مسئول نشریه کاوش)', role: 'student', pageId: 'page_journal_kavosh' },
-    { id: 'u_nima_roshan', label: 'نیما روشن (دبیر کانون فیلم و تئاتر)', role: 'student', pageId: 'page_club_theatre' },
-    { id: 'u_hossein_ebadi', label: 'حسین عبادی (دبیر شورای صنفی)', role: 'student', pageId: 'page_union_senfi' }
+    { id: 'super_admin', label: 'مدیر کل سیستم (Super Admin - دسترسی نامحدود)', role: 'admin', pageId: null as string | null, ownerName: '' },
+    ...pages
+      .filter(p => !!p.owner?.name)
+      .map(p => ({
+        id: `page_${p.id}`,
+        label: `${p.owner!.name}${p.owner!.roleTitle ? ` — ${p.owner!.roleTitle}` : ''} (${p.shortTitle || p.title})`,
+        role: 'owner',
+        pageId: p.id as string | null,
+        ownerName: p.owner!.name
+      }))
   ];
 
   // Handle Persona Switching
@@ -191,20 +198,29 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     }
   };
 
-  const handleDeletePage = async (id: string, e?: React.MouseEvent) => {
+  const handleDeletePage = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (confirm('آیا از حذف این صفحه اختصاصی و تمام تنظیمات آن اطمینان دارید؟')) {
-      try {
-        await deleteDedicatedPage(id);
-        setPages(pages.filter(p => p.id !== id));
-        setContents(contents.filter(c => c.pageId !== id));
-        if (previewPage?.id === id) setPreviewPage(null);
-        if (moderationPage?.id === id) setModerationPage(null);
-        if (isolatedViewPage?.id === id) setIsolatedViewPage(null);
-      } catch (e) {
-        console.error('Error deleting page:', e);
-        alert('خطا در حذف صفحه. لطفاً دوباره تلاش کنید.');
-      }
+    const page = pages.find(p => p.id === id);
+    if (page) setPageToDelete(page);
+  };
+
+  const confirmDeletePage = async () => {
+    if (!pageToDelete) return;
+    const id = pageToDelete.id;
+    setIsDeletingPage(true);
+    try {
+      await deleteDedicatedPage(id);
+      setPages(pages.filter(p => p.id !== id));
+      setContents(contents.filter(c => c.pageId !== id));
+      if (previewPage?.id === id) setPreviewPage(null);
+      if (moderationPage?.id === id) setModerationPage(null);
+      if (isolatedViewPage?.id === id) setIsolatedViewPage(null);
+      setPageToDelete(null);
+    } catch (e) {
+      console.error('Error deleting page:', e);
+      alert('خطا در حذف صفحه. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsDeletingPage(false);
     }
   };
 
@@ -273,7 +289,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         page={isolatedViewPage}
         allPages={pages}
         contents={contents}
-        currentPersonaName={activePersonaObj?.label.split('(')[0].trim() || 'کاربر اختصاصی'}
+        currentPersonaName={activePersonaObj?.ownerName || 'کاربر اختصاصی'}
         onSelectPage={setIsolatedViewPage}
         onUpdatePage={handleSavePage}
         onUpdateContents={setContents}
@@ -893,6 +909,19 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
             isOpen={!!moderationPage}
             onClose={() => setModerationPage(null)}
             onUpdateContents={setContents}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {pageToDelete && (
+          <ConfirmDialog
+            title="حذف صفحه اختصاصی"
+            message={`آیا از حذف «${pageToDelete.title}» و تمام تنظیمات آن اطمینان دارید؟ این عملیات قابل بازگشت نیست.`}
+            isBusy={isDeletingPage}
+            onConfirm={confirmDeletePage}
+            onCancel={() => setPageToDelete(null)}
           />
         )}
       </AnimatePresence>

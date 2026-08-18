@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield,
   LayoutDashboard,
@@ -21,6 +21,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface IsolatedManagerPortalProps {
   page: DedicatedPage;
@@ -112,10 +113,17 @@ export default function IsolatedManagerPortal({
     setNewSummary('');
   };
 
+  const [contentToDelete, setContentToDelete] = useState<PageContentItem | null>(null);
+
   const handleDeleteContent = (id: string) => {
-    if (confirm('آیا از حذف این محتوا مطمئن هستید؟')) {
-      onUpdateContents(contents.filter(c => c.id !== id));
-    }
+    const item = contents.find(c => c.id === id);
+    if (item) setContentToDelete(item);
+  };
+
+  const confirmDeleteContent = () => {
+    if (!contentToDelete) return;
+    onUpdateContents(contents.filter(c => c.id !== contentToDelete.id));
+    setContentToDelete(null);
   };
 
   const handleToggleContentStatus = (id: string) => {
@@ -603,6 +611,18 @@ export default function IsolatedManagerPortal({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {contentToDelete && (
+          <ConfirmDialog
+            title="حذف محتوا"
+            message={`آیا از حذف «${contentToDelete.title}» مطمئن هستید؟`}
+            onConfirm={confirmDeleteContent}
+            onCancel={() => setContentToDelete(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

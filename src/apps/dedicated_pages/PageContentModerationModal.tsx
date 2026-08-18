@@ -18,6 +18,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface PageContentModerationModalProps {
   page: DedicatedPage;
@@ -49,6 +50,7 @@ export default function PageContentModerationModal({
   const [newFileUrl, setNewFileUrl] = useState('');
   const [newFileSize, setNewFileSize] = useState('');
   const [newAuthor, setNewAuthor] = useState(page.owner?.name || '');
+  const [contentToDelete, setContentToDelete] = useState<PageContentItem | null>(null);
 
   if (!isOpen) return null;
 
@@ -78,10 +80,15 @@ export default function PageContentModerationModal({
   };
 
   const handleDeleteContent = (id: string) => {
-    if (confirm('آیا از حذف این محتوا از صفحه اختصاصی اطمینان دارید؟')) {
-      const updated = contents.filter(item => item.id !== id);
-      onUpdateContents(updated);
-    }
+    const item = contents.find(c => c.id === id);
+    if (item) setContentToDelete(item);
+  };
+
+  const confirmDeleteContent = () => {
+    if (!contentToDelete) return;
+    const updated = contents.filter(item => item.id !== contentToDelete.id);
+    onUpdateContents(updated);
+    setContentToDelete(null);
   };
 
   const handleSaveNewContent = (e: React.FormEvent) => {
@@ -433,6 +440,18 @@ export default function PageContentModerationModal({
           </button>
         </div>
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {contentToDelete && (
+          <ConfirmDialog
+            title="حذف محتوا"
+            message={`آیا از حذف «${contentToDelete.title}» از صفحه اختصاصی اطمینان دارید؟`}
+            onConfirm={confirmDeleteContent}
+            onCancel={() => setContentToDelete(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
