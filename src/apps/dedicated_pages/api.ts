@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils/functions';
-import type { DedicatedPage, PageContentItem, PageType, ProfessorProfileData } from './types';
+import type { DedicatedPage, DedicatedPagesListResult, PageContentItem, PageType, ProfessorProfileData } from './types';
 
 // ==================== Professors Data ====================
 
@@ -18,21 +18,32 @@ export async function fetchProfessors(): Promise<ProfessorProfileData[]> {
 // ==================== Dedicated Pages CRUD ====================
 
 /**
- * دریافت تمام صفحات اختصاصی
+ * دریافت صفحات اختصاصی به‌صورت صفحه‌بندی‌شده، همراه با آمار کلی سیستم
+ * (تعداد کل، فعال، محتواها و ...) در همان یک درخواست — بدون نیاز به وب‌سرویس جدا.
  */
 export async function fetchDedicatedPages(filters?: {
   pageType?: PageType;
   status?: 'active' | 'inactive' | 'draft' | 'maintenance';
   searchQuery?: string;
-}): Promise<DedicatedPage[]> {
+  sort?: 'newest' | 'title' | 'contents';
+  page?: number;
+  perPage?: number;
+}): Promise<DedicatedPagesListResult> {
   const params = new URLSearchParams();
   if (filters?.pageType) params.append('pageType', filters.pageType);
   if (filters?.status) params.append('status', filters.status);
   if (filters?.searchQuery) params.append('search', filters.searchQuery);
+  if (filters?.sort) params.append('sort', filters.sort);
+  if (filters?.page) params.append('page', String(filters.page));
+  if (filters?.perPage) params.append('per_page', String(filters.perPage));
 
   const queryString = params.toString() ? `?${params.toString()}` : '';
-  const res = await API<{ data: DedicatedPage[] }>(`dedicated-pages${queryString}`);
-  return res.data || [];
+  const res = await API<DedicatedPagesListResult>(`dedicated-pages${queryString}`);
+  return {
+    data: res.data || [],
+    pagination: res.pagination,
+    stats: res.stats
+  };
 }
 
 /**

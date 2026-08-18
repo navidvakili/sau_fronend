@@ -41,7 +41,12 @@ import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
 import IsolatedManagerPortal from './IsolatedManagerPortal';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
+import Pagination from '@/src/shared-components/Pagination';
 import { getDedicatedPagePublicUrl } from './utils';
+import type { DedicatedPagesStats } from './types';
+
+const PER_PAGE = 12;
+const EMPTY_STATS: DedicatedPagesStats = { total: 0, active: 0, total_contents: 0, total_authorized_users: 0, by_type: {} };
 
 interface DedicatedPagesStudioProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
@@ -50,41 +55,13 @@ interface DedicatedPagesStudioProps {
 export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudioProps) {
   // Primary State
   const [pages, setPages] = useState<DedicatedPage[]>([]);
-  const [contents, setContents] = useState<PageContentItem[]>([]);
   const [pageTypeRegistry] = useState<PageTypeDefinition[]>(DEDICATED_PAGE_TYPES);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // blocking loader — first load only
+  const [isFetching, setIsFetching] = useState(false); // lightweight indicator for subsequent reloads
   const [error, setError] = useState<string | null>(null);
-
-  // Load data from API
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const pagesData = await fetchDedicatedPages();
-
-      // Load contents for all pages
-      const allContents: PageContentItem[] = [];
-      for (const page of pagesData) {
-        try {
-          const pageContents = await fetchPageContents(page.id);
-          allContents.push(...pageContents);
-        } catch (e) {
-          console.error(`Error loading contents for page ${page.id}:`, e);
-        }
-      }
-      setContents(allContents);
-      setPages(pagesData);
-    } catch (e) {
-      console.error('Error loading data:', e);
-      setError('خطا در بارگذاری اطلاعات. لطفاً دوباره تلاش کنید.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [stats, setStats] = useState<DedicatedPagesStats>(EMPTY_STATS);
+  const [paginationTotal, setPaginationTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Persona / Access Simulation (Super Admin vs. Isolated Page Manager)
   const [currentPersona, setCurrentPersona] = useState<string>('super_admin');
@@ -101,9 +78,70 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'title' | 'contents'>('newest');
+
+  // Debounce search input so typing doesn't fire a request per keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Changing a filter/sort always restarts from page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedTypeFilter, selectedStatusFilter, sortBy]);
+
+  // Load data from API — ONE consolidated request per change (list + pagination + stats)
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedTypeFilter, selectedStatusFilter, sortBy, currentPage]);
+
+  const loadData = async () => {
+    setIsFetching(true);
+    setError(null);
+    try {
+      const result = await fetchDedicatedPages({
+        pageType: selectedTypeFilter !== 'all' ? (selectedTypeFilter as PageType) : undefined,
+        status: selectedStatusFilter !== 'all' ? (selectedStatusFilter as any) : undefined,
+        searchQuery: debouncedSearch || undefined,
+        sort: sortBy,
+        page: currentPage,
+        perPage: PER_PAGE
+      });
+      setPages(result.data);
+      setPaginationTotal(result.pagination?.total ?? result.data.length);
+      setStats(result.stats ?? EMPTY_STATS);
+    } catch (e) {
+      console.error('Error loading data:', e);
+      setError('خطا در بارگذاری اطلاعات. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsFetching(false);
+      setIsLoading(false);
+    }
+  };
+
+  // On-demand content loading — fetches contents ONLY for the single page currently
+  // open in a moderation / preview / isolated-portal view (replaces the old N+1
+  // "fetch every page's contents up front" pattern).
+  const activeContentPageId = moderationPage?.id || previewPage?.id || isolatedViewPage?.id || null;
+  const [activePageContents, setActivePageContents] = useState<PageContentItem[]>([]);
+
+  useEffect(() => {
+    if (!activeContentPageId) {
+      setActivePageContents([]);
+      return;
+    }
+    fetchPageContents(activeContentPageId)
+      .then(setActivePageContents)
+      .catch(e => {
+        console.error(`Error loading contents for page ${activeContentPageId}:`, e);
+        setActivePageContents([]);
+      });
+  }, [activeContentPageId]);
 
   // Available Personas for Access Simulation — derived from real page owners in the database
   const PERSONA_OPTIONS = [
@@ -135,34 +173,9 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     }
   };
 
-  // Filter & Sort Pages
-  const filteredPages = pages
-    .filter(p => {
-      const term = searchQuery.trim().toLowerCase();
-      const matchesSearch =
-        term === '' ||
-        p.title.toLowerCase().includes(term) ||
-        p.shortTitle.toLowerCase().includes(term) ||
-        p.slug.toLowerCase().includes(term) ||
-        (p.owner?.name && p.owner.name.toLowerCase().includes(term)) ||
-        (p.owner?.roleTitle && p.owner.roleTitle.toLowerCase().includes(term)) ||
-        (p.owner?.username && p.owner.username.toLowerCase().includes(term));
-      const matchesType = selectedTypeFilter === 'all' || p.pageType === selectedTypeFilter;
-      const matchesStatus = selectedStatusFilter === 'all' || p.status === selectedStatusFilter;
-      return matchesSearch && matchesType && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'title') {
-        return a.title.localeCompare(b.title, 'fa');
-      }
-      if (sortBy === 'contents') {
-        const countA = contents.filter(c => c.pageId === a.id).length;
-        const countB = contents.filter(c => c.pageId === b.id).length;
-        return countB - countA;
-      }
-      // 'newest' default
-      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true });
-    });
+  // Search/type/status filtering and sorting now happen on the server (see loadData),
+  // so `pages` already reflects the current filters/sort/page — no client-side pass needed.
+  const filteredPages = pages;
 
   const activeFiltersCount =
     (searchQuery.trim() !== '' ? 1 : 0) +
@@ -181,18 +194,13 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   const handleSavePage = async (savedPage: DedicatedPage) => {
     try {
       const exists = pages.some(p => p.id === savedPage.id);
-      let result: DedicatedPage;
       if (exists) {
-        result = await updateDedicatedPage(savedPage.id, savedPage);
+        await updateDedicatedPage(savedPage.id, savedPage);
       } else {
-        result = await createDedicatedPage(savedPage);
-      }
-      if (exists) {
-        setPages(pages.map(p => (p.id === result.id ? result : p)));
-      } else {
-        setPages([result, ...pages]);
+        await createDedicatedPage(savedPage);
       }
       setEditingPage(null);
+      await loadData();
     } catch (e) {
       console.error('Error saving page:', e);
       alert('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.');
@@ -211,12 +219,11 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     setIsDeletingPage(true);
     try {
       await deleteDedicatedPage(id);
-      setPages(pages.filter(p => p.id !== id));
-      setContents(contents.filter(c => c.pageId !== id));
       if (previewPage?.id === id) setPreviewPage(null);
       if (moderationPage?.id === id) setModerationPage(null);
       if (isolatedViewPage?.id === id) setIsolatedViewPage(null);
       setPageToDelete(null);
+      await loadData();
     } catch (e) {
       console.error('Error deleting page:', e);
       alert('خطا در حذف صفحه. لطفاً دوباره تلاش کنید.');
@@ -263,8 +270,10 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     );
   }
 
-  // Error State
-  if (error) {
+  // Error State — only block the whole screen if we have nothing else to show yet.
+  // A failed reload while filtering (with previous results still on screen) shouldn't
+  // hide the filters/grid; it's logged and the previous results just stay as-is.
+  if (error && pages.length === 0) {
     return (
       <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -289,11 +298,11 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
       <IsolatedManagerPortal
         page={isolatedViewPage}
         allPages={pages}
-        contents={contents}
+        contents={activePageContents}
         currentPersonaName={activePersonaObj?.ownerName || 'کاربر اختصاصی'}
         onSelectPage={setIsolatedViewPage}
         onUpdatePage={handleSavePage}
-        onUpdateContents={setContents}
+        onUpdateContents={setActivePageContents}
         onOpenLivePreview={setPreviewPage}
         onExitToSuperAdmin={() => handlePersonaChange('super_admin')}
       />
@@ -343,7 +352,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">کل صفحات اختصاصی</span>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono">{pages.length}</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono">{stats.total}</div>
             <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">تعریف شده در پرتال</span>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -355,7 +364,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">صفحات فعال و عمومی</span>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
-              {pages.filter(p => p.status === 'active').length}
+              {stats.active}
             </div>
             <span className="text-[11px] text-slate-400">در دسترس کاربران</span>
           </div>
@@ -368,7 +377,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">مجموع محتواهای ثبت شده</span>
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1 font-mono">
-              {contents.length}
+              {stats.total_contents}
             </div>
             <span className="text-[11px] text-slate-400">خبر، سند، مقاله و رویداد</span>
           </div>
@@ -381,7 +390,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">اساتید و مسئولین متصل</span>
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 font-mono">
-              {pages.reduce((acc, p) => acc + 1 + (p.authorizedUsers?.length || 0), 0)}
+              {stats.total_authorized_users}
             </div>
             <span className="text-[11px] text-slate-400">با دسترسی مدیریتی مجزا</span>
           </div>
@@ -479,21 +488,21 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
               onChange={e => setSelectedTypeFilter(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 font-medium focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">همه انواع صفحات ({pages.length})</option>
+              <option value="all">همه انواع صفحات ({stats.total})</option>
               <option value="scientific_association">
-                انجمن‌های علمی ({pages.filter(p => p.pageType === 'scientific_association').length})
+                انجمن‌های علمی ({stats.by_type.scientific_association || 0})
               </option>
               <option value="cultural_club">
-                کانون‌های فرهنگی ({pages.filter(p => p.pageType === 'cultural_club').length})
+                کانون‌های فرهنگی ({stats.by_type.cultural_club || 0})
               </option>
               <option value="student_union">
-                تشکل‌های دانشجویی ({pages.filter(p => p.pageType === 'student_union').length})
+                تشکل‌های دانشجویی ({stats.by_type.student_union || 0})
               </option>
               <option value="student_journal">
-                نشریات دانشجویی ({pages.filter(p => p.pageType === 'student_journal').length})
+                نشریات دانشجویی ({stats.by_type.student_journal || 0})
               </option>
               <option value="faculty_member">
-                صفحات اساتید و هیئت علمی ({pages.filter(p => p.pageType === 'faculty_member').length})
+                صفحات اساتید و هیئت علمی ({stats.by_type.faculty_member || 0})
               </option>
             </select>
           </div>
@@ -551,12 +560,12 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
               <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
                 selectedTypeFilter === 'all' ? 'bg-blue-700 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
               }`}>
-                {pages.length}
+                {stats.total}
               </span>
             </button>
 
             {DEDICATED_PAGE_TYPES.map(type => {
-              const count = pages.filter(p => p.pageType === type.id).length;
+              const count = stats.by_type[type.id] || 0;
               const isSelected = selectedTypeFilter === type.id;
               return (
                 <button
@@ -606,8 +615,9 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-slate-500 font-semibold text-[11px]">نتایج:</span>
             <span className="text-slate-800 dark:text-slate-200 font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-              نمایش {filteredPages.length} صفحه از {pages.length} صفحه
+              نمایش {filteredPages.length} صفحه از {paginationTotal} صفحه
             </span>
+            {isFetching && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
 
             {searchQuery && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-medium border border-blue-200 dark:border-blue-800">
@@ -686,7 +696,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         ) : (
           filteredPages.map(page => {
             const pageTypeObj = pageTypeRegistry.find(t => t.id === page.pageType);
-            const contentCount = contents.filter(c => c.pageId === page.id).length;
+            const contentCount = page.contents_count ?? 0;
             const isActive = page.status === 'active';
 
             return (
@@ -800,7 +810,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                       <div>
                         <span className="text-slate-400 text-[10px] block">مدیران فرعی</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
-                          {page.authorizedUsers?.length || 0}
+                          {page.authorizations_count ?? 0}
                         </span>
                       </div>
                     </div>
@@ -875,6 +885,14 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         )}
       </div>
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={paginationTotal}
+        perPage={PER_PAGE}
+        onPageChange={setCurrentPage}
+      />
+
       {/* 10-Step Wizard Modal */}
       <AnimatePresence>
         {isWizardOpen && (
@@ -902,7 +920,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
             >
               <PageLiveWebsiteView
                 page={previewPage}
-                contents={contents}
+                contents={activePageContents}
                 onClose={() => setPreviewPage(null)}
                 onEditPage={p => {
                   setPreviewPage(null);
@@ -920,10 +938,10 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
         {moderationPage && (
           <PageContentModerationModal
             page={moderationPage}
-            contents={contents}
+            contents={activePageContents}
             isOpen={!!moderationPage}
             onClose={() => setModerationPage(null)}
-            onUpdateContents={setContents}
+            onUpdateContents={setActivePageContents}
           />
         )}
       </AnimatePresence>

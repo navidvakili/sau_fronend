@@ -274,6 +274,32 @@ export interface DedicatedPage {
     journalFrequency?: 'ماهنامه' | 'فصلنامه' | 'دوفصلنامه' | 'گاهنامه';
     journalCirculation?: number;
   };
+  /** تعداد محتواهای صفحه — از سرور (withCount)، بدون نیاز به بارگذاری کامل محتوا */
+  contents_count?: number;
+  /** تعداد کاربران مجاز/مالک صفحه — از سرور (withCount) */
+  authorizations_count?: number;
+}
+
+export interface DedicatedPagesPagination {
+  total: number;
+  count: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+}
+
+export interface DedicatedPagesStats {
+  total: number;
+  active: number;
+  total_contents: number;
+  total_authorized_users: number;
+  by_type: Partial<Record<PageType, number>>;
+}
+
+export interface DedicatedPagesListResult {
+  data: DedicatedPage[];
+  pagination?: DedicatedPagesPagination;
+  stats?: DedicatedPagesStats;
 }
 
 export interface PageContentItem {
