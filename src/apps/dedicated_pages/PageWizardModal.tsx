@@ -39,9 +39,11 @@ import {
   PageTaxonomy,
   ProfessorProfileData,
   LayoutType,
-  HeaderStyle
+  HeaderStyle,
+  PageTypeDefinition,
+  DEDICATED_PAGE_TYPES
 } from './types';
-import { PAGE_TYPE_REGISTRY, UNIVERSITY_PROFESSORS } from './mockData';
+import { fetchProfessors } from './api';
 
 interface PageWizardModalProps {
   isOpen: boolean;
@@ -65,6 +67,22 @@ export default function PageWizardModal({
 }: PageWizardModalProps) {
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
+  const [universityProfessors, setUniversityProfessors] = useState<ProfessorProfileData[]>([]);
+
+  // Load data from API on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const professors = await fetchProfessors();
+        setUniversityProfessors(professors);
+      } catch (e) {
+        console.error('Error loading wizard data:', e);
+      }
+    };
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]);
 
   // Form State - Step 1 & 2: Page Type, Info, URL & Theme
   const [pageType, setPageType] = useState<PageType>('scientific_association');
@@ -152,12 +170,12 @@ export default function PageWizardModal({
       setAccentColor(initialPage.layoutConfig?.accentColor || '#0284c7');
 
       // Manager User Identity
-      setOwnerName(initialPage.owner.name);
-      setOwnerPhone(initialPage.owner.phone);
-      setOwnerEmail(initialPage.owner.email);
-      setOwnerRoleTitle(initialPage.owner.roleTitle);
-      setOwnerUsername(initialPage.owner.username || initialPage.owner.email.split('@')[0] || 'manager');
-      setOwnerPassword(initialPage.owner.password || 'Elm@2026');
+      setOwnerName(initialPage.owner?.name || '');
+      setOwnerPhone(initialPage.owner?.phone || '');
+      setOwnerEmail(initialPage.owner?.email || '');
+      setOwnerRoleTitle(initialPage.owner?.roleTitle || '');
+      setOwnerUsername(initialPage.owner?.username || initialPage.owner?.email?.split('@')[0] || 'manager');
+      setOwnerPassword(initialPage.owner?.password || 'Elm@2026');
 
       // Reset password change fields
       setIsChangingPassword(false);
@@ -172,9 +190,9 @@ export default function PageWizardModal({
 
       setStatus(initialPage.status);
       setPublishStatus(initialPage.publishStatus);
-      setShowInNavigation(initialPage.displaySettings.showInNavigation);
-      setShowInDirectory(initialPage.displaySettings.showInDirectory);
-      setHighlightOnHome(initialPage.displaySettings.highlightOnHome);
+      setShowInNavigation(initialPage.displaySettings?.showInNavigation ?? true);
+      setShowInDirectory(initialPage.displaySettings?.showInDirectory ?? true);
+      setHighlightOnHome(initialPage.displaySettings?.highlightOnHome ?? false);
 
       setLayoutType(initialPage.layoutConfig?.layoutType || 'two_column_sidebar_left');
       setHeaderStyle(initialPage.layoutConfig?.headerStyle || 'banner_hero');
@@ -252,7 +270,7 @@ export default function PageWizardModal({
 
   // When Page Type Changes
   const handleSelectPageType = (typeId: PageType) => {
-    const reg = PAGE_TYPE_REGISTRY.find(r => r.id === typeId);
+    const reg = DEDICATED_PAGE_TYPES.find(r => r.id === typeId);
     if (reg?.isDisabled) return;
 
     setPageType(typeId);
@@ -262,7 +280,7 @@ export default function PageWizardModal({
         setHeaderStyle('profile_card');
         setLayoutType('two_column_sidebar_right');
         setFeatures(f => ({ ...f, hasResearchArticles: true, hasBoardMembers: false }));
-        const prof = UNIVERSITY_PROFESSORS.find(p => p.professorId === selectedProfId) || UNIVERSITY_PROFESSORS[0];
+        const prof = universityProfessors.find(p => p.professorId === selectedProfId) || universityProfessors[0];
         if (prof) {
           setTitle(`صفحه اختصاصی ${prof.fullName}`);
           setShortTitle(prof.fullName);
@@ -292,7 +310,7 @@ export default function PageWizardModal({
   // Sync professor selection for faculty_member
   const handleSelectProfessor = (profId: string) => {
     setSelectedProfId(profId);
-    const prof = UNIVERSITY_PROFESSORS.find(p => p.professorId === profId);
+    const prof = universityProfessors.find(p => p.professorId === profId);
     if (prof) {
       setTitle(`صفحه اختصاصی ${prof.fullName}`);
       setShortTitle(prof.fullName);
@@ -341,7 +359,7 @@ export default function PageWizardModal({
   // Save Dedicated Page
   const handleFinalSave = () => {
     const profObj = pageType === 'faculty_member'
-      ? UNIVERSITY_PROFESSORS.find(p => p.professorId === selectedProfId) || UNIVERSITY_PROFESSORS[0]
+      ? universityProfessors.find(p => p.professorId === selectedProfId) || universityProfessors[0]
       : undefined;
 
     const userObjId = initialPage?.owner?.id || `usr_${Date.now()}`;
@@ -516,7 +534,7 @@ export default function PageWizardModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {PAGE_TYPE_REGISTRY.map(type => {
+                {DEDICATED_PAGE_TYPES.map(type => {
                   const isSelected = pageType === type.id;
                   const isDisabled = type.isDisabled;
 
@@ -792,7 +810,7 @@ export default function PageWizardModal({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto p-1">
-                    {UNIVERSITY_PROFESSORS.map(prof => {
+                    {universityProfessors.map(prof => {
                       const isSelected = selectedProfId === prof.professorId;
                       return (
                         <div
