@@ -327,9 +327,13 @@ export default function App() {
   }, [activeTabId, tabs]);
 
   // Tab management
-  const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false) => {
+  const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false, initialProps?: Record<string, any>) => {
     if (!forceNewInstance && tabs.some(t => t.id === id)) {
       setActiveTabId(id);
+      // اگر تب از قبل باز است اما با رکورد دیگری درخواست شده، initialProps را به‌روزرسانی کن
+      if (initialProps) {
+        setTabs(prev => prev.map(t => (t.id === id ? { ...t, initialProps } : t)));
+      }
       return;
     }
     if (tabs.length >= MAX_TABS) {
@@ -339,7 +343,7 @@ export default function App() {
     const uniqueId = forceNewInstance ? `${id}_${Date.now()}` : id;
     const baseTabsCount = tabs.filter(t => t.id === id || t.moduleType === id).length;
     const finalTitle = forceNewInstance ? `${title} (نمونه ${baseTabsCount + 1})` : title;
-    setTabs(prev => [...prev, { id: uniqueId, title: finalTitle, iconName, moduleType: id }]);
+    setTabs(prev => [...prev, { id: uniqueId, title: finalTitle, iconName, moduleType: id, initialProps }]);
     setActiveTabId(uniqueId);
   }, [tabs]);
 

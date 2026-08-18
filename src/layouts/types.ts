@@ -7,6 +7,8 @@ export interface Tab {
   title: string;
   iconName: string;
   moduleType?: string;
+  /** داده‌های اولیهٔ اختصاصی این تب — برای بازکردن یک ماژول با یک رکورد مشخص از پیش انتخاب‌شده */
+  initialProps?: Record<string, any>;
 }
 
 export interface NavChild {

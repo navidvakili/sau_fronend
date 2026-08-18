@@ -20,6 +20,7 @@ import GradientPicker from '../slider-studio/components/GradientPicker';
 import MediaManager from '@/src/shared-components/MediaManager';
 import WysiwygEditor, { type WysiwygEditorHandle } from '@/src/shared-components/WysiwygEditor';
 import IconPicker, { ICON_CHOICES } from './components/IconPicker';
+import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
 import type { NewsCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
 import {
@@ -301,6 +302,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               mode="full"
               onRequestCompact={() => setRichtextFullscreen(false)}
               showIconButton
+              showVariableButton
               onRequestIcon={() => {
                 iconTargetRef.current = 'fullscreen';
                 setIconPickerState({ open: true, mode: 'text' });
@@ -503,21 +505,27 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
               {(selectedWidget.type === 'heading' || selectedWidget.type === 'text' || selectedWidget.type === 'accordion') && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">محتوای متنی</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ta = textareaRef.current;
-                        setCursorRange(ta ? { start: ta.selectionStart, end: ta.selectionEnd } : null);
-                        setIconPickerState({ open: true, mode: 'text' });
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
-                      title="درج آیکون در متن (توکن [icon:name])"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      درج آیکون
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <VariableInsertButton
+                        label="درج متغیر"
+                        onInsert={(token) => insertAtCursor(textareaRef.current, selectedWidget.content || '', token, (next) => onUpdateWidget({ ...selectedWidget, content: next }))}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ta = textareaRef.current;
+                          setCursorRange(ta ? { start: ta.selectionStart, end: ta.selectionEnd } : null);
+                          setIconPickerState({ open: true, mode: 'text' });
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                        title="درج آیکون در متن (توکن [icon:name])"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        درج آیکون
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     ref={textareaRef}
@@ -526,7 +534,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
                     className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 leading-relaxed"
                   />
-                  <p className="text-[10px] text-slate-400">برای درج آیکون در دل متن، از دکمه «درج آیکون» استفاده کنید.</p>
+                  <p className="text-[10px] text-slate-400">برای درج آیکون یا متغیرِ صفحهٔ اختصاصی در دل متن، از دکمه‌های بالا استفاده کنید.</p>
                 </div>
               )}
 
@@ -712,6 +720,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     showMaximize
                     onRequestFullscreen={() => setRichtextFullscreen(true)}
                     showIconButton
+                    showVariableButton
                     onRequestIcon={() => {
                       iconTargetRef.current = 'inline';
                       setIconPickerState({ open: true, mode: 'richtext' });

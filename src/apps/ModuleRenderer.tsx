@@ -32,7 +32,7 @@ interface ModuleRendererProps {
     desc: string;
     roles: readonly ('admin' | 'editor' | 'user')[];
   }>;
-  onOpenTab: (id: string, title: string, iconName: string, forceNewInstance?: boolean) => void;
+  onOpenTab: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
   openTabsCount: number;
   onUpdateUser: (user: UserType) => void;
 }
@@ -104,6 +104,9 @@ export default function ModuleRenderer({
       onOpenTab,
       userRoles,
       onUpdateUser,
+      // داده‌های اولیهٔ اختصاصی تب (مثلاً initialPageId برای بازکردن Page Builder
+      // با یک صفحهٔ مشخص) — هر ماژول هرچه را لازم ندارد نادیده می‌گیرد
+      ...tab?.initialProps,
     };
 
     return user ? (

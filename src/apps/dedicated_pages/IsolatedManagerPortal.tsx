@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   Shield,
@@ -23,6 +23,8 @@ import {
 import { DedicatedPage, PageContentItem } from './types';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { getDedicatedPagePublicUrl } from './utils';
+import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
+import { createPageContent, updatePageContent, deletePageContent } from './api';
 
 interface IsolatedManagerPortalProps {
   page: DedicatedPage;
@@ -64,6 +66,8 @@ export default function IsolatedManagerPortal({
   const [newType, setNewType] = useState<'news' | 'event' | 'document' | 'article'>('news');
   const [newCatSlug, setNewCatSlug] = useState(page.taxonomies?.[0]?.slug || 'general');
   const [newSummary, setNewSummary] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const summaryTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Contact messages mockup for this isolated page
   const [messages, setMessages] = useState([
@@ -87,31 +91,35 @@ export default function IsolatedManagerPortal({
     }
   ]);
 
-  const handleAddContentQuick = (e: React.FormEvent) => {
+  const handleAddContentQuick = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle) return;
 
     const matchedTax = page.taxonomies?.find(t => t.slug === newCatSlug);
     const categoryTitle = matchedTax ? matchedTax.title : 'عمومی';
 
-    const newItem: PageContentItem = {
-      id: `cnt_${Date.now()}`,
-      pageId: page.id,
-      type: newType,
-      title: newTitle,
-      summary: newSummary || newTitle,
-      content: newSummary,
-      categorySlug: newCatSlug,
-      categoryTitle,
-      publishedDate: '۱۴۰۵/۰۳/۲۵',
-      author: currentPersonaName,
-      status: 'published',
-      views: 1
-    };
+    try {
+      const created = await createPageContent(page.id, {
+        pageId: page.id,
+        type: newType,
+        title: newTitle,
+        summary: newSummary || newTitle,
+        content: newSummary,
+        categorySlug: newCatSlug,
+        categoryTitle,
+        publishedDate: new Date().toISOString().slice(0, 10),
+        author: currentPersonaName,
+        status: 'published',
+        views: 0
+      });
 
-    onUpdateContents([...contents, newItem]);
-    setNewTitle('');
-    setNewSummary('');
+      onUpdateContents([created, ...contents]);
+      setNewTitle('');
+      setNewSummary('');
+    } catch (err) {
+      console.error('Error creating content:', err);
+      alert('خطا در ایجاد محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
   const [contentToDelete, setContentToDelete] = useState<PageContentItem | null>(null);
@@ -121,16 +129,29 @@ export default function IsolatedManagerPortal({
     if (item) setContentToDelete(item);
   };
 
-  const confirmDeleteContent = () => {
+  const confirmDeleteContent = async () => {
     if (!contentToDelete) return;
-    onUpdateContents(contents.filter(c => c.id !== contentToDelete.id));
-    setContentToDelete(null);
+    try {
+      await deletePageContent(page.id, contentToDelete.id);
+      onUpdateContents(contents.filter(c => c.id !== contentToDelete.id));
+      setContentToDelete(null);
+    } catch (err) {
+      console.error('Error deleting content:', err);
+      alert('خطا در حذف محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
-  const handleToggleContentStatus = (id: string) => {
-    onUpdateContents(
-      contents.map(c => (c.id === id ? { ...c, status: c.status === 'published' ? 'draft' : 'published' } : c))
-    );
+  const handleToggleContentStatus = async (id: string) => {
+    const item = contents.find(c => c.id === id);
+    if (!item) return;
+    const newStatus = item.status === 'published' ? 'draft' : 'published';
+    try {
+      await updatePageContent(page.id, id, { status: newStatus });
+      onUpdateContents(contents.map(c => (c.id === id ? { ...c, status: newStatus as PageContentItem['status'] } : c)));
+    } catch (err) {
+      console.error('Error updating content status:', err);
+      alert('خطا در تغییر وضعیت محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
   return (
@@ -339,8 +360,14 @@ export default function IsolatedManagerPortal({
 
                 <form onSubmit={handleAddContentQuick} className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-300 font-medium mb-1">عنوان خبر</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-slate-600 dark:text-slate-300 font-medium">عنوان خبر</label>
+                      <VariableInsertButton
+                        onInsert={token => insertAtCursor(titleInputRef.current, newTitle, token, setNewTitle)}
+                      />
+                    </div>
                     <input
+                      ref={titleInputRef}
                       type="text"
                       value={newTitle}
                       onChange={e => setNewTitle(e.target.value)}
@@ -382,8 +409,14 @@ export default function IsolatedManagerPortal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-300 font-medium mb-1">متن خلاصه</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-slate-600 dark:text-slate-300 font-medium">متن خلاصه</label>
+                      <VariableInsertButton
+                        onInsert={token => insertAtCursor(summaryTextareaRef.current, newSummary, token, setNewSummary)}
+                      />
+                    </div>
                     <textarea
+                      ref={summaryTextareaRef}
                       rows={3}
                       value={newSummary}
                       onChange={e => setNewSummary(e.target.value)}

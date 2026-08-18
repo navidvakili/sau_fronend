@@ -32,7 +32,8 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Check,
-  Loader2
+  Loader2,
+  LayoutTemplate
 } from 'lucide-react';
 import { DedicatedPage, PageType, PageContentItem, PageTypeDefinition, DEDICATED_PAGE_TYPES } from './types';
 import { fetchDedicatedPages, fetchPageContents, createDedicatedPage, updateDedicatedPage, deleteDedicatedPage, publishDedicatedPage, unpublishDedicatedPage } from './api';
@@ -44,12 +45,13 @@ import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import Pagination from '@/src/shared-components/Pagination';
 import { getDedicatedPagePublicUrl } from './utils';
 import type { DedicatedPagesStats } from './types';
+import { getSmartPageForDedicatedPage, createSmartPage } from '../page-builder/api';
 
 const PER_PAGE = 12;
 const EMPTY_STATS: DedicatedPagesStats = { total: 0, active: 0, total_contents: 0, total_authorized_users: 0, by_type: {} };
 
 interface DedicatedPagesStudioProps {
-  onOpenTab?: (id: string, title: string, iconName: string) => void;
+  onOpenTab?: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
 }
 
 export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudioProps) {
@@ -229,6 +231,35 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
       alert('خطا در حذف صفحه. لطفاً دوباره تلاش کنید.');
     } finally {
       setIsDeletingPage(false);
+    }
+  };
+
+  // باز کردن Page Builder برای ویرایش لایوت این صفحهٔ اختصاصی — اگر لایوتی وجود
+  // نداشته باشد، ابتدا یکی می‌سازد و سپس استودیو را مستقیماً روی همان باز می‌کند.
+  const [isOpeningLayout, setIsOpeningLayout] = useState<string | null>(null);
+  const handleEditLayout = async (page: DedicatedPage, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!onOpenTab) return;
+    setIsOpeningLayout(page.id);
+    try {
+      const existing = await getSmartPageForDedicatedPage(page.id);
+      let layoutPageId = existing?.id;
+      if (!layoutPageId) {
+        const created = await createSmartPage({
+          title: `لایوت — ${page.shortTitle || page.title}`,
+          slug: `layout-${page.slug}`,
+          status: 'draft',
+          schema: { sections: [] },
+          dedicated_page_id: Number(page.id)
+        });
+        layoutPageId = created.data.id;
+      }
+      onOpenTab('page-builder', 'صفحه‌ساز هوشمند', 'LayoutTemplate', false, { initialPageId: layoutPageId });
+    } catch (err) {
+      console.error('Error opening layout page:', err);
+      alert('خطا در بازکردن لایوت. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsOpeningLayout(null);
     }
   };
 
@@ -857,6 +888,21 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
+
+                      {onOpenTab && (
+                        <button
+                          onClick={e => handleEditLayout(page, e)}
+                          disabled={isOpeningLayout === page.id}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                          title="ویرایش لایوت با Page Builder"
+                        >
+                          {isOpeningLayout === page.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LayoutTemplate className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {

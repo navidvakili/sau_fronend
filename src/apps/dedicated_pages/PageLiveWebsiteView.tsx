@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
 import { getDedicatedPagePublicUrl } from './utils';
+import { resolvePageContentVariables } from './PageContentVariables';
 
 interface PageLiveWebsiteViewProps {
   page: DedicatedPage;
@@ -51,7 +52,16 @@ export default function PageLiveWebsiteView({
   const [contactSuccess, setContactSuccess] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', message: '' });
 
-  const pageContents = contents.filter(c => c.pageId === page.id);
+  // Resolve {{variable}} tokens (owner name, page title, ...) against this page's
+  // real data — exactly what the public site does when it actually renders this content.
+  const pageContents = contents
+    .filter(c => c.pageId === page.id)
+    .map(c => ({
+      ...c,
+      title: resolvePageContentVariables(c.title, page),
+      summary: resolvePageContentVariables(c.summary, page),
+      content: resolvePageContentVariables(c.content, page)
+    }));
   const newsItems = pageContents.filter(c => c.type === 'news' || c.type === 'announcement' || c.type === 'event');
   const documentItems = pageContents.filter(c => c.type === 'document');
   const articleItems = pageContents.filter(c => c.type === 'article');

@@ -12,11 +12,14 @@ import {
 interface PreviewModalProps {
   pageSchema: SmartPageSchema;
   onClose: () => void;
+  /** مقدار متغیرهای صفحهٔ اختصاصی — وقتی این صفحه به یک صفحهٔ اختصاصی متصل است */
+  variables?: Record<string, string>;
 }
 
 export const PreviewModal: React.FC<PreviewModalProps> = ({
   pageSchema,
-  onClose
+  onClose,
+  variables
 }) => {
   const [deviceSize, setDeviceSize] = useState<Breakpoint>('desktop');
 
@@ -112,6 +115,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                       widget={widget}
                       currentUserRole="all"
                       isEditorPreview={false}
+                      variables={variables}
                     />
                   );
                 })}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
+import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
+import { createPageContent, updatePageContent, deletePageContent } from './api';
 
 interface PageContentModerationModalProps {
   page: DedicatedPage;
@@ -51,6 +53,8 @@ export default function PageContentModerationModal({
   const [newFileSize, setNewFileSize] = useState('');
   const [newAuthor, setNewAuthor] = useState(page.owner?.name || '');
   const [contentToDelete, setContentToDelete] = useState<PageContentItem | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (!isOpen) return null;
 
@@ -66,17 +70,17 @@ export default function PageContentModerationModal({
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleToggleStatus = (id: string) => {
-    const updated: PageContentItem[] = contents.map(item => {
-      if (item.id === id) {
-        return {
-          ...item,
-          status: item.status === 'published' ? ('draft' as const) : ('published' as const)
-        };
-      }
-      return item;
-    });
-    onUpdateContents(updated);
+  const handleToggleStatus = async (id: string) => {
+    const item = contents.find(c => c.id === id);
+    if (!item) return;
+    const newStatus = item.status === 'published' ? 'draft' : 'published';
+    try {
+      await updatePageContent(page.id, id, { status: newStatus });
+      onUpdateContents(contents.map(c => (c.id === id ? { ...c, status: newStatus as PageContentItem['status'] } : c)));
+    } catch (e) {
+      console.error('Error updating content status:', e);
+      alert('خطا در تغییر وضعیت محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
   const handleDeleteContent = (id: string) => {
@@ -84,47 +88,56 @@ export default function PageContentModerationModal({
     if (item) setContentToDelete(item);
   };
 
-  const confirmDeleteContent = () => {
+  const confirmDeleteContent = async () => {
     if (!contentToDelete) return;
-    const updated = contents.filter(item => item.id !== contentToDelete.id);
-    onUpdateContents(updated);
-    setContentToDelete(null);
+    try {
+      await deletePageContent(page.id, contentToDelete.id);
+      onUpdateContents(contents.filter(item => item.id !== contentToDelete.id));
+      setContentToDelete(null);
+    } catch (e) {
+      console.error('Error deleting content:', e);
+      alert('خطا در حذف محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
-  const handleSaveNewContent = (e: React.FormEvent) => {
+  const handleSaveNewContent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle) return;
 
     const matchedTax = page.taxonomies?.find(t => t.slug === newCategorySlug);
     const categoryTitle = matchedTax ? matchedTax.title : 'عمومی';
 
-    const newItem: PageContentItem = {
-      id: `cnt_${Date.now()}`,
-      pageId: page.id,
-      type: newType,
-      title: newTitle,
-      summary: newSummary,
-      content: newContent,
-      categorySlug: newCategorySlug,
-      categoryTitle,
-      publishedDate: '۱۴۰۵/۰۳/۲۵',
-      author: newAuthor || page.owner?.name || '',
-      status: 'published',
-      views: 1,
-      imageUrl: newImageUrl || undefined,
-      fileUrl: newFileUrl || undefined,
-      fileSize: newFileSize || undefined
-    };
+    try {
+      const created = await createPageContent(page.id, {
+        pageId: page.id,
+        type: newType,
+        title: newTitle,
+        summary: newSummary,
+        content: newContent,
+        categorySlug: newCategorySlug,
+        categoryTitle,
+        publishedDate: new Date().toISOString().slice(0, 10),
+        author: newAuthor || page.owner?.name || '',
+        status: 'published',
+        views: 0,
+        imageUrl: newImageUrl || undefined,
+        fileUrl: newFileUrl || undefined,
+        fileSize: newFileSize || undefined
+      });
 
-    onUpdateContents([...contents, newItem]);
-    setIsAddingContent(false);
-    // Reset Form
-    setNewTitle('');
-    setNewSummary('');
-    setNewContent('');
-    setNewImageUrl('');
-    setNewFileUrl('');
-    setNewFileSize('');
+      onUpdateContents([created, ...contents]);
+      setIsAddingContent(false);
+      // Reset Form
+      setNewTitle('');
+      setNewSummary('');
+      setNewContent('');
+      setNewImageUrl('');
+      setNewFileUrl('');
+      setNewFileSize('');
+    } catch (e) {
+      console.error('Error creating content:', e);
+      alert('خطا در ایجاد محتوا. لطفاً دوباره تلاش کنید.');
+    }
   };
 
   return (
@@ -347,8 +360,14 @@ export default function PageContentModerationModal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">عنوان محتوا *</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold">عنوان محتوا *</label>
+                      <VariableInsertButton
+                        onInsert={token => insertAtCursor(titleInputRef.current, newTitle, token, setNewTitle)}
+                      />
+                    </div>
                     <input
+                      ref={titleInputRef}
                       type="text"
                       value={newTitle}
                       onChange={e => setNewTitle(e.target.value)}
@@ -370,14 +389,23 @@ export default function PageContentModerationModal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">متن کامل</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-slate-700 dark:text-slate-300 font-semibold">متن کامل</label>
+                      <VariableInsertButton
+                        onInsert={token => insertAtCursor(contentTextareaRef.current, newContent, token, setNewContent)}
+                      />
+                    </div>
                     <textarea
+                      ref={contentTextareaRef}
                       rows={4}
                       value={newContent}
                       onChange={e => setNewContent(e.target.value)}
                       placeholder="شرح کامل رویداد، بیانیه یا دستورالعمل..."
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                     />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      متغیرهای درج‌شده مانند {'{{ownerName}}'} در نمایش نهایی صفحه به‌صورت خودکار با مقدار واقعی این صفحه جایگزین می‌شوند.
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

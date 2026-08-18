@@ -37,6 +37,8 @@ import {
   SmartPageDto,
   SmartPageTreeNode
 } from './api';
+import { fetchDedicatedPageById } from '../dedicated_pages/api';
+import { getPageVariableValues } from '../dedicated_pages/PageContentVariables';
 import {
   Save,
   Undo2,
@@ -66,9 +68,11 @@ import {
 
 interface PageBuilderStudioProps {
   onBackToPortal?: () => void;
+  /** اگر تنظیم شود، استودیو مستقیماً همان صفحه را باز می‌کند (نه فهرست) — مثلاً هنگام ورود از «ویرایش لایوت» یک صفحهٔ اختصاصی */
+  initialPageId?: string | number;
 }
 
-export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal }) => {
+export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId }) => {
   // Main Page Schema state
   const [pageSchema, setPageSchema] = useState<SmartPageSchema>(INITIAL_SMART_PAGE);
 
@@ -76,6 +80,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [pages, setPages] = useState<SmartPageDto[]>([]);
   const [activePageId, setActivePageId] = useState<number | null>(null);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
+  // متغیرهای صفحهٔ اختصاصی‌ای که صفحهٔ لایوت فعلی به آن متصل است (اگر باشد) — برای
+  // حل توکن‌های {{key}} در ویجت‌های عنوان/متن، هم در بوم و هم در پیش‌نمایش
+  const [dedicatedPageVariables, setDedicatedPageVariables] = useState<Record<string, string> | undefined>(undefined);
   const [isLoadingPages, setIsLoadingPages] = useState(true);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
@@ -123,6 +130,16 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setShowVersionHistory(false);
   };
 
+  // اگر با initialPageId باز شده باشیم (مثلاً از «ویرایش لایوت» یک صفحهٔ اختصاصی)،
+  // مستقیماً همان صفحه را باز کن — نه فهرست را. با تغییر initialPageId (تب همان
+  // ماژول برای رکورد دیگری دوباره استفاده شود) هم دوباره اجرا می‌شود.
+  useEffect(() => {
+    if (initialPageId !== undefined && initialPageId !== null) {
+      openEditor(Number(initialPageId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPageId]);
+
   // Recursively ensure every column has a subSections array (heals legacy schemas
   // created before the key existed, preventing renderer crashes)
   const normalizeSubSections = (sections: SectionInstance[]): SectionInstance[] =>
@@ -164,6 +181,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       setSelectedSectionId(merged.sections[0]?.id ?? null);
       setSelectedColumnId(merged.sections[0]?.columns[0]?.id ?? null);
       setSelectedWidgetId(merged.sections[0]?.columns[0]?.widgets[0]?.id ?? null);
+
+      // اگر این صفحه به یک صفحهٔ اختصاصی متصل است، متغیرهای آن را برای حل توکن‌های
+      // {{key}} در بوم/پیش‌نمایش بارگذاری کن
+      if (dto.dedicated_page_id) {
+        const dedicatedPage = await fetchDedicatedPageById(String(dto.dedicated_page_id));
+        setDedicatedPageVariables(dedicatedPage ? getPageVariableValues(dedicatedPage) : undefined);
+      } else {
+        setDedicatedPageVariables(undefined);
+      }
     } catch {
       // ignore — keep current schema
     }
@@ -183,6 +209,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     fresh.sections = [];
     setActivePageId(null);
     setCurrentParentId(null);
+    setDedicatedPageVariables(undefined);
     setPageSchema(fresh);
     setUndoStack([]);
     setRedoStack([]);
@@ -1642,6 +1669,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           pageSchema={pageSchema}
           pageId={activePageId}
           pageSlug={pageSchema.slug}
+          variables={dedicatedPageVariables}
           activeBreakpoint={activeBreakpoint}
           selectedSectionId={selectedSectionId}
           selectedColumnId={selectedColumnId}
@@ -1724,6 +1752,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         <PreviewModal
           pageSchema={pageSchema}
           onClose={() => setShowPreviewModal(false)}
+          variables={dedicatedPageVariables}
         />
       )}
 

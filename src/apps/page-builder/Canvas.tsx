@@ -32,6 +32,8 @@ interface CanvasProps {
   /** شناسه و slug صفحهٔ در حال ویرایش — برای ویجت‌های وابسته به خودِ صفحه (مثل child-pages) */
   pageId?: number | null;
   pageSlug?: string | null;
+  /** مقدار متغیرهای صفحهٔ اختصاصی — وقتی این صفحه به یک صفحهٔ اختصاصی متصل است */
+  variables?: Record<string, string>;
   activeBreakpoint: Breakpoint;
   selectedSectionId: string | null;
   selectedColumnId: string | null;
@@ -62,6 +64,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   pageSchema,
   pageId,
   pageSlug,
+  variables,
   activeBreakpoint,
   selectedSectionId,
   selectedColumnId,
@@ -598,6 +601,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 isEditorPreview={true}
                                 pageId={pageId}
                                 pageSlug={pageSlug}
+                                variables={variables}
                               />
                             </div>
                           );

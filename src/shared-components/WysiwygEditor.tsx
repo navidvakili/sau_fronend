@@ -30,6 +30,7 @@ import {
   Globe, CodeSquare, Maximize2, Minimize2, Sparkles,
 } from 'lucide-react';
 import MediaManager from './MediaManager';
+import { VariableInsertButton } from './PageVariables';
 
 /** Image extension with configurable width (for resize controls) */
 const ResizableImage = Image.extend({
@@ -245,11 +246,15 @@ interface WysiwygEditorProps {
   showIconButton?: boolean;
   /** با زدن دکمهٔ درج آیکون صدا زده می‌شود تا والد، انتخابگر آیکون را باز کند */
   onRequestIcon?: () => void;
+  /** نمایش دکمهٔ «درج متغیر» (توکن {{key}}) در نوار ابزار — منوی متغیرها خودکفاست، نیازی به هندلر باز/بسته شدن از والد نیست */
+  showVariableButton?: boolean;
 }
 
 export interface WysiwygEditorHandle {
   /** درج توکن آیکون [icon:name] در محل مکان‌نما */
   insertIconToken: (iconName: string) => void;
+  /** درج یک رشتهٔ خام (مثلاً توکن متغیر {{key}}) در محل مکان‌نما */
+  insertRawText: (text: string) => void;
 }
 
 // ===== Main Component =====
@@ -270,6 +275,7 @@ export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function Wysi
     onRequestCompact,
     showIconButton = false,
     onRequestIcon,
+    showVariableButton = false,
   }: WysiwygEditorProps,
   ref
 ) {
@@ -427,6 +433,10 @@ export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function Wysi
       insertIconToken: (iconName: string) => {
         if (!editor || !iconName) return;
         editor.chain().focus().insertContent(`[icon:${iconName}]`).run();
+      },
+      insertRawText: (text: string) => {
+        if (!editor || !text) return;
+        editor.chain().focus().insertContent(text).run();
       },
     }),
     [editor]
@@ -769,6 +779,13 @@ export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function Wysi
             >
               <Sparkles className="w-4 h-4" />
             </ToolbarBtn>
+          )}
+
+          {/* دکمهٔ درج متغیر — توکن {{key}} */}
+          {showVariableButton && (
+            <VariableInsertButton
+              onInsert={(token) => editor.chain().focus().insertContent(token).run()}
+            />
           )}
 
           {/* دکمه‌های تغییر حالت پایه/کامل — با آیکون */}

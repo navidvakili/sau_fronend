@@ -101,6 +101,8 @@ interface WidgetRendererProps {
   /** شناسه و slug صفحهٔ در حال ویرایش — برای ویجت child-pages (لیست زیرصفحه‌ها) */
   pageId?: number | null;
   pageSlug?: string | null;
+  /** مقدار متغیرهای صفحهٔ اختصاصی — وقتی این صفحه به یک صفحهٔ اختصاصی متصل است (برای توکن‌های {{key}} در متن) */
+  variables?: Record<string, string>;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -2320,16 +2322,24 @@ const parseLines = (content: string, separators = '|،,;'): string[][] =>
     .map((line) => line.split(new RegExp(`[${separators}]`)).map((p) => p.trim()));
 
 // ────────────────────────────────────────────────
-// رندر آیکون‌های درج‌شده در متن (توکن [icon:name])
+// رندر آیکون‌ها (توکن [icon:name]) و متغیرهای صفحهٔ اختصاصی (توکن {{key}}) درج‌شده در متن
 // ────────────────────────────────────────────────
 const ICON_TOKEN_RE = /\[icon:([a-zA-Z-]+)\]/g;
+const VARIABLE_TOKEN_RE = /\{\{(\w+)\}\}/g;
 
 /** اندازه آیکون داخل متن */
 const inlineIconClass = 'inline-block w-4 h-4 align-middle mx-1 shrink-0';
 
-/** جایگزینی توکن‌های [icon:name] در متن ساده با کامپوننت آیکون */
-const renderTextWithIcons = (content: string): ReactNode => {
-  const parts = (content || '').split(ICON_TOKEN_RE);
+/** جایگزینی توکن‌های {{key}} با مقدار واقعی — اگر variables داده نشده باشد، متن دست‌نخورده می‌ماند */
+const resolveVariableTokens = (text: string, variables?: Record<string, string>): string => {
+  const content = text || '';
+  if (!variables) return content;
+  return content.replace(VARIABLE_TOKEN_RE, (match, key) => (key in variables ? variables[key] : match));
+};
+
+/** جایگزینی توکن‌های [icon:name] در متن ساده با کامپوننت آیکون (پس از حل متغیرها) */
+const renderTextWithIcons = (content: string, variables?: Record<string, string>): ReactNode => {
+  const parts = resolveVariableTokens(content, variables).split(ICON_TOKEN_RE);
   // split با گروه ضبط‌شده: [متن, نام, متن, نام, ...]
   return parts.map((part, i) => {
     if (i % 2 === 1) {
@@ -2341,9 +2351,9 @@ const renderTextWithIcons = (content: string): ReactNode => {
   });
 };
 
-/** جایگزینی توکن‌های [icon:name] در HTML (ریش‌تکست) با SVG درون‌خطی */
-const renderHtmlWithIcons = (html: string): string => {
-  return (html || '').replace(ICON_TOKEN_RE, (match, name: string) => {
+/** جایگزینی توکن‌های [icon:name] در HTML (ریش‌تکست) با SVG درون‌خطی (پس از حل متغیرها) */
+const renderHtmlWithIcons = (html: string, variables?: Record<string, string>): string => {
+  return resolveVariableTokens(html, variables).replace(ICON_TOKEN_RE, (match, name: string) => {
     const el = iconMap[name];
     if (!el) return match;
     try {
@@ -2355,7 +2365,7 @@ const renderHtmlWithIcons = (html: string): string => {
 };
 
 /** بلوک متن غنی WYSIWYG (محتوای HTML) */
-const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => (
+const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties; variables?: Record<string, string> }> = ({ widget, containerStyle, variables }) => (
   <div
     style={containerStyle}
     className="transition-all richtext-content"
@@ -2363,7 +2373,8 @@ const RichTextBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CS
       __html:
         renderHtmlWithIcons(
           widget.content ||
-            '<p>متن غنی خود را اینجا بنویسید — از HTML برای تیتر، پاراگراف، لینک و آیکون استفاده کنید.</p>'
+            '<p>متن غنی خود را اینجا بنویسید — از HTML برای تیتر، پاراگراف، لینک و آیکون استفاده کنید.</p>',
+          variables
         )
     }}
   />
@@ -2505,7 +2516,8 @@ const ContainerBlock: React.FC<{
   vertical: boolean;
   depth: number;
   isEditorPreview: boolean;
-}> = ({ widget, containerStyle, vertical, depth, isEditorPreview }) => {
+  variables?: Record<string, string>;
+}> = ({ widget, containerStyle, vertical, depth, isEditorPreview, variables }) => {
   const children: WidgetInstance[] = (widget.settings.customProps?.children as WidgetInstance[]) || [];
   const gap = (widget.settings.customProps?.gap as number) ?? 16;
 
@@ -2537,6 +2549,7 @@ const ContainerBlock: React.FC<{
               currentUserRole="all"
               isEditorPreview={isEditorPreview}
               depth={depth + 1}
+              variables={variables}
             />
           </div>
         ))
@@ -3305,7 +3318,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   isEditorPreview = false,
   depth = 0,
   pageId,
-  pageSlug
+  pageSlug,
+  variables
 }) => {
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
@@ -3373,7 +3387,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
               fontWeight: style.fontWeight || 900
             }}
           >
-            {renderTextWithIcons(widget.content || widget.title)}
+            {renderTextWithIcons(widget.content || widget.title, variables)}
           </h2>
         </div>
       );
@@ -3385,7 +3399,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
             className="whitespace-pre-line text-sm md:text-base"
             style={{ fontSize: style.fontSize || undefined }}
           >
-            {renderTextWithIcons(widget.content || 'متن نمونه برای این ویجت قرار داده شده است.')}
+            {renderTextWithIcons(widget.content || 'متن نمونه برای این ویجت قرار داده شده است.', variables)}
           </p>
         </div>
       );
@@ -3580,7 +3594,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     // NEW STATIC BLOCKS — بلوک‌های جدید سازنده صفحه
     // -------------------------------------------------------------
     case 'richtext':
-      return <RichTextBlock widget={widget} containerStyle={containerStyle} />;
+      return <RichTextBlock widget={widget} containerStyle={containerStyle} variables={variables} />;
 
     case 'icon-box':
       return <IconBoxBlock widget={widget} containerStyle={containerStyle} />;
@@ -3593,6 +3607,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           vertical
           depth={depth}
           isEditorPreview={isEditorPreview}
+          variables={variables}
         />
       );
 
@@ -3604,6 +3619,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           vertical={false}
           depth={depth}
           isEditorPreview={isEditorPreview}
+          variables={variables}
         />
       );
 
