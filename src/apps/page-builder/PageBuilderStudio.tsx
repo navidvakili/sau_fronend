@@ -1670,7 +1670,6 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           pageSchema={pageSchema}
           pageId={activePageId}
           pageSlug={pageSchema.slug}
-          variables={dedicatedPageVariables}
           activeBreakpoint={activeBreakpoint}
           selectedSectionId={selectedSectionId}
           selectedColumnId={selectedColumnId}
