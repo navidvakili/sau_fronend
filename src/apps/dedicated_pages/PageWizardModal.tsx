@@ -47,6 +47,7 @@ import {
   DEDICATED_PAGE_TYPES
 } from './types';
 import { fetchProfessors } from './api';
+import { getDedicatedPagePublicUrl } from './utils';
 
 interface PageWizardModalProps {
   isOpen: boolean;
@@ -330,24 +331,8 @@ export default function PageWizardModal({
     }
   };
 
-  // Calculate Final URL
-  const getFullUrl = () => {
-    const cleanSlug = slug.trim() || 'my-page';
-    switch (pageType) {
-      case 'scientific_association':
-        return `/associations/${cleanSlug}`;
-      case 'cultural_club':
-        return `/clubs/${cleanSlug}`;
-      case 'student_union':
-        return `/unions/${cleanSlug}`;
-      case 'student_journal':
-        return `/journals/${cleanSlug}`;
-      case 'faculty_member':
-        return `/professors/${cleanSlug}`;
-      default:
-        return `/pages/${cleanSlug}`;
-    }
-  };
+  // Calculate Final URL (full, absolute — matches the real public site routes)
+  const getFullUrl = () => getDedicatedPagePublicUrl(pageType, slug);
 
   // Determine final password to save
   const getFinalPassword = () => {

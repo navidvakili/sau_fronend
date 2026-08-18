@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
+import { getDedicatedPagePublicUrl } from './utils';
 
 interface IsolatedManagerPortalProps {
   page: DedicatedPage;
@@ -202,7 +203,7 @@ export default function IsolatedManagerPortal({
             سطح دسترسی شما محدود به <strong>«{page.title}»</strong> است. دسترسی به سایر تشکل‌ها، واحدهای دانشگاه و تنظیمات سراسری مسدود می‌باشد.
           </span>
         </div>
-        <span className="text-[11px] font-mono opacity-80 dir-ltr">{page.fullUrl}</span>
+        <span className="text-[11px] font-mono opacity-80 dir-ltr">{getDedicatedPagePublicUrl(page.pageType, page.slug)}</span>
       </div>
 
       {/* Sub-Navigation Tabs */}

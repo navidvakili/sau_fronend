@@ -3,7 +3,40 @@
 // ============================================================
 
 import type { User } from '@/src/shared-types';
-import type { DedicatedPage, AuthorizedUser, AccessLevel } from './types';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
+import type { DedicatedPage, AuthorizedUser, AccessLevel, PageType } from './types';
+
+/**
+ * پیشوند مسیر عمومی هر نوع صفحه اختصاصی در سایت عمومی (Next.js).
+ * این مقادیر باید همواره با مسیرهای واقعی زیر public/src/app هم‌راستا بمانند:
+ * associations/[slug]، clubs/[slug]، unions/[slug]، journals/[slug]، professors/[slug]
+ */
+export const DEDICATED_PAGE_TYPE_URL_PREFIXES: Record<PageType, string> = {
+  scientific_association: 'associations',
+  cultural_club: 'clubs',
+  student_union: 'unions',
+  student_journal: 'journals',
+  faculty_member: 'professors',
+  interactive_survey: 'surveys',
+  special_event: 'events'
+};
+
+/**
+ * تولید آدرس کامل و واقعی صفحه اختصاصی در سایت عمومی
+ * (بر اساس نوع صفحه و اسلاگ آن) — مثال: /journals/student-journal-newsletter
+ */
+export function getDedicatedPagePublicPath(pageType: PageType, slug: string): string {
+  const prefix = DEDICATED_PAGE_TYPE_URL_PREFIXES[pageType] || 'pages';
+  const cleanSlug = (slug || '').trim() || 'my-page';
+  return `/${prefix}/${cleanSlug}`;
+}
+
+/**
+ * آدرس کامل (با دامنه سایت عمومی) صفحه اختصاصی
+ */
+export function getDedicatedPagePublicUrl(pageType: PageType, slug: string): string {
+  return `${PUBLIC_SITE_URL}${getDedicatedPagePublicPath(pageType, slug)}`;
+}
 
 /**
  * بررسی اینکه کاربر می‌تواند ماژول صفحات اختصاصی را مشاهده کند

@@ -30,6 +30,7 @@ import {
   Clock
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
+import { getDedicatedPagePublicUrl } from './utils';
 
 interface PageLiveWebsiteViewProps {
   page: DedicatedPage;
@@ -94,7 +95,7 @@ export default function PageLiveWebsiteView({
                 پیش‌نمایش خروجی زنده
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-mono dir-ltr">{page.fullUrl}</p>
+            <p className="text-xs text-slate-500 font-mono dir-ltr">{getDedicatedPagePublicUrl(page.pageType, page.slug)}</p>
           </div>
         </div>
 

@@ -41,6 +41,7 @@ import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
 import IsolatedManagerPortal from './IsolatedManagerPortal';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
+import { getDedicatedPagePublicUrl } from './utils';
 
 interface DedicatedPagesStudioProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
@@ -759,7 +760,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                         <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
                           {page.title}
                         </h3>
-                        <p className="text-xs text-slate-500 font-mono dir-ltr truncate">{page.fullUrl}</p>
+                        <p className="text-xs text-slate-500 font-mono dir-ltr truncate">{getDedicatedPagePublicUrl(page.pageType, page.slug)}</p>
                       </div>
                     </div>
 
