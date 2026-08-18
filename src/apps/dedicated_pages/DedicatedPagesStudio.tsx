@@ -738,12 +738,22 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                         {pageTypeObj?.title || page.pageType}
                       </span>
                     </div>
+
+                    {/* Title — overlaid on the banner image */}
+                    <div className="absolute bottom-2 right-3 left-3">
+                      <h3 className="font-bold text-sm sm:text-base text-white truncate drop-shadow-md">
+                        {page.title}
+                      </h3>
+                      {page.shortTitle && (
+                        <span className="text-[11px] text-white/80 truncate block drop-shadow-md">{page.shortTitle}</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Body Info Overlap */}
                   <div className="p-5 pt-0">
                     <div className="flex items-end gap-3 -mt-9 mb-3 relative z-10">
-                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 p-1 border-2 border-white dark:border-slate-700 shadow-lg overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 p-1 border-2 border-white dark:border-slate-700 shadow-lg overflow-hidden flex-shrink-0 mr-auto">
                         {page.logo ? (
                           <img src={page.logo} alt={page.title} className="w-full h-full object-cover rounded-xl" />
                         ) : (
@@ -754,13 +764,6 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                             {page.shortTitle ? page.shortTitle.slice(0, 2) : 'صف'}
                           </div>
                         )}
-                      </div>
-
-                      <div className="overflow-hidden">
-                        <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                          {page.title}
-                        </h3>
-                        <p className="text-xs text-slate-500 font-mono dir-ltr truncate">{getDedicatedPagePublicUrl(page.pageType, page.slug)}</p>
                       </div>
                     </div>
 
@@ -834,6 +837,17 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
                     </button>
 
                     <div className="flex items-center gap-1">
+                      <a
+                        href={getDedicatedPagePublicUrl(page.pageType, page.slug)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="باز کردن صفحه در وب‌سایت (تب جدید)"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+
                       <button
                         onClick={() => {
                           setEditingPage(page);
