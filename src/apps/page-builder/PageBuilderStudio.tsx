@@ -24,7 +24,7 @@ import { PreviewModal } from './PreviewModal';
 import { ExportModal } from './ExportModal';
 import { ComponentPickerModal } from './ComponentPickerModal';
 import { PagesList, buildPagePath } from './PagesList';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { PageSettingsModal } from './PageSettingsModal';
 import { ChildPagesManagerModal } from './ChildPagesManagerModal';
 import {
@@ -1773,24 +1773,25 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       )}
 
       {/* Delete confirmation dialog (replaces window.confirm) */}
-      {pageToDelete && (() => {
-        const deletedChildCount = pages.filter((p) => p.parent_id === pageToDelete.id).length;
-        return (
-          <ConfirmDialog
-            title={pageToDelete.parent_id ? 'حذف زیرصفحه' : 'حذف صفحه'}
-            message={
+      <ConfirmDialog
+        open={!!pageToDelete}
+        title={pageToDelete?.parent_id ? 'حذف زیرصفحه' : 'حذف صفحه'}
+        message={
+          pageToDelete ? (() => {
+            const deletedChildCount = pages.filter((p) => p.parent_id === pageToDelete.id).length;
+            return (
               `آیا از حذف «${pageToDelete.title}» (${buildPagePath(pageToDelete, pages)}) مطمئن هستید؟ این عملیات قابل بازگشت نیست.` +
               (deletedChildCount > 0
                 ? `\nاین صفحه ${deletedChildCount} زیرصفحه دارد که همراه آن حذف خواهند شد.`
                 : '')
-            }
-            confirmLabel="حذف"
-            isBusy={isDeletingPage}
-            onConfirm={handleConfirmDeletePage}
-            onCancel={() => setPageToDelete(null)}
-          />
-        );
-      })()}
+            );
+          })() : ''
+        }
+        confirmLabel="حذف"
+        busy={isDeletingPage}
+        onConfirm={handleConfirmDeletePage}
+        onCancel={() => setPageToDelete(null)}
+      />
     </>
   );
 };

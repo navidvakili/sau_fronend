@@ -37,7 +37,6 @@ import {
   Clock,
   Sparkle,
   GripVertical,
-  AlertTriangle,
   Move,
   RotateCw,
   X,
@@ -48,6 +47,7 @@ import ShapePicker from './ShapePicker';
 import ShapeLayer from './ShapeLayer';
 import { SHAPE_LABELS } from '../constants/shapes';
 import { MOTION_PATH_PRESETS, buildMotionPathPreset } from '../constants/motionPath';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import type { MotionPathPresetMode } from '../constants/motionPath';
 import { INITIAL_SLIDER_PROJECTS } from '../data/presetTemplates';
 import InspectorPanel from './InspectorPanel';
@@ -2284,52 +2284,17 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       />
 
       {/* CONFIRMATION DIALOG */}
-      <AnimatePresence>
-        {confirmDialog && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setConfirmDialog(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-w-sm w-full mx-4"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                </div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">تأیید حذف</h3>
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                {confirmDialog.message}
-              </p>
-              <div className="flex items-center gap-2 justify-end">
-                <button
-                  onClick={() => setConfirmDialog(null)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  انصراف
-                </button>
-                <button
-                  onClick={() => {
-                    confirmDialog.onConfirm();
-                    setConfirmDialog(null);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-md shadow-rose-500/20"
-                >
-                  تأیید حذف
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title="تأیید حذف"
+        message={confirmDialog?.message || ''}
+        confirmLabel="تأیید حذف"
+        onConfirm={() => {
+          confirmDialog?.onConfirm();
+          setConfirmDialog(null);
+        }}
+        onCancel={() => setConfirmDialog(null)}
+      />
 
       {/* Template Loading Overlay */}
       <AnimatePresence>

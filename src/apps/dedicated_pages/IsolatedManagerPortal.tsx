@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   Shield,
   LayoutDashboard,
@@ -21,7 +21,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface IsolatedManagerPortalProps {
   page: DedicatedPage;
@@ -613,16 +613,13 @@ export default function IsolatedManagerPortal({
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AnimatePresence>
-        {contentToDelete && (
-          <ConfirmDialog
-            title="حذف محتوا"
-            message={`آیا از حذف «${contentToDelete.title}» مطمئن هستید؟`}
-            onConfirm={confirmDeleteContent}
-            onCancel={() => setContentToDelete(null)}
-          />
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        open={!!contentToDelete}
+        title="حذف محتوا"
+        message={`آیا از حذف «${contentToDelete?.title}» مطمئن هستید؟`}
+        onConfirm={confirmDeleteContent}
+        onCancel={() => setContentToDelete(null)}
+      />
     </div>
   );
 }

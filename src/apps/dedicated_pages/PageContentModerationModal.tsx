@@ -18,7 +18,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { DedicatedPage, PageContentItem } from './types';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface PageContentModerationModalProps {
   page: DedicatedPage;
@@ -442,16 +442,13 @@ export default function PageContentModerationModal({
       </motion.div>
 
       {/* Delete Confirmation Dialog */}
-      <AnimatePresence>
-        {contentToDelete && (
-          <ConfirmDialog
-            title="حذف محتوا"
-            message={`آیا از حذف «${contentToDelete.title}» از صفحه اختصاصی اطمینان دارید؟`}
-            onConfirm={confirmDeleteContent}
-            onCancel={() => setContentToDelete(null)}
-          />
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        open={!!contentToDelete}
+        title="حذف محتوا"
+        message={`آیا از حذف «${contentToDelete?.title}» از صفحه اختصاصی اطمینان دارید؟`}
+        onConfirm={confirmDeleteContent}
+        onCancel={() => setContentToDelete(null)}
+      />
     </div>
   );
 }

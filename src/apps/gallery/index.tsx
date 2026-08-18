@@ -58,7 +58,7 @@ import { isPdfName } from './pdf/pdfEngine';
 import { UploadModal } from './UploadModal';
 import { LightboxModal } from './LightboxModal';
 import { DamDashboard } from './DamDashboard';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface DigitalAssetManagementProps {
   user?: any;

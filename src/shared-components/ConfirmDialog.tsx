@@ -1,5 +1,6 @@
 // ============================================================
-// ConfirmDialog — دیالوگ تأیید (حذف و عملیات حساس)
+// ConfirmDialog — دیالوگ تأیید عملیات (به‌جای window.confirm)
+// کامپوننت مشترک برای تمام ماژول‌ها
 // ============================================================
 
 import React from 'react';
@@ -12,6 +13,7 @@ interface ConfirmDialogProps {
   message: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** true (پیش‌فرض) = عملیات مخرب/حذف (قرمز) — false = عملیات خنثی (کهربایی) */
   danger?: boolean;
   busy?: boolean;
   onConfirm: () => void;
@@ -22,17 +24,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   open,
   title,
   message,
-  confirmLabel = 'تأیید حذف',
+  confirmLabel = 'حذف',
   cancelLabel = 'انصراف',
   danger = true,
   busy = false,
   onConfirm,
-  onCancel,
+  onCancel
 }) => (
   <AnimatePresence>
     {open && (
       <div
-        className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md rtl"
+        className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md rtl"
         onClick={busy ? undefined : onCancel}
         role="dialog"
         aria-modal="true"
@@ -66,7 +68,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
           <div>
             <h3 className="text-sm font-black text-slate-900 dark:text-white">{title}</h3>
-            <div className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            <div className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400 whitespace-pre-line">
               {message}
             </div>
           </div>
@@ -95,3 +97,5 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     )}
   </AnimatePresence>
 );
+
+export default ConfirmDialog;

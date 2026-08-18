@@ -40,7 +40,7 @@ import PageWizardModal from './PageWizardModal';
 import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
 import IsolatedManagerPortal from './IsolatedManagerPortal';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface DedicatedPagesStudioProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
@@ -914,17 +914,14 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
       </AnimatePresence>
 
       {/* Delete Confirmation Dialog */}
-      <AnimatePresence>
-        {pageToDelete && (
-          <ConfirmDialog
-            title="حذف صفحه اختصاصی"
-            message={`آیا از حذف «${pageToDelete.title}» و تمام تنظیمات آن اطمینان دارید؟ این عملیات قابل بازگشت نیست.`}
-            isBusy={isDeletingPage}
-            onConfirm={confirmDeletePage}
-            onCancel={() => setPageToDelete(null)}
-          />
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        open={!!pageToDelete}
+        title="حذف صفحه اختصاصی"
+        message={`آیا از حذف «${pageToDelete?.title}» و تمام تنظیمات آن اطمینان دارید؟ این عملیات قابل بازگشت نیست.`}
+        busy={isDeletingPage}
+        onConfirm={confirmDeletePage}
+        onCancel={() => setPageToDelete(null)}
+      />
     </div>
   );
 }
