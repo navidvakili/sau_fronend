@@ -240,7 +240,7 @@ export default function IsolatedManagerPortal({
           }`}
         >
           <Layers className="w-4 h-4" />
-          دسته‌بندی‌های اختصاصی ({page.taxonomies.length})
+          دسته‌بندی‌های اختصاصی ({page.taxonomies?.length || 0})
         </button>
 
         <button
@@ -318,7 +318,7 @@ export default function IsolatedManagerPortal({
                 <div>
                   <span className="text-xs text-slate-400">دسته‌بندی‌های محتوایی</span>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1 font-mono">
-                    {page.taxonomies.length}
+                    {page.taxonomies?.length || 0}
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
@@ -371,7 +371,7 @@ export default function IsolatedManagerPortal({
                         onChange={e => setNewCatSlug(e.target.value)}
                         className="w-full px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                       >
-                        {page.taxonomies.map(t => (
+                        {(page.taxonomies || []).map(t => (
                           <option key={t.id} value={t.slug}>
                             {t.title}
                           </option>
@@ -510,7 +510,7 @@ export default function IsolatedManagerPortal({
               دسته‌بندی‌های محتوایی اختصاصی این صفحه
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {page.taxonomies.map(tax => (
+              {(page.taxonomies || []).map(tax => (
                 <div
                   key={tax.id}
                   className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
@@ -567,7 +567,7 @@ export default function IsolatedManagerPortal({
                 <label className="block text-slate-500 mb-1">محل استقرار / دفتر</label>
                 <input
                   type="text"
-                  value={page.contactInfo.location}
+                  value={page.contactInfo?.location || ''}
                   onChange={e =>
                     onUpdatePage({
                       ...page,
@@ -582,7 +582,7 @@ export default function IsolatedManagerPortal({
                 <label className="block text-slate-500 mb-1">تلفن مستقیم</label>
                 <input
                   type="text"
-                  value={page.contactInfo.phone}
+                  value={page.contactInfo?.phone || ''}
                   onChange={e =>
                     onUpdatePage({
                       ...page,
@@ -597,7 +597,7 @@ export default function IsolatedManagerPortal({
                 <label className="block text-slate-500 mb-1">پست الکترونیک رسمی</label>
                 <input
                   type="email"
-                  value={page.contactInfo.email}
+                  value={page.contactInfo?.email || ''}
                   onChange={e =>
                     onUpdatePage({
                       ...page,

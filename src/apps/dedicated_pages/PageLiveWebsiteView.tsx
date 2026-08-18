@@ -83,7 +83,7 @@ export default function PageLiveWebsiteView({
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold shadow-sm"
-            style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+            style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
           >
             {page.shortTitle ? page.shortTitle.slice(0, 2) : 'صف'}
           </div>
@@ -209,7 +209,7 @@ export default function PageLiveWebsiteView({
               <div
                 className="h-44 sm:h-56 w-full relative overflow-hidden flex items-center justify-center"
                 style={{
-                  background: `linear-gradient(135deg, ${page.layoutConfig.accentColor || '#0284c7'}, #1e293b)`
+                  background: `linear-gradient(135deg, ${page.layoutConfig?.accentColor || '#0284c7'}, #1e293b)`
                 }}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
@@ -225,7 +225,7 @@ export default function PageLiveWebsiteView({
                   ) : (
                     <div
                       className="w-full h-full rounded-xl flex items-center justify-center text-white text-2xl font-bold"
-                      style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+                      style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
                     >
                       {page.shortTitle ? page.shortTitle.slice(0, 2) : 'صف'}
                     </div>
@@ -243,19 +243,19 @@ export default function PageLiveWebsiteView({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 self-stretch sm:self-auto">
-                {page.features.hasContactForm && (
+                {page.features?.hasContactForm && (
                   <button
                     onClick={() => setActiveTab('contact')}
                     className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-md transition-all flex items-center justify-center gap-1.5"
-                    style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+                    style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
                   >
                     <Mail className="w-3.5 h-3.5" />
                     ارتباط و ارسال پیام
                   </button>
                 )}
-                {page.contactInfo.website && (
+                {page.contactInfo?.website && (
                   <a
-                    href={page.contactInfo.website}
+                    href={page.contactInfo?.website}
                     target="_blank"
                     rel="noreferrer"
                     className="p-2 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-white transition-colors"
@@ -304,7 +304,7 @@ export default function PageLiveWebsiteView({
                 </>
               )}
 
-              {page.features.hasNews && (
+              {page.features?.hasNews && (
                 <button
                   onClick={() => setActiveTab('news')}
                   className={`py-3 px-3 border-b-2 font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
@@ -317,7 +317,7 @@ export default function PageLiveWebsiteView({
                 </button>
               )}
 
-              {page.features.hasDocuments && (
+              {page.features?.hasDocuments && (
                 <button
                   onClick={() => setActiveTab('downloads')}
                   className={`py-3 px-3 border-b-2 font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
@@ -341,7 +341,7 @@ export default function PageLiveWebsiteView({
                 معرفی و ساختار
               </button>
 
-              {page.features.hasContactForm && (
+              {page.features?.hasContactForm && (
                 <button
                   onClick={() => setActiveTab('contact')}
                   className={`py-3 px-3 border-b-2 font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
@@ -421,7 +421,7 @@ export default function PageLiveWebsiteView({
                   </div>
 
                   {/* Latest News / Announcements */}
-                  {page.features.hasNews && newsItems.length > 0 && (
+                  {page.features?.hasNews && newsItems.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -523,31 +523,31 @@ export default function PageLiveWebsiteView({
                     </h4>
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex-shrink-0">
-                        {page.owner.avatar ? (
-                          <img src={page.owner.avatar} alt={page.owner.name} className="w-full h-full object-cover" />
+                        {page.owner?.avatar ? (
+                          <img src={page.owner.avatar} alt={page.owner?.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center font-bold text-slate-500">
-                            {page.owner.name.slice(0, 1)}
+                            {page.owner?.name?.slice(0, 1)}
                           </div>
                         )}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-slate-800 dark:text-slate-100">{page.owner.name}</div>
-                        <div className="text-xs text-blue-600 dark:text-blue-400">{page.owner.roleTitle}</div>
-                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">{page.owner.email}</div>
+                        <div className="font-bold text-sm text-slate-800 dark:text-slate-100">{page.owner?.name}</div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400">{page.owner?.roleTitle}</div>
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">{page.owner?.email}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Dedicated Taxonomies / Categories */}
-                  {page.taxonomies.length > 0 && (
+                  {(page.taxonomies?.length || 0) > 0 && (
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5" />
                         دسته‌بندی‌های محتوایی
                       </h4>
                       <div className="space-y-2">
-                        {page.taxonomies.map(tax => (
+                        {(page.taxonomies || []).map(tax => (
                           <div
                             key={tax.id}
                             className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-xs hover:bg-slate-100 transition-colors"
@@ -566,7 +566,7 @@ export default function PageLiveWebsiteView({
                   )}
 
                   {/* Downloads & Forms Widget */}
-                  {page.features.hasDocuments && documentItems.length > 0 && (
+                  {page.features?.hasDocuments && documentItems.length > 0 && (
                     <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                         <Download className="w-3.5 h-3.5" />
@@ -599,28 +599,28 @@ export default function PageLiveWebsiteView({
                       <Phone className="w-3.5 h-3.5 text-blue-400" />
                       راه‌های ارتباطی
                     </h4>
-                    {page.contactInfo.email && (
+                    {page.contactInfo?.email && (
                       <div className="flex items-center gap-2 text-slate-300">
                         <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="font-mono">{page.contactInfo.email}</span>
+                        <span className="font-mono">{page.contactInfo?.email}</span>
                       </div>
                     )}
-                    {page.contactInfo.phone && (
+                    {page.contactInfo?.phone && (
                       <div className="flex items-center gap-2 text-slate-300">
                         <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="font-mono">{page.contactInfo.phone}</span>
+                        <span className="font-mono">{page.contactInfo?.phone}</span>
                       </div>
                     )}
-                    {page.contactInfo.location && (
+                    {page.contactInfo?.location && (
                       <div className="flex items-start gap-2 text-slate-300">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
-                        <span>{page.contactInfo.location}</span>
+                        <span>{page.contactInfo?.location}</span>
                       </div>
                     )}
-                    {page.contactInfo.telegramOrEitaa && (
+                    {page.contactInfo?.telegramOrEitaa && (
                       <div className="flex items-center gap-2 text-slate-300">
                         <MessageSquare className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                        <span>کانال/پیام‌رسان: {page.contactInfo.telegramOrEitaa}</span>
+                        <span>کانال/پیام‌رسان: {page.contactInfo?.telegramOrEitaa}</span>
                       </div>
                     )}
                   </div>
@@ -840,14 +840,14 @@ export default function PageLiveWebsiteView({
                 </div>
 
                 {/* Authorized sub-admins / board members */}
-                {page.authorizedUsers.length > 0 && (
+                {(page.authorizedUsers?.length || 0) > 0 && (
                   <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
                     <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                       <Users className="w-4 h-4 text-blue-600" />
                       کادر مدیریتی و اعضای مجاز صفحه
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {page.authorizedUsers.map(auth => (
+                      {(page.authorizedUsers || []).map(auth => (
                         <div
                           key={auth.id}
                           className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 flex items-center gap-3"
@@ -952,21 +952,21 @@ export default function PageLiveWebsiteView({
                         <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="font-semibold text-slate-800 dark:text-slate-200">آدرس: </span>
-                          {page.contactInfo.location || 'یزد، بلوار دانشجو، دانشگاه علم و هنر'}
+                          {page.contactInfo?.location || 'یزد، بلوار دانشجو، دانشگاه علم و هنر'}
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         <div>
                           <span className="font-semibold text-slate-800 dark:text-slate-200">تلفن مستقیم: </span>
-                          <span className="font-mono">{page.contactInfo.phone || '۰۳۵-۳۸۲۰۴۰۰۰'}</span>
+                          <span className="font-mono">{page.contactInfo?.phone || '۰۳۵-۳۸۲۰۴۰۰۰'}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <Mail className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         <div>
                           <span className="font-semibold text-slate-800 dark:text-slate-200">پست الکترونیک: </span>
-                          <span className="font-mono">{page.contactInfo.email}</span>
+                          <span className="font-mono">{page.contactInfo?.email}</span>
                         </div>
                       </div>
                     </div>

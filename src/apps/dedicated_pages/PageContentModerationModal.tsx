@@ -108,7 +108,7 @@ export default function PageContentModerationModal({
       categorySlug: newCategorySlug,
       categoryTitle,
       publishedDate: '۱۴۰۵/۰۳/۲۵',
-      author: newAuthor || page.owner.name,
+      author: newAuthor || page.owner?.name || '',
       status: 'published',
       views: 1,
       imageUrl: newImageUrl || undefined,
@@ -140,7 +140,7 @@ export default function PageContentModerationModal({
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-sm"
-              style={{ backgroundColor: page.layoutConfig.accentColor || '#0284c7' }}
+              style={{ backgroundColor: page.layoutConfig?.accentColor || '#0284c7' }}
             >
               {page.shortTitle ? page.shortTitle.slice(0, 2) : 'صف'}
             </div>
@@ -337,7 +337,7 @@ export default function PageContentModerationModal({
                         onChange={e => setNewCategorySlug(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                       >
-                        {page.taxonomies.map(t => (
+                        {(page.taxonomies || []).map(t => (
                           <option key={t.id} value={t.slug}>
                             {t.title}
                           </option>
