@@ -32,7 +32,8 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Check,
-  Loader2
+  Loader2,
+  LayoutTemplate
 } from 'lucide-react';
 import { DedicatedPage, PageType, PageContentItem, PageTypeDefinition, DEDICATED_PAGE_TYPES } from './types';
 import { fetchDedicatedPages, fetchPageContents, createDedicatedPage, updateDedicatedPage, deleteDedicatedPage, publishDedicatedPage, unpublishDedicatedPage } from './api';
@@ -40,6 +41,7 @@ import PageWizardModal from './PageWizardModal';
 import PageLiveWebsiteView from './PageLiveWebsiteView';
 import PageContentModerationModal from './PageContentModerationModal';
 import IsolatedManagerPortal from './IsolatedManagerPortal';
+import LinkLayoutDialog from './LinkLayoutDialog';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import Pagination from '@/src/shared-components/Pagination';
 import { getDedicatedPagePublicUrl } from './utils';
@@ -75,6 +77,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   const [isolatedViewPage, setIsolatedViewPage] = useState<DedicatedPage | null>(null);
   const [pageToDelete, setPageToDelete] = useState<DedicatedPage | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [layoutDialogType, setLayoutDialogType] = useState<PageType | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -397,6 +400,44 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
             <Users className="w-6 h-6" />
           </div>
+        </div>
+      </div>
+
+      {/* Page-Type ↔ Page Builder Layout Connections */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-6 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+            <LayoutTemplate className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">اتصال لایوت Page Builder به انواع صفحات</h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              برای هر «نوع صفحه» یک لایوت مشترک انتخاب کنید — همهٔ صفحات از آن نوع همین لایوت را نمایش می‌دهند.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {DEDICATED_PAGE_TYPES.filter(type => !type.isDisabled).map(type => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => setLayoutDialogType(type.id as PageType)}
+              className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 flex items-center justify-between gap-2 transition-colors text-right"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                {type.id === 'scientific_association' && <GraduationCap className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'cultural_club' && <Palette className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'student_union' && <Users className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'student_journal' && <BookOpen className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'faculty_member' && <UserCheck className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'interactive_survey' && <MessageSquare className="w-4 h-4 text-slate-500 shrink-0" />}
+                {type.id === 'special_event' && <Sparkles className="w-4 h-4 text-slate-500 shrink-0" />}
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{type.title}</span>
+              </div>
+              <span className="shrink-0 text-[11px] font-semibold text-teal-600 dark:text-teal-400">مدیریت اتصال</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -904,7 +945,6 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
             }}
             onSavePage={handleSavePage}
             initialPage={editingPage}
-            onOpenTab={onOpenTab}
           />
         )}
       </AnimatePresence>
@@ -946,6 +986,19 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           />
         )}
       </AnimatePresence>
+
+      {/* Page-Type ↔ Page Builder Layout Link Dialog */}
+      {layoutDialogType && (
+        <LinkLayoutDialog
+          pageType={layoutDialogType}
+          pageTypeLabel={pageTypeRegistry.find(t => t.id === layoutDialogType)?.title || layoutDialogType}
+          onClose={() => setLayoutDialogType(null)}
+          onOpenBuilder={(smartPageId) => {
+            setLayoutDialogType(null);
+            onOpenTab?.('page-builder', 'صفحه‌ساز هوشمند', 'LayoutTemplate', false, { initialPageId: smartPageId });
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

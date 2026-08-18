@@ -32,8 +32,7 @@ import {
   Key,
   CheckCircle2,
   Image as ImageIcon,
-  Trash2,
-  LayoutTemplate
+  Trash2
 } from 'lucide-react';
 import MediaManager from '@/src/shared-components/MediaManager';
 import {
@@ -49,14 +48,12 @@ import {
 } from './types';
 import { fetchProfessors } from './api';
 import { getDedicatedPagePublicUrl } from './utils';
-import LinkLayoutDialog from './LinkLayoutDialog';
 
 interface PageWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSavePage: (page: DedicatedPage) => void;
   initialPage?: DedicatedPage | null;
-  onOpenTab?: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
 }
 
 const WIZARD_STEPS = [
@@ -70,12 +67,10 @@ export default function PageWizardModal({
   isOpen,
   onClose,
   onSavePage,
-  initialPage,
-  onOpenTab
+  initialPage
 }: PageWizardModalProps) {
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
-  const [showLayoutDialog, setShowLayoutDialog] = useState(false);
   const [universityProfessors, setUniversityProfessors] = useState<ProfessorProfileData[]>([]);
 
   // Load data from API on mount
@@ -844,28 +839,6 @@ export default function PageWizardModal({
                   </div>
                 </div>
               </div>
-
-              {/* Page Builder Layout Link — لایوت مشترک برای همهٔ صفحات از این نوع (pageType) */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                    <LayoutTemplate className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">لایوت بخش «درباره» با Page Builder</h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      اتصال به یک صفحهٔ Page Builder — لایوت مشترک همهٔ صفحات از نوع «{DEDICATED_PAGE_TYPES.find(t => t.id === pageType)?.title || pageType}»
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowLayoutDialog(true)}
-                  className="shrink-0 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors"
-                >
-                  مدیریت اتصال
-                </button>
-              </div>
             </div>
           )}
 
@@ -1369,20 +1342,6 @@ export default function PageWizardModal({
           setMediaManagerTarget(null);
         }}
       />
-
-      {/* اتصال به Page Builder — لایوت مشترک برای نوع صفحهٔ انتخاب‌شده */}
-      {showLayoutDialog && (
-        <LinkLayoutDialog
-          pageType={pageType}
-          pageTypeLabel={DEDICATED_PAGE_TYPES.find(t => t.id === pageType)?.title || pageType}
-          onClose={() => setShowLayoutDialog(false)}
-          onOpenBuilder={(smartPageId) => {
-            setShowLayoutDialog(false);
-            onOpenTab?.('page-builder', 'صفحه‌ساز هوشمند', 'LayoutTemplate', false, { initialPageId: smartPageId });
-            onClose();
-          }}
-        />
-      )}
     </div>
   );
 }
