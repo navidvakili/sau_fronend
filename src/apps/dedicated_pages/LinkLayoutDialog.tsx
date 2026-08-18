@@ -6,12 +6,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, LayoutTemplate, Search, Plus, Link2, Unlink, ExternalLink, Loader2, AlertCircle, Info } from 'lucide-react';
-import { PageType } from './types';
+import { PageType, DEDICATED_PAGE_TYPES } from './types';
 import {
   fetchSmartPages,
   createSmartPage,
-  updateSmartPage,
   getSmartPageForDedicatedPageType,
+  linkDedicatedPageType,
+  unlinkDedicatedPageType,
   SmartPageDto
 } from '../page-builder/api';
 import { INITIAL_SMART_PAGE } from '../page-builder/mockData';
@@ -43,8 +44,8 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
         fetchSmartPages({ per_page: 100 })
       ]);
       setLinked(existing);
-      // فقط صفحاتی که به هیچ نوع صفحهٔ اختصاصی دیگری متصل نیستند قابل انتخابند
-      setCandidates(list.data.filter(p => !p.dedicated_page_type));
+      // همهٔ صفحات قابل انتخاب‌اند — یک صفحه می‌تواند هم‌زمان لایوتِ چند نوع مختلف باشد
+      setCandidates(list.data);
     } catch (e) {
       console.error('Error loading layout link data:', e);
       setError('خطا در بارگذاری اطلاعات. لطفاً دوباره تلاش کنید.');
@@ -61,7 +62,7 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
   const handleLink = async (smartPageId: number) => {
     setLinkingId(smartPageId);
     try {
-      await updateSmartPage(smartPageId, { dedicated_page_type: pageType });
+      await linkDedicatedPageType(pageType, smartPageId);
       await load();
     } catch (e) {
       console.error('Error linking layout page:', e);
@@ -75,7 +76,7 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
     if (!linked) return;
     setIsUnlinking(true);
     try {
-      await updateSmartPage(linked.id, { dedicated_page_type: null });
+      await unlinkDedicatedPageType(pageType);
       await load();
     } catch (e) {
       console.error('Error unlinking layout page:', e);
@@ -92,9 +93,9 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
         title: `لایوت — ${pageTypeLabel}`,
         slug: `layout-type-${pageType.replace(/_/g, '-')}-${Date.now()}`,
         status: 'draft',
-        schema: { sections: [], globalStyles: INITIAL_SMART_PAGE.globalStyles },
-        dedicated_page_type: pageType
+        schema: { sections: [], globalStyles: INITIAL_SMART_PAGE.globalStyles }
       });
+      await linkDedicatedPageType(pageType, created.data.id!);
       onOpenBuilder(created.data.id!);
     } catch (e) {
       console.error('Error creating layout page:', e);
@@ -138,7 +139,7 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
         <div className="px-4 pt-3">
           <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-300">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            <span>این لایوت برای همهٔ صفحات اختصاصی از نوع «{pageTypeLabel}» مشترک است — نه فقط این یک صفحه.</span>
+            <span>این لایوت برای همهٔ صفحات اختصاصی از نوع «{pageTypeLabel}» مشترک است — نه فقط این یک صفحه. همچنین می‌توانید همین صفحهٔ Page Builder را برای انواع دیگر هم انتخاب کنید.</span>
           </div>
         </div>
 
@@ -234,7 +235,9 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
                     {filteredCandidates.length === 0 ? (
                       <p className="text-xs text-slate-400 text-center py-4">صفحه‌ای یافت نشد.</p>
                     ) : (
-                      filteredCandidates.map(c => (
+                      filteredCandidates.map(c => {
+                        const otherTypes = (c.dedicated_page_types || []).filter(t => t !== pageType);
+                        return (
                         <div
                           key={c.id}
                           className="p-3 rounded-xl border border-gray-200 dark:border-slate-800 flex items-center justify-between gap-2"
@@ -242,6 +245,11 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
                           <div className="min-w-0">
                             <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{c.title}</div>
                             <div className="text-[10px] font-mono text-slate-400 dir-ltr truncate">{c.slug}</div>
+                            {otherTypes.length > 0 && (
+                              <div className="text-[10px] text-teal-600 dark:text-teal-400 mt-0.5 truncate">
+                                هم‌اکنون لایوت: {otherTypes.map(t => DEDICATED_PAGE_TYPES.find(dt => dt.id === t)?.title || t).join('، ')}
+                              </div>
+                            )}
                           </div>
                           <button
                             type="button"
@@ -253,7 +261,8 @@ export default function LinkLayoutDialog({ pageType, pageTypeLabel, onClose, onO
                             اتصال
                           </button>
                         </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </>

@@ -182,11 +182,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       setSelectedColumnId(merged.sections[0]?.columns[0]?.id ?? null);
       setSelectedWidgetId(merged.sections[0]?.columns[0]?.widgets[0]?.id ?? null);
 
-      // اگر این صفحه لایوت مشترک یک نوع صفحهٔ اختصاصی است، یک نمونه از آن نوع را
-      // برای پیش‌نمایش حل توکن‌های {{key}} در بوم/پیش‌نمایش بارگذاری کن (چون این
-      // لایوت به یک رکورد مشخص متصل نیست، بلکه به همهٔ صفحات از آن نوع)
-      if (dto.dedicated_page_type) {
-        const sample = await fetchDedicatedPages({ pageType: dto.dedicated_page_type as any, perPage: 1 });
+      // اگر این صفحه لایوت مشترک یک یا چند نوع صفحهٔ اختصاصی است، یک نمونه از
+      // اولین نوع را برای پیش‌نمایش حل توکن‌های {{key}} در پیش‌نمایش بارگذاری کن
+      // (چون این لایوت به یک رکورد مشخص متصل نیست، بلکه به همهٔ صفحات از آن نوع/انواع)
+      const firstType = dto.dedicated_page_types?.[0];
+      if (firstType) {
+        const sample = await fetchDedicatedPages({ pageType: firstType as any, perPage: 1 });
         setDedicatedPageVariables(sample.data[0] ? getPageVariableValues(sample.data[0]) : undefined);
       } else {
         setDedicatedPageVariables(undefined);

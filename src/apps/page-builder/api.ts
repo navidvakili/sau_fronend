@@ -22,8 +22,8 @@ export interface SmartPageDto {
   parent_id?: number | null;
   parent_slug?: string | null;
   sort_order?: number;
-  /** نوع صفحهٔ اختصاصی‌ای که این صفحه به‌عنوان لایوت مشترک آن متصل است (اگر باشد) — نه یک رکورد مشخص */
-  dedicated_page_type?: string | null;
+  /** انواع صفحهٔ اختصاصی‌ای که این صفحه به‌عنوان لایوت مشترکشان متصل است (یک صفحه می‌تواند هم‌زمان لایوتِ چند نوع باشد) */
+  dedicated_page_types?: string[];
   status: 'published' | 'draft';
   seo?: {
     title?: string;
@@ -83,6 +83,19 @@ export const getSmartPageForDedicatedPageType = async (
   return res.data;
 };
 
+/** اتصال یک صفحهٔ Page Builder به‌عنوان لایوت مشترک یک نوع صفحهٔ اختصاصی — جایگزین اتصال قبلی همان نوع می‌شود، اما همان صفحه می‌تواند هم‌زمان لایوت انواع دیگر هم باشد */
+export const linkDedicatedPageType = async (
+  pageType: string,
+  smartPageId: number
+): Promise<{ message: string }> => {
+  return API('smart-pages/dedicated-page-type-links', { page_type: pageType, smart_page_id: smartPageId }, 'POST');
+};
+
+/** قطع اتصال لایوتِ یک نوع صفحهٔ اختصاصی (خودِ صفحهٔ Page Builder حذف نمی‌شود) */
+export const unlinkDedicatedPageType = async (pageType: string): Promise<{ message: string }> => {
+  return API(`smart-pages/dedicated-page-type-links/${pageType}`, {}, 'DELETE');
+};
+
 /** Admin list of CHILD pages of a page (lightweight rows for the canvas widget) */
 export const fetchSmartPageChildren = async (parentId: number): Promise<SmartPageDto[]> => {
   return API<SmartPageDto[]>(`smart-pages/${parentId}/children`);
@@ -104,7 +117,6 @@ export const createSmartPage = async (data: {
   slug: string;
   parent_id?: number | null;
   sort_order?: number;
-  dedicated_page_type?: string | null;
   status?: 'published' | 'draft';
   seo?: SmartPageDto['seo'];
   schema: Record<string, unknown>;
@@ -121,7 +133,6 @@ export const updateSmartPage = async (
     slug: string;
     parent_id?: number | null;
     sort_order?: number;
-    dedicated_page_type?: string | null;
     status: 'published' | 'draft';
     seo: SmartPageDto['seo'];
     schema: Record<string, unknown>;
