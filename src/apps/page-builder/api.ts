@@ -22,8 +22,8 @@ export interface SmartPageDto {
   parent_id?: number | null;
   parent_slug?: string | null;
   sort_order?: number;
-  /** صفحهٔ اختصاصی‌ای که این صفحه به‌عنوان لایوت آن متصل است (اگر باشد) */
-  dedicated_page_id?: number | null;
+  /** نوع صفحهٔ اختصاصی‌ای که این صفحه به‌عنوان لایوت مشترک آن متصل است (اگر باشد) — نه یک رکورد مشخص */
+  dedicated_page_type?: string | null;
   status: 'published' | 'draft';
   seo?: {
     title?: string;
@@ -73,12 +73,12 @@ export const fetchSmartPage = async (id: number): Promise<SmartPageDto> => {
   return res.data;
 };
 
-/** لایوت (SmartPage) متصل به یک صفحهٔ اختصاصی، اگر وجود داشته باشد */
-export const getSmartPageForDedicatedPage = async (
-  dedicatedPageId: string | number
+/** لایوت مشترک (SmartPage) متصل به یک نوع صفحهٔ اختصاصی، اگر وجود داشته باشد */
+export const getSmartPageForDedicatedPageType = async (
+  pageType: string
 ): Promise<{ id: number; slug: string; status: 'published' | 'draft' } | null> => {
   const res = await API<{ data: { id: number; slug: string; status: 'published' | 'draft' } | null }>(
-    `smart-pages/for-dedicated-page/${dedicatedPageId}`
+    `smart-pages/for-dedicated-page-type/${pageType}`
   );
   return res.data;
 };
@@ -104,7 +104,7 @@ export const createSmartPage = async (data: {
   slug: string;
   parent_id?: number | null;
   sort_order?: number;
-  dedicated_page_id?: number | null;
+  dedicated_page_type?: string | null;
   status?: 'published' | 'draft';
   seo?: SmartPageDto['seo'];
   schema: Record<string, unknown>;
@@ -121,6 +121,7 @@ export const updateSmartPage = async (
     slug: string;
     parent_id?: number | null;
     sort_order?: number;
+    dedicated_page_type?: string | null;
     status: 'published' | 'draft';
     seo: SmartPageDto['seo'];
     schema: Record<string, unknown>;
