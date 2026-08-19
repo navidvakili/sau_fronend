@@ -78,7 +78,11 @@ import {
   Megaphone,
   Plus,
   Loader2,
-  Building2
+  Building2,
+  Maximize2,
+  Minimize2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import {
   EitaaIcon,
@@ -2041,6 +2045,8 @@ const DedicatedPageContentWidget: React.FC<{
 }> = ({ binding, containerStyle, contentType, dedicatedPageId }) => {
   const sortDir: 'asc' | 'desc' = binding.sortBy === 'date_asc' ? 'asc' : 'desc';
   const [modalItem, setModalItem] = useState<DedicatedPageContentItem | null>(null);
+  const [isModalFullscreen, setIsModalFullscreen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
     () =>
@@ -2066,7 +2072,10 @@ const DedicatedPageContentWidget: React.FC<{
     <button
       key={item.id}
       type="button"
-      onClick={() => setModalItem(item)}
+      onClick={() => {
+        setModalItem(item);
+        setIsModalFullscreen(false);
+      }}
       className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-violet-500/40 transition-all overflow-hidden shadow-xs flex flex-col text-right cursor-pointer w-full"
     >
       {item.image_url && (
@@ -2116,23 +2125,37 @@ const DedicatedPageContentWidget: React.FC<{
           onClick={() => setModalItem(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto relative"
+            className={`bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto relative transition-all ${
+              isModalFullscreen
+                ? 'w-[calc(100vw-2rem)] h-[calc(100vh-2rem)] max-w-none rounded-2xl'
+                : 'max-w-4xl w-full max-h-[85vh] rounded-2xl'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {modalItem.image_url && (
-              <div className="h-64 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div className={`bg-slate-100 dark:bg-slate-800 overflow-hidden ${isModalFullscreen ? 'h-[40vh]' : 'h-64'}`}>
                 <img src={modalItem.image_url} alt={modalItem.title} className="w-full h-full object-contain" />
               </div>
             )}
             <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-5 py-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-black text-slate-900 dark:text-white">{modalItem.title}</h3>
-              <button
-                type="button"
-                onClick={() => setModalItem(null)}
-                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsModalFullscreen((v) => !v)}
+                  title={isModalFullscreen ? 'خروج از حالت تمام‌صفحه' : 'نمایش تمام‌صفحه'}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-violet-500 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  {isModalFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalItem(null)}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="p-5 space-y-3">
               {modalItem.published_date && (
@@ -2218,9 +2241,14 @@ const DedicatedPageContentWidget: React.FC<{
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {modalItem.gallery_images.map((url, idx) => (
-                      <div key={idx} className="h-20 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setLightboxIndex(idx)}
+                        className="h-20 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 cursor-pointer hover:opacity-80 transition-opacity"
+                      >
                         <img src={url} alt={`${modalItem.title} ${idx + 1}`} className="w-full h-full object-contain" />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -2241,6 +2269,58 @@ const DedicatedPageContentWidget: React.FC<{
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox — نمایش تمام‌صفحهٔ تصاویر گزارش تصویری */}
+      {modalItem && lightboxIndex !== null && modalItem.gallery_images && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm select-none"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 left-4 p-2 rounded-xl bg-white/10 text-white hover:bg-rose-500 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <span className="absolute top-4 right-4 text-xs font-bold text-white/70 bg-white/10 px-3 py-1.5 rounded-full">
+            {lightboxIndex + 1} از {modalItem.gallery_images.length}
+          </span>
+
+          {modalItem.gallery_images.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => (i! - 1 + modalItem.gallery_images!.length) % modalItem.gallery_images!.length);
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-10"
+            >
+              <ChevronRight className="w-6 h-6 text-white" />
+            </button>
+          )}
+
+          <img
+            src={modalItem.gallery_images[lightboxIndex]}
+            alt={`${modalItem.title} ${lightboxIndex + 1}`}
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {modalItem.gallery_images.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => (i! + 1) % modalItem.gallery_images!.length);
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-10"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+          )}
         </div>
       )}
     </>

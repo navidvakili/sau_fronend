@@ -2245,7 +2245,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                   </div>
 
-                  {selectedWidget.type === 'dp-members' && (selectedWidget.settings.binding.displayMode || 'grid') === 'list' && (
+                  {selectedWidget.type === 'dp-members' && (
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">موقعیت تصویر</label>
                       <select
@@ -2256,6 +2256,9 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         <option value="right">تصویر راست، جزئیات چپ</option>
                         <option value="left">تصویر چپ، جزئیات راست</option>
                       </select>
+                      {(selectedWidget.settings.binding.displayMode || 'grid') === 'grid' && (
+                        <p className="text-[10px] text-slate-400">این تنظیم فقط در حالت چیدمان «لیست عمودی» اثر دارد.</p>
+                      )}
                     </div>
                   )}
 
