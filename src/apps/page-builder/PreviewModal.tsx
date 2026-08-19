@@ -14,12 +14,15 @@ interface PreviewModalProps {
   onClose: () => void;
   /** مقدار متغیرهای صفحهٔ اختصاصی — وقتی این صفحه به یک صفحهٔ اختصاصی متصل است */
   variables?: Record<string, string>;
+  /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ در حال پیش‌نمایش — برای بلوک‌های dp-* */
+  dedicatedPageId?: number;
 }
 
 export const PreviewModal: React.FC<PreviewModalProps> = ({
   pageSchema,
   onClose,
-  variables
+  variables,
+  dedicatedPageId
 }) => {
   const [deviceSize, setDeviceSize] = useState<Breakpoint>('desktop');
 
@@ -116,6 +119,7 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
                       currentUserRole="all"
                       isEditorPreview={false}
                       variables={variables}
+                      dedicatedPageId={dedicatedPageId}
                     />
                   );
                 })}

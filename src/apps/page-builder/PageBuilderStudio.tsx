@@ -83,6 +83,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   // متغیرهای صفحهٔ اختصاصی‌ای که صفحهٔ لایوت فعلی به آن متصل است (اگر باشد) — برای
   // حل توکن‌های {{key}} در ویجت‌های عنوان/متن، هم در بوم و هم در پیش‌نمایش
   const [dedicatedPageVariables, setDedicatedPageVariables] = useState<Record<string, string> | undefined>(undefined);
+  /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ استفاده‌شده برای پیش‌نمایش بلوک‌های dp-* — وقتی این لایوت به یک نوع صفحهٔ اختصاصی متصل است */
+  const [previewDedicatedPageId, setPreviewDedicatedPageId] = useState<number | undefined>(undefined);
   const [isLoadingPages, setIsLoadingPages] = useState(true);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
@@ -189,8 +191,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       if (firstType) {
         const sample = await fetchDedicatedPages({ pageType: firstType as any, perPage: 1 });
         setDedicatedPageVariables(sample.data[0] ? getPageVariableValues(sample.data[0]) : undefined);
+        setPreviewDedicatedPageId(sample.data[0]?.id ? Number(sample.data[0].id) : undefined);
       } else {
         setDedicatedPageVariables(undefined);
+        setPreviewDedicatedPageId(undefined);
       }
     } catch {
       // ignore — keep current schema
@@ -730,6 +734,27 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'dp-news') {
+      title = 'خبرهای صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-announcements') {
+      title = 'اطلاعیه‌های صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-journal-issues') {
+      title = 'نسخه‌های نشریه';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-articles') {
+      title = 'فهرست مقالات صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-gallery') {
+      title = 'گالری تصاویر صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-events') {
+      title = 'رویدادهای صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-members') {
+      title = 'اعضای شورا و کادر اجرایی';
+      bindingDataSource = 'dedicated-page';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -900,6 +925,27 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'dp-news') {
+      title = 'خبرهای صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-announcements') {
+      title = 'اطلاعیه‌های صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-journal-issues') {
+      title = 'نسخه‌های نشریه';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-articles') {
+      title = 'فهرست مقالات صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-gallery') {
+      title = 'گالری تصاویر صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-events') {
+      title = 'رویدادهای صفحهٔ اختصاصی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-members') {
+      title = 'اعضای شورا و کادر اجرایی';
+      bindingDataSource = 'dedicated-page';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -1706,6 +1752,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDeleteWidget={handleDeleteWidget}
           onDeleteSection={handleDeleteSection}
           onDuplicateWidget={handleDuplicateWidget}
+          dedicatedPageId={previewDedicatedPageId}
         />
       </div>
       </div>
@@ -1754,6 +1801,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           pageSchema={pageSchema}
           onClose={() => setShowPreviewModal(false)}
           variables={dedicatedPageVariables}
+          dedicatedPageId={previewDedicatedPageId}
         />
       )}
 

@@ -54,7 +54,17 @@ export type SmartWidgetType =
   | 'staff-directory'
   | 'file-manager';
 
-export type WidgetType = StaticWidgetType | SmartWidgetType;
+/** بلوک‌های متصل به یک صفحهٔ اختصاصی مشخص (انجمن علمی/کانون/تشکل/نشریه) — انتخاب صفحه در binding.dedicatedPageId */
+export type DedicatedPageWidgetType =
+  | 'dp-news'
+  | 'dp-announcements'
+  | 'dp-journal-issues'
+  | 'dp-articles'
+  | 'dp-gallery'
+  | 'dp-events'
+  | 'dp-members';
+
+export type WidgetType = StaticWidgetType | SmartWidgetType | DedicatedPageWidgetType;
 
 /** برچسب فارسی نوع ویجت — برای نمایش روی بوم و پنل تنظیمات تا نوع هر ویجت قابل‌تشخیص باشد */
 export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
@@ -92,7 +102,15 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'image-gallery': 'آلبوم گالری',
   'achievements-timeline': 'تایم‌لاین افتخارات',
   'staff-directory': 'کادر علمی و اساتید',
-  'file-manager': 'مخزن اسناد'
+  'file-manager': 'مخزن اسناد',
+  // بلوک‌های صفحات اختصاصی
+  'dp-news': 'خبرهای صفحهٔ اختصاصی',
+  'dp-announcements': 'اطلاعیه‌های صفحهٔ اختصاصی',
+  'dp-journal-issues': 'نسخه‌های نشریه',
+  'dp-articles': 'فهرست مقالات صفحهٔ اختصاصی',
+  'dp-gallery': 'گالری تصاویر صفحهٔ اختصاصی',
+  'dp-events': 'رویدادهای صفحهٔ اختصاصی',
+  'dp-members': 'اعضای شورا و کادر اجرایی'
 };
 
 /** برچسب فارسی نوع ویجت با فالبک به خودِ type */
@@ -151,7 +169,7 @@ export interface WidgetStyle {
 }
 
 export interface WidgetDataBinding {
-  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'none';
+  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'dedicated-page' | 'none';
   categoryFilter?: string;
   priorityFilter?: 'all' | 'urgent' | 'standard';
   departmentFilter?: string;

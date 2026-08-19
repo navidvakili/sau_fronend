@@ -35,7 +35,11 @@ import {
   PanelTop,
   PanelBottom,
   MessageSquareQuote,
-  FolderTree
+  FolderTree,
+  Building2,
+  CalendarDays,
+  UsersRound,
+  BookOpen
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -55,12 +59,12 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
   targetInsertIndex,
   targetColumnId
 }) => {
-  const [activeCategory, setActiveCategory] = useState<'all' | 'widgets' | 'smart' | 'sections'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'widgets' | 'smart' | 'dedicated-page' | 'sections'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
 
-  const widgetItems: { type: WidgetType; category: 'basic' | 'smart'; name: string; desc: string; icon: any; badge?: string }[] = [
+  const widgetItems: { type: WidgetType; category: 'basic' | 'smart' | 'dedicated-page'; name: string; desc: string; icon: any; badge?: string }[] = [
     { type: 'heading', category: 'basic', name: 'عنوان تیتر (Heading)', desc: 'تیتر اصلی با تایپوگرافی برجسته و سایزهای متنوع', icon: Type },
     { type: 'text', category: 'basic', name: 'بلوک متنی (Text Block)', desc: 'پاراگراف‌ها و توضیحات متنی غنی', icon: Layout },
     { type: 'image', category: 'basic', name: 'تصویر (Image Banner)', desc: 'تصویر تک یا بنر با نسبت تصویر دلخواه', icon: ImageIcon },
@@ -96,7 +100,17 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'staff-directory', category: 'smart', name: 'کادر علمی و اساتید', desc: 'نمایش کارت مشخصات اساتید و رزومه', icon: Users, badge: 'ماژول پرسنلی' },
     { type: 'achievements-timeline', category: 'smart', name: 'تایم‌لاین افتخارات', desc: 'نمایش مدال‌ها، جوایز و دستاوردهای ملی', icon: Award, badge: 'ماژول افتخارات' },
     { type: 'image-gallery', category: 'smart', name: 'آلبوم و گالری تصاویری', desc: 'گالری شبکه‌ای رسانه‌ها و رویدادها', icon: ImageIcon, badge: 'گالری' },
-    { type: 'file-manager', category: 'smart', name: 'مخزن اسناد و فرم‌ها', desc: 'لیست دانلود فایل‌ها و آیین‌نامه‌ها', icon: FileText, badge: 'مدیریت فایل' }
+    { type: 'file-manager', category: 'smart', name: 'مخزن اسناد و فرم‌ها', desc: 'لیست دانلود فایل‌ها و آیین‌نامه‌ها', icon: FileText, badge: 'مدیریت فایل' },
+
+    // Dedicated Pages blocks — این بلوک‌ها همیشه دادهٔ همان صفحهٔ اختصاصی‌ای را نمایش می‌دهند
+    // که این لایوت به آن متصل است (انجمن علمی/کانون/تشکل/نشریه) — بدون نیاز به انتخاب دستی صفحه
+    { type: 'dp-news', category: 'dedicated-page', name: 'خبرهای صفحهٔ اختصاصی', desc: 'خوراک اخبار همین صفحهٔ اختصاصی', icon: Newspaper, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-announcements', category: 'dedicated-page', name: 'اطلاعیه‌های صفحهٔ اختصاصی', desc: 'اطلاعیه‌های رسمی همین صفحهٔ اختصاصی', icon: Bell, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-journal-issues', category: 'dedicated-page', name: 'نسخه‌های نشریه', desc: 'فهرست شماره‌های منتشرشدهٔ همین نشریهٔ دانشجویی', icon: BookOpen, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-articles', category: 'dedicated-page', name: 'فهرست مقالات', desc: 'مقالات منتشرشدهٔ همین صفحهٔ اختصاصی', icon: FileText, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-gallery', category: 'dedicated-page', name: 'گالری تصاویر صفحهٔ اختصاصی', desc: 'گالری تصاویر همین صفحهٔ اختصاصی به‌همراه دسته‌بندی', icon: Images, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-events', category: 'dedicated-page', name: 'رویدادهای صفحهٔ اختصاصی', desc: 'فهرست رویدادهای همین صفحهٔ اختصاصی', icon: CalendarDays, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-members', category: 'dedicated-page', name: 'اعضای شورا و کادر اجرایی', desc: 'اعضای شورای مرکزی/کادر اجرایی همین صفحهٔ اختصاصی', icon: UsersRound, badge: 'صفحهٔ اختصاصی' }
   ];
 
   const sectionPresets: { preset: '1col' | '2col' | '3col' | '4col' | '7-5' | '8-4'; name: string; desc: string; columns: string }[] = [
@@ -113,6 +127,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     if (!matchesSearch) return false;
     if (activeCategory === 'widgets') return w.category === 'basic';
     if (activeCategory === 'smart') return w.category === 'smart';
+    if (activeCategory === 'dedicated-page') return w.category === 'dedicated-page';
     if (activeCategory === 'sections') return false;
     return true;
   });
@@ -191,6 +206,16 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
               }`}
             >
               ماژول‌های هوشمند
+            </button>
+            <button
+              onClick={() => setActiveCategory('dedicated-page')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
+                activeCategory === 'dedicated-page'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              بلوک‌های صفحات اختصاصی
             </button>
             <button
               onClick={() => setActiveCategory('sections')}
@@ -316,6 +341,59 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <span className="text-xs font-black text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 truncate">
+                            {item.name}
+                          </span>
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-bold border border-teal-500/20 shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2.5: Dedicated Pages Blocks */}
+          {(activeCategory === 'all' || activeCategory === 'dedicated-page') && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-violet-500" />
+                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">
+                    بلوک‌های صفحات اختصاصی (Dedicated Pages Blocks)
+                  </h4>
+                </div>
+                <span className="text-[10px] text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded-md font-bold border border-violet-500/20">
+                  اتصال خودکار به یک صفحهٔ اختصاصی
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {filteredWidgets.filter(w => w.category === 'dedicated-page').map((item) => {
+                  const IconComp = item.icon;
+                  return (
+                    <button
+                      key={item.type}
+                      onClick={() => {
+                        onSelectWidget(item.type);
+                        onClose();
+                      }}
+                      className="p-3.5 rounded-2xl bg-gradient-to-br from-violet-500/5 via-teal-500/5 to-white dark:to-slate-900 border border-violet-500/20 dark:border-violet-500/30 hover:border-violet-500 hover:shadow-lg transition-all text-right flex items-start gap-3 group cursor-pointer"
+                    >
+                      <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 group-hover:bg-violet-500 group-hover:text-white transition-colors shrink-0 border border-violet-500/20">
+                        <IconComp className="w-5 h-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-xs font-black text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 truncate">
                             {item.name}
                           </span>
                           {item.badge && (

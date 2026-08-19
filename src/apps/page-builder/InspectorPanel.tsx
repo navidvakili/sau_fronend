@@ -14,7 +14,9 @@ import {
 import {
   fetchDataSourceNewsCategories,
   fetchDataSourceAnnouncementGroups,
-  fetchDataSourceMediaFolders
+  fetchDataSourceMediaFolders,
+  fetchDedicatedPageTaxonomiesForWidget,
+  type DedicatedPageTaxonomyOption
 } from './api';
 import GradientPicker from '../slider-studio/components/GradientPicker';
 import MediaManager from '@/src/shared-components/MediaManager';
@@ -142,6 +144,8 @@ interface InspectorPanelProps {
   onDeleteWidget: (widgetId: string) => void;
   onDeleteSection: (sectionId: string) => void;
   onDuplicateWidget: (widget: WidgetInstance) => void;
+  /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ متصل به این لایوت — برای دسته‌بندی‌های بلوک گالری صفحات اختصاصی */
+  dedicatedPageId?: number;
 }
 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
@@ -155,7 +159,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onUpdateColumnWidth,
   onDeleteWidget,
   onDeleteSection,
-  onDuplicateWidget
+  onDuplicateWidget,
+  dedicatedPageId
 }) => {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
   const [colBp, setColBp] = useState<Breakpoint>('desktop');
@@ -229,6 +234,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const [dataSourceError, setDataSourceError] = useState<string | null>(null);
 
   const activeDataSource = selectedWidget?.settings.binding.dataSource;
+  const isDedicatedPageWidget = !!selectedWidget && selectedWidget.type.startsWith('dp-');
 
   useEffect(() => {
     let cancelled = false;
@@ -250,6 +256,22 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
     return () => { cancelled = true; };
   }, [activeDataSource]);
+
+  // ── بلوک گالری صفحهٔ اختصاصی: دسته‌بندی‌های صفحهٔ اختصاصیِ متصل به این لایوت ──
+  // (بلوک‌های dp-* دیگر صفحه را دستی انتخاب نمی‌کنند — همان صفحه‌ای که این لایوت به آن متصل است)
+  const [dedicatedPageTaxonomies, setDedicatedPageTaxonomies] = useState<DedicatedPageTaxonomyOption[]>([]);
+
+  useEffect(() => {
+    if (selectedWidget?.type !== 'dp-gallery' || !dedicatedPageId) {
+      setDedicatedPageTaxonomies([]);
+      return;
+    }
+    let cancelled = false;
+    fetchDedicatedPageTaxonomiesForWidget(dedicatedPageId)
+      .then((taxs) => { if (!cancelled) setDedicatedPageTaxonomies(taxs); })
+      .catch(() => { if (!cancelled) setDedicatedPageTaxonomies([]); });
+    return () => { cancelled = true; };
+  }, [selectedWidget?.type, dedicatedPageId]);
 
   if (!selectedWidget && !selectedSection) {
     return (
@@ -1858,7 +1880,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
-              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS */}
+              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS — بلوک‌های dp-* از بخش جداگانهٔ زیر استفاده می‌کنند */}
+              {!isDedicatedPageWidget && (
               <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
                   <Database className="w-3.5 h-3.5" />
@@ -2154,6 +2177,64 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   </>
                 )}
               </div>
+              )}
+
+              {/* بلوک‌های صفحات اختصاصی — همیشه دادهٔ همان صفحهٔ اختصاصیِ متصل به این لایوت را نمایش می‌دهند؛ فقط نحوهٔ نمایش قابل تنظیم است */}
+              {isDedicatedPageWidget && (
+                <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-violet-600 dark:text-violet-400">
+                    <Database className="w-3.5 h-3.5" />
+                    <span>تنظیمات نمایش (متصل به صفحهٔ اختصاصیِ این لایوت)</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حداکثر تعداد آیتم‌ها</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={selectedWidget.settings.binding.limit || 6}
+                      onChange={(e) => handleBindingChange('limit', parseInt(e.target.value) || 6)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت چیدمان</label>
+                    <select
+                      value={selectedWidget.settings.binding.displayMode || 'grid'}
+                      onChange={(e) => handleBindingChange('displayMode', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+                    >
+                      <option value="grid">شبکه‌ای (Grid)</option>
+                      <option value="list">لیست عمودی (List)</option>
+                    </select>
+                  </div>
+
+                  {selectedWidget.type === 'dp-gallery' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">دسته‌بندی گالری (اختیاری)</label>
+                      <select
+                        value={selectedWidget.settings.binding.categoryFilter || 'all'}
+                        onChange={(e) => handleBindingChange('categoryFilter', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+                      >
+                        <option value="all">همه دسته‌بندی‌ها</option>
+                        {dedicatedPageTaxonomies.map((t) => (
+                          <option key={t.id} value={t.slug}>
+                            {t.title}
+                          </option>
+                        ))}
+                      </select>
+                      {!dedicatedPageId && (
+                        <p className="text-[10px] text-slate-400">
+                          این لایوت هنوز به یک نوع صفحهٔ اختصاصی متصل نشده — دسته‌بندی‌ها پس از اتصال لایوت نمایش داده می‌شوند.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

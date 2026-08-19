@@ -12,9 +12,11 @@ import {
   fetchDataSourceMedia,
   fetchDataSourceAchievements,
   fetchDataSourcePeople,
-  fetchSmartPageChildrenTree
+  fetchSmartPageChildrenTree,
+  fetchDedicatedPageContentsForWidget,
+  fetchDedicatedPageMembersForWidget
 } from './api';
-import type { SmartPageTreeNode } from './api';
+import type { SmartPageTreeNode, DedicatedPageContentItem, DedicatedPageMemberItem } from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import {
@@ -75,7 +77,8 @@ import {
   CalendarDays,
   Megaphone,
   Plus,
-  Loader2
+  Loader2,
+  Building2
 } from 'lucide-react';
 import {
   EitaaIcon,
@@ -103,6 +106,8 @@ interface WidgetRendererProps {
   pageSlug?: string | null;
   /** مقدار متغیرهای صفحهٔ اختصاصی — وقتی این صفحه به یک صفحهٔ اختصاصی متصل است (برای توکن‌های {{key}} در متن) */
   variables?: Record<string, string>;
+  /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ در حال پیش‌نمایش — برای بلوک‌های dp-* (وقتی این لایوت به یک نوع صفحهٔ اختصاصی متصل است) */
+  dedicatedPageId?: number | null;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -1994,6 +1999,230 @@ const StaffDirectoryWidget: React.FC<{
   );
 };
 
+// ==============================================================
+// بلوک‌های صفحات اختصاصی — اتصال به یک DedicatedPage مشخص (binding.dedicatedPageId)
+// ==============================================================
+
+/** پیام «هنوز پیکربندی نشده» — وقتی هنوز صفحهٔ اختصاصی از پنل تنظیمات انتخاب نشده باشد */
+const DedicatedPageNotConfigured: React.FC = () => (
+  <div className="py-6 text-center space-y-2 rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-800 bg-violet-500/5">
+    <div className="flex items-center justify-center gap-2 text-xs font-bold text-violet-600 dark:text-violet-400">
+      <Building2 className="w-4 h-4" />
+      <span>این بلوک هنوز به صفحهٔ اختصاصی متصل نشده</span>
+    </div>
+    <p className="text-[11px] text-slate-500 dark:text-slate-400">از پنل تنظیمات (Smart Binding) یک صفحهٔ اختصاصی انتخاب کنید</p>
+  </div>
+);
+
+const DP_TYPE_DATE_LABEL: Record<string, string> = {
+  event: 'تاریخ برگزاری',
+  journal_issue: 'تاریخ انتشار'
+};
+
+/** ویجت محتوای صفحهٔ اختصاصی — خبر/اطلاعیه/مقاله/رویداد/نسخهٔ نشریه (نوع از contentType تعیین می‌شود) */
+const DedicatedPageContentWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+  contentType: 'news' | 'announcement' | 'journal_issue' | 'article' | 'event';
+  dedicatedPageId?: number | null;
+}> = ({ binding, containerStyle, contentType, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
+    () =>
+      dedicatedPageId
+        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, contentType, binding.limit || 6)
+        : Promise.resolve([]),
+    [dedicatedPageId, contentType, binding.limit]
+  );
+
+  if (!dedicatedPageId) {
+    return (
+      <div style={containerStyle}>
+        <DedicatedPageNotConfigured />
+      </div>
+    );
+  }
+
+  const items = data || [];
+  const isGrid = (binding.displayMode || 'grid') === 'grid';
+  const dateLabel = DP_TYPE_DATE_LABEL[contentType];
+
+  const renderCard = (item: DedicatedPageContentItem) => (
+    <div
+      key={item.id}
+      className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-violet-500/40 transition-all overflow-hidden shadow-xs flex flex-col"
+    >
+      {item.image_url && (
+        <div className="h-28 bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
+          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-3.5 space-y-1.5 flex-1 flex flex-col">
+        <span className="text-xs font-black text-slate-900 dark:text-white line-clamp-2">{item.title}</span>
+        {item.summary && (
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{item.summary}</p>
+        )}
+        <div className="flex items-center justify-between text-[10px] text-slate-400 mt-auto pt-1.5">
+          {item.published_date && (
+            <span className="flex items-center gap-1" title={dateLabel}>
+              <Clock className="w-3 h-3" />
+              {formatFaDate(item.published_date)}
+            </span>
+          )}
+          {item.file_url && (
+            <a
+              href={item.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-violet-600 dark:text-violet-400 font-bold"
+            >
+              <Download className="w-3 h-3" />
+              دانلود
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant={isGrid ? 'cards' : 'list'} count={binding.limit || 6} />
+      ) : items.length === 0 ? null : isGrid ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.map(renderCard)}</div>
+      ) : (
+        <div className="space-y-2.5">{items.map(renderCard)}</div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت گالری تصاویر صفحهٔ اختصاصی — تصاویر آیتم‌های نوع gallery، با فیلتر دسته‌بندی اختیاری */
+const DedicatedPageGalleryWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ binding, containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
+    () =>
+      dedicatedPageId
+        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'gallery', binding.limit || 12)
+        : Promise.resolve([]),
+    [dedicatedPageId, binding.limit]
+  );
+
+  if (!dedicatedPageId) {
+    return (
+      <div style={containerStyle}>
+        <DedicatedPageNotConfigured />
+      </div>
+    );
+  }
+
+  const filtered =
+    binding.categoryFilter && binding.categoryFilter !== 'all'
+      ? (data || []).filter((item) => item.category_slug === binding.categoryFilter)
+      : data || [];
+
+  const images = filtered.flatMap((item) =>
+    (item.gallery_images && item.gallery_images.length > 0 ? item.gallery_images : item.image_url ? [item.image_url] : []).map(
+      (url) => ({ url, title: item.title })
+    )
+  );
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="gallery" count={4} />
+      ) : images.length === 0 ? null : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {images.map((img, idx) => (
+            <div
+              key={idx}
+              className="group relative h-32 rounded-xl overflow-hidden bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs"
+            >
+              <img
+                src={img.url}
+                alt={img.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white">
+                <span className="text-[11px] font-bold truncate">{img.title}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت اعضای شورای مرکزی و کادر اجرایی صفحهٔ اختصاصی */
+const DedicatedPageMembersWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ binding, containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageMemberItem>(
+    () => (dedicatedPageId ? fetchDedicatedPageMembersForWidget(dedicatedPageId) : Promise.resolve([])),
+    [dedicatedPageId]
+  );
+
+  if (!dedicatedPageId) {
+    return (
+      <div style={containerStyle}>
+        <DedicatedPageNotConfigured />
+      </div>
+    );
+  }
+
+  const members = (data || []).slice(0, binding.limit || 12);
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={binding.limit || 6} />
+      ) : members.length === 0 ? null : (
+        <div className="space-y-3">
+          {members.map((m) => (
+            <div
+              key={m.id}
+              className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
+            >
+              <img
+                src={m.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name)}
+                alt={m.name}
+                className="w-12 h-12 rounded-full object-cover border border-violet-500/30 bg-slate-100"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">{m.name}</div>
+                {(m.role_title || m.field_of_study) && (
+                  <div className="text-[11px] text-violet-600 dark:text-violet-400 font-bold truncate">
+                    {m.role_title}
+                    {m.role_title && m.field_of_study ? ' · ' : ''}
+                    {m.field_of_study}
+                  </div>
+                )}
+                {m.email && <div className="text-[10px] text-slate-400 truncate">{m.email}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** ویجت مخزن اسناد و فایل‌ها — اتصال به وب‌سرویس رسانه */
 const FileManagerWidget: React.FC<{
   widget: WidgetInstance;
@@ -3319,7 +3548,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   depth = 0,
   pageId,
   pageSlug,
-  variables
+  variables,
+  dedicatedPageId
 }) => {
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
@@ -3711,6 +3941,36 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'file-manager':
       return isEditorPreview ? null : <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+
+    // بلوک‌های صفحات اختصاصی — اتصال به یک DedicatedPage مشخص (binding.dedicatedPageId)
+    case 'dp-news':
+      return isEditorPreview ? null : (
+        <DedicatedPageContentWidget widget={widget} binding={binding} containerStyle={containerStyle} contentType="news" dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-announcements':
+      return isEditorPreview ? null : (
+        <DedicatedPageContentWidget widget={widget} binding={binding} containerStyle={containerStyle} contentType="announcement" dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-journal-issues':
+      return isEditorPreview ? null : (
+        <DedicatedPageContentWidget widget={widget} binding={binding} containerStyle={containerStyle} contentType="journal_issue" dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-articles':
+      return isEditorPreview ? null : (
+        <DedicatedPageContentWidget widget={widget} binding={binding} containerStyle={containerStyle} contentType="article" dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-events':
+      return isEditorPreview ? null : (
+        <DedicatedPageContentWidget widget={widget} binding={binding} containerStyle={containerStyle} contentType="event" dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-gallery':
+      return isEditorPreview ? null : (
+        <DedicatedPageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-members':
+      return isEditorPreview ? null : (
+        <DedicatedPageMembersWidget widget={widget} binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
 
     default:
       return (

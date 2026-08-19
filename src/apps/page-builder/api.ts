@@ -262,3 +262,79 @@ export const fetchDataSourceMediaFolders = async (): Promise<MediaFolderDto[]> =
   const res = await API<{ data: MediaFolderDto[] }>('media/folders');
   return res.data;
 };
+
+// ===== Dedicated Pages blocks — اتصال به یک صفحهٔ اختصاصی مشخص =====
+
+export interface DedicatedPageOption {
+  id: number;
+  title: string;
+  page_type: string;
+  slug: string;
+}
+
+/** فهرست صفحات اختصاصی — برای دراپ‌داون «انتخاب صفحهٔ اختصاصی» در پنل تنظیمات */
+export const fetchDataSourceDedicatedPages = async (): Promise<DedicatedPageOption[]> => {
+  const res = await API<{ data: DedicatedPageOption[] }>('dedicated-pages?per_page=200');
+  return res.data;
+};
+
+export interface DedicatedPageContentItem {
+  id: number;
+  type: string;
+  title: string;
+  summary: string | null;
+  content: string | null;
+  category_slug: string | null;
+  category_title: string | null;
+  author: string;
+  status: string;
+  published_date: string | null;
+  views: number;
+  file_url: string | null;
+  file_size: string | null;
+  image_url: string | null;
+  gallery_images?: string[] | null;
+}
+
+/** محتوای یک صفحهٔ اختصاصی، تفکیک‌شده براساس نوع — برای بلوک‌های dp-news/dp-announcements/dp-journal-issues/dp-articles/dp-gallery/dp-events */
+export const fetchDedicatedPageContentsForWidget = async (
+  pageId: number | string,
+  type: string,
+  limit: number
+): Promise<DedicatedPageContentItem[]> => {
+  const qs = new URLSearchParams({ type, status: 'published', per_page: String(limit) });
+  const res = await API<{ data: DedicatedPageContentItem[] }>(`dedicated-pages/${pageId}/contents?${qs.toString()}`);
+  return res.data;
+};
+
+export interface DedicatedPageTaxonomyOption {
+  id: number;
+  slug: string;
+  title: string;
+}
+
+/** دسته‌بندی‌های یک صفحهٔ اختصاصی — برای فیلتر دسته در تنظیمات بلوک گالری */
+export const fetchDedicatedPageTaxonomiesForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageTaxonomyOption[]> => {
+  const res = await API<{ data: DedicatedPageTaxonomyOption[] }>(`dedicated-pages/${pageId}/taxonomies`);
+  return res.data;
+};
+
+export interface DedicatedPageMemberItem {
+  id: number;
+  name: string;
+  role_title: string | null;
+  field_of_study: string | null;
+  email: string | null;
+  image_url: string | null;
+  sort_order: number;
+}
+
+/** اعضای شورای مرکزی/کادر اجرایی یک صفحهٔ اختصاصی — برای بلوک dp-members */
+export const fetchDedicatedPageMembersForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageMemberItem[]> => {
+  const res = await API<{ data: DedicatedPageMemberItem[] }>(`dedicated-pages/${pageId}/members`);
+  return res.data;
+};
