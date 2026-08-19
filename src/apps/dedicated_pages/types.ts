@@ -278,6 +278,8 @@ export interface DedicatedPage {
   contents_count?: number;
   /** تعداد کاربران مجاز/مالک صفحه — از سرور (withCount) */
   authorizations_count?: number;
+  /** سقف مجاز فضای ذخیره‌سازی رسانه/فایل‌های این صفحه، به مگابایت */
+  storageQuotaMb?: number;
 }
 
 export interface DedicatedPagesPagination {

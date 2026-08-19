@@ -48,6 +48,7 @@ import {
 } from './types';
 import { fetchProfessors, getOwnerAccount, setOwnerAccount } from './api';
 import { getDedicatedPagePublicUrl } from './utils';
+import PageStorageUsageChart from './PageStorageUsageChart';
 
 interface PageWizardModalProps {
   isOpen: boolean;
@@ -102,6 +103,7 @@ export default function PageWizardModal({
   const [featuredImage, setFeaturedImage] = useState('');
   const [accentColor, setAccentColor] = useState('#0284c7');
   const [mediaManagerTarget, setMediaManagerTarget] = useState<'logo' | 'featuredImage' | null>(null);
+  const [storageQuotaMb, setStorageQuotaMb] = useState(200);
 
   // Form State - Step 3: Single Manager User (Merged Owner & Access)
   const [ownerName, setOwnerName] = useState('');
@@ -179,6 +181,7 @@ export default function PageWizardModal({
       setLogo(initialPage.logo || '');
       setFeaturedImage(initialPage.featuredImage || '');
       setAccentColor(initialPage.layoutConfig?.accentColor || '#0284c7');
+      setStorageQuotaMb(initialPage.storageQuotaMb || 200);
 
       // Manager User Identity
       setOwnerName(initialPage.owner?.name || '');
@@ -440,7 +443,8 @@ export default function PageWizardModal({
       features,
       taxonomies,
       professorData: profObj,
-      customFields
+      customFields,
+      storageQuotaMb
     };
 
     const savedPage = await onSavePage(newDedicatedPage);
@@ -1331,6 +1335,31 @@ export default function PageWizardModal({
                     </span>
                   </label>
                 </div>
+              </div>
+
+              {/* Storage Quota */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                  سقف مجاز فضای ذخیره‌سازی فایل‌ها و تصاویر صفحه
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={102400}
+                    value={storageQuotaMb}
+                    onChange={e => setStorageQuotaMb(Math.max(1, Number(e.target.value) || 0))}
+                    className="w-32 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                  <span className="text-xs text-slate-500">مگابایت</span>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  مسئول این صفحه تا سقف تعیین‌شده می‌تواند فایل و تصویر در پرتال مدیریت صفحهٔ خود بارگذاری کند؛ با رسیدن به این سقف، بارگذاری فایل جدید مسدود می‌شود.
+                </p>
+
+                {isEditMode && initialPage?.id && (
+                  <PageStorageUsageChart pageId={initialPage.id} />
+                )}
               </div>
             </div>
           )}

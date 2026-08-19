@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { getDedicatedPagePublicUrl } from './utils';
 import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
 import { createPageContent, updatePageContent, deletePageContent } from './api';
+import PageStorageUsageChart from './PageStorageUsageChart';
 
 interface IsolatedManagerPortalProps {
   page: DedicatedPage;
@@ -347,6 +348,11 @@ export default function IsolatedManagerPortal({
                   <Layers className="w-5 h-5" />
                 </div>
               </div>
+            </div>
+
+            {/* Storage Usage */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <PageStorageUsageChart pageId={page.id} />
             </div>
 
             {/* Quick Actions & Recent Items */}

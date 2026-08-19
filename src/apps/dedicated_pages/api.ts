@@ -125,6 +125,31 @@ export async function deletePageContent(pageId: string, contentId: string): Prom
   return res;
 }
 
+// ==================== Storage Usage (سقف مجاز و حجم استفاده‌شده) ====================
+
+export interface MediaUsageBreakdownItem {
+  type: 'image' | 'pdf' | 'document' | 'other';
+  label: string;
+  bytes: number;
+  count: number;
+}
+
+export interface MediaUsage {
+  quota_bytes: number;
+  used_bytes: number;
+  remaining_bytes: number;
+  percent_used: number;
+  breakdown: MediaUsageBreakdownItem[];
+}
+
+/**
+ * حجم استفاده‌شده از فضای ذخیره‌سازی یک صفحهٔ اختصاصی، تفکیک‌شده براساس نوع فایل
+ */
+export async function fetchPageMediaUsage(pageId: string): Promise<MediaUsage> {
+  const res = await API<{ data: MediaUsage }>(`dedicated-pages/${pageId}/media-usage`);
+  return res.data;
+}
+
 // ==================== Page Publish & Status Management ====================
 
 /**
