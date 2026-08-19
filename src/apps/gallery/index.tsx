@@ -678,6 +678,22 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
               </div>
 
               <div className="space-y-1">
+                {/* بازگشت به پوشهٔ ریشه / نمایش همهٔ فایل‌ها بدون فیلتر پوشه */}
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, folderId: null }))}
+                  className={`w-full flex items-center gap-2 px-2 py-2 rounded-xl text-xs font-black text-right transition-all cursor-pointer ${
+                    filters.folderId === null
+                      ? 'bg-teal-500 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <HardDrive
+                    className="w-4 h-4 shrink-0"
+                    style={{ color: filters.folderId === null ? '#fff' : '#64748b' }}
+                  />
+                  <span>همهٔ فایل‌ها (ریشه)</span>
+                </button>
+
                 {folders.length === 0 && (
                   <p className="text-[11px] text-slate-400 leading-relaxed px-2">
                     هنوز پوشه‌ای ساخته نشده است.
