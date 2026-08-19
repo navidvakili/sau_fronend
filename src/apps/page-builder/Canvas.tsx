@@ -709,7 +709,8 @@ export const Canvas: React.FC<CanvasProps> = ({
         className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 pb-editor-canvas ${getCanvasWidthClass()}`}
         style={{
           fontFamily: globalStyles.fontFamily,
-          color: globalStyles.textColor
+          color: globalStyles.textColor,
+          backgroundColor: globalStyles.backgroundColor || undefined
         }}
         onClickCapture={(e) => {
           // در بوم استودیو، لینک‌های داخلی نباید ناوبری شوند — فقط preventDefault،

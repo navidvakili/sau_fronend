@@ -361,6 +361,8 @@ export interface GlobalStyles {
   fontFamily: string;
   containerMaxWidth: number; // e.g. 1200
   baseRadius: number;
+  /** نمایش منوی اصلی (هدر سراسری) وب‌سایت هنگام نمایش این صفحه — پیش‌فرض true (بدون تغییر نسبت به قبل) */
+  showSiteNav?: boolean;
 }
 
 /** فال‌بک وقتی شمای صفحه فاقد globalStyles است (مثلاً یک صفحهٔ لایوت تازه‌ساز یا داده‌های ناقص) */
@@ -372,7 +374,8 @@ export const DEFAULT_GLOBAL_STYLES: GlobalStyles = {
   textColor: '#1e293b',
   fontFamily: 'Vazirmatn, sans-serif',
   containerMaxWidth: 1240,
-  baseRadius: 16
+  baseRadius: 16,
+  showSiteNav: true
 };
 
 export interface PageVersion {

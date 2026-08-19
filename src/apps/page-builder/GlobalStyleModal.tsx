@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { GlobalStyles } from './builderTypes';
-import { X, Palette, Check, Copy, Code } from 'lucide-react';
+import { X, Palette, Check, Copy, Code, Menu as MenuIcon } from 'lucide-react';
 
 interface GlobalStyleModalProps {
   globalStyles: GlobalStyles;
@@ -86,7 +86,7 @@ export const GlobalStyleModal: React.FC<GlobalStyleModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {activeTab === 'palette' ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">رنگ اصلی (Primary)</label>
                   <input
@@ -111,6 +111,15 @@ export const GlobalStyleModal: React.FC<GlobalStyleModalProps> = ({
                     type="color"
                     value={styles.accentColor}
                     onChange={(e) => setStyles({ ...styles, accentColor: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-1 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه اصلی صفحه</label>
+                  <input
+                    type="color"
+                    value={styles.backgroundColor}
+                    onChange={(e) => setStyles({ ...styles, backgroundColor: e.target.value })}
                     className="w-full h-10 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-1 cursor-pointer"
                   />
                 </div>
@@ -140,6 +149,33 @@ export const GlobalStyleModal: React.FC<GlobalStyleModalProps> = ({
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
                   />
                 </div>
+              </div>
+
+              <div className="pt-3 border-t border-gray-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setStyles({ ...styles, showSiteNav: styles.showSiteNav === false ? true : false })}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <MenuIcon className="w-4 h-4 text-slate-400" />
+                    نمایش منوی اصلی وب‌سایت هنگام مشاهدهٔ این صفحه
+                  </span>
+                  <span
+                    className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${
+                      styles.showSiteNav === false ? 'bg-slate-300 dark:bg-slate-700' : 'bg-teal-500'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                        styles.showSiteNav === false ? 'left-0.5' : 'left-5'
+                      }`}
+                    />
+                  </span>
+                </button>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
+                  در صورت خاموش بودن، هدر و منوی اصلی سایت (نه ویجت‌های داخل خود صفحه) در نمایش عمومی این صفحه پنهان می‌شود — مناسب صفحات فرودی تمام‌صفحه.
+                </p>
               </div>
             </div>
           ) : (

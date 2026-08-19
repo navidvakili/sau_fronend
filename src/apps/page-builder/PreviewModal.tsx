@@ -195,7 +195,8 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-y-auto ${getContainerWidth()}`}
           style={{
             fontFamily: globalStyles.fontFamily,
-            color: globalStyles.textColor
+            color: globalStyles.textColor,
+            backgroundColor: globalStyles.backgroundColor || undefined
           }}
         >
           {pageSchema.sections.map((sec) => renderSection(sec, 0))}
