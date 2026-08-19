@@ -194,19 +194,19 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   };
 
   // Page CRUD Operations (connected to backend API)
-  const handleSavePage = async (savedPage: DedicatedPage) => {
+  const handleSavePage = async (savedPage: DedicatedPage): Promise<DedicatedPage | null> => {
     try {
       const exists = pages.some(p => p.id === savedPage.id);
-      if (exists) {
-        await updateDedicatedPage(savedPage.id, savedPage);
-      } else {
-        await createDedicatedPage(savedPage);
-      }
+      const result = exists
+        ? await updateDedicatedPage(savedPage.id, savedPage)
+        : await createDedicatedPage(savedPage);
       setEditingPage(null);
       await loadData();
+      return result;
     } catch (e) {
       console.error('Error saving page:', e);
       alert('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.');
+      return null;
     }
   };
 

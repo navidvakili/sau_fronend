@@ -46,13 +46,13 @@ import {
   PageTypeDefinition,
   DEDICATED_PAGE_TYPES
 } from './types';
-import { fetchProfessors } from './api';
+import { fetchProfessors, getOwnerAccount, setOwnerAccount } from './api';
 import { getDedicatedPagePublicUrl } from './utils';
 
 interface PageWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSavePage: (page: DedicatedPage) => void;
+  onSavePage: (page: DedicatedPage) => Promise<DedicatedPage | null>;
   initialPage?: DedicatedPage | null;
 }
 
@@ -111,6 +111,9 @@ export default function PageWizardModal({
   const [ownerUsername, setOwnerUsername] = useState('');
   const [ownerPassword, setOwnerPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // نام‌کاربری واقعیِ ورود مسئول صفحه — از جدول جداگانهٔ page_manager_accounts
+  // (نه از خودِ رکورد DedicatedPage) — برای تشخیص واقعیِ تغییر نام‌کاربری
+  const [realOwnerUsername, setRealOwnerUsername] = useState<string | null>(null);
 
   // Edit mode password change fields
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -179,8 +182,8 @@ export default function PageWizardModal({
       setOwnerPhone(initialPage.owner?.phone || '');
       setOwnerEmail(initialPage.owner?.email || '');
       setOwnerRoleTitle(initialPage.owner?.roleTitle || '');
-      setOwnerUsername(initialPage.owner?.username || initialPage.owner?.email?.split('@')[0] || 'manager');
-      setOwnerPassword(initialPage.owner?.password || 'Elm@2026');
+      setOwnerUsername(initialPage.owner?.email?.split('@')[0] || 'manager');
+      setOwnerPassword('');
 
       // Reset password change fields
       setIsChangingPassword(false);
@@ -188,6 +191,17 @@ export default function PageWizardModal({
       setConfirmNewPassword('');
       setShowNewPassword(false);
       setPasswordChangeSuccess(false);
+
+      // نام‌کاربری واقعیِ ورود مسئول صفحه از وب‌سرویس جداگانهٔ owner-account می‌آید
+      setRealOwnerUsername(null);
+      getOwnerAccount(initialPage.id)
+        .then(account => {
+          if (account) {
+            setRealOwnerUsername(account.username);
+            setOwnerUsername(account.username);
+          }
+        })
+        .catch(e => console.error('Error loading owner account:', e));
 
       if (initialPage.professorData?.professorId) {
         setSelectedProfId(initialPage.professorData.professorId);
@@ -346,7 +360,7 @@ export default function PageWizardModal({
   };
 
   // Save Dedicated Page
-  const handleFinalSave = () => {
+  const handleFinalSave = async () => {
     const profObj = pageType === 'faculty_member'
       ? universityProfessors.find(p => p.professorId === selectedProfId) || universityProfessors[0]
       : undefined;
@@ -426,7 +440,29 @@ export default function PageWizardModal({
       customFields
     };
 
-    onSavePage(newDedicatedPage);
+    const savedPage = await onSavePage(newDedicatedPage);
+
+    // ورود مسئول صفحه (page-manager) در جدول جداگانه‌ای ذخیره می‌شود — نه در
+    // خودِ رکورد DedicatedPage — پس باید جدا و پس از ذخیرهٔ موفق صفحه ارسال شود.
+    // فقط وقتی واقعاً نام‌کاربری/گذرواژه تغییر کرده یا صفحه تازه ایجاد شده
+    // ارسال می‌شود؛ در غیر این صورت گذرواژهٔ فعلی مسئول صفحه دست‌نخورده می‌ماند.
+    if (savedPage?.id) {
+      const usernameChanged = ownerUsername && ownerUsername !== (realOwnerUsername ?? '');
+      const passwordChanged = isChangingPassword && newPassword.trim();
+      if (!isEditMode || usernameChanged || passwordChanged) {
+        try {
+          await setOwnerAccount(savedPage.id, {
+            username: ownerUsername || 'manager',
+            ...(passwordChanged || !isEditMode ? { password: finalPassword } : {})
+          });
+        } catch (e) {
+          console.error('Error saving owner account credentials:', e);
+          const reason = e instanceof Error ? e.message : 'خطای نامشخص';
+          alert(`صفحه ذخیره شد، اما تغییر نام‌کاربری/گذرواژهٔ ورود مسئول صفحه ذخیره نشد: ${reason}`);
+        }
+      }
+    }
+
     onClose();
   };
 
@@ -1070,6 +1106,13 @@ export default function PageWizardModal({
                           </div>
                         </div>
                       </div>
+
+                      {newPassword && newPassword.trim().length < 8 && (
+                        <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          گذرواژه باید حداقل ۸ کاراکتر باشد.
+                        </div>
+                      )}
 
                       {newPassword && confirmNewPassword && newPassword !== confirmNewPassword && (
                         <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">

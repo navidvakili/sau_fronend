@@ -143,6 +143,35 @@ export async function unpublishDedicatedPage(pageId: string): Promise<{ message:
   return res;
 }
 
+// ==================== Owner Account (Isolated Login) ====================
+
+export interface OwnerAccountInfo {
+  username: string;
+  name: string;
+  email: string;
+  is_active: boolean;
+  last_login_at: string | null;
+}
+
+/**
+ * دریافت حساب ورود مستقل مالک صفحه (بدون گذرواژه) — اگر هنوز تعریف نشده، null
+ */
+export async function getOwnerAccount(pageId: string): Promise<OwnerAccountInfo | null> {
+  const res = await API<{ data: OwnerAccountInfo | null }>(`dedicated-pages/${pageId}/owner-account`);
+  return res.data;
+}
+
+/**
+ * تعریف/به‌روزرسانی نام کاربری و گذرواژهٔ ورود مالک صفحه (page-manager)
+ * password اختیاری است — اگر خالی باشد فقط نام کاربری/وضعیت به‌روز می‌شود.
+ */
+export async function setOwnerAccount(
+  pageId: string,
+  data: { username: string; password?: string; is_active?: boolean }
+): Promise<{ message: string; data: { username: string; name: string; is_active: boolean } }> {
+  return API(`dedicated-pages/${pageId}/owner-account`, data, 'POST');
+}
+
 /**
  * مدیریت دسترسی‌های کاربری برای صفحه
  */
