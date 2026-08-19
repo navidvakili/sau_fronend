@@ -210,8 +210,13 @@ export interface WidgetDataBinding {
   fileType?: 'all' | 'image' | 'video' | 'audio' | 'document';
   /** نحوه باز شدن اطلاعیه هنگام کلیک — صفحه جاری / صفحه جدید / پنجره modal */
   openMode?: 'self' | 'new' | 'modal';
-  /** موقعیت تصویر نسبت به جزئیات — فقط در حالت لیستی بلوک اعضای صفحهٔ اختصاصی */
-  avatarPosition?: 'right' | 'left';
+  /**
+   * موقعیت تصویر نسبت به جزئیات در بلوک اعضای صفحهٔ اختصاصی — این فیلد خودش
+   * تعیین‌کنندهٔ چیدمان است، مستقل از displayMode:
+   * 'top' = کارتی/شبکه‌ای، تصویر بالا (پیش‌فرض) | 'card-right'/'card-left' = کارتی/شبکه‌ای، تصویر کنار جزئیات
+   * 'right'/'left' = ردیفی تک‌ستونه، تصویر کنار جزئیات
+   */
+  avatarPosition?: 'top' | 'right' | 'left' | 'card-right' | 'card-left';
 }
 
 export interface WidgetInstance {

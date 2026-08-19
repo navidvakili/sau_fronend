@@ -2199,19 +2199,23 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت چیدمان</label>
-                    <select
-                      value={selectedWidget.settings.binding.displayMode || 'grid'}
-                      onChange={(e) => handleBindingChange('displayMode', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
-                    >
-                      <option value="grid">شبکه‌ای (Grid)</option>
-                      <option value="list">لیست عمودی (List)</option>
-                    </select>
-                  </div>
+                  {selectedWidget.type !== 'dp-members' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت چیدمان</label>
+                      <select
+                        value={selectedWidget.settings.binding.displayMode || 'grid'}
+                        onChange={(e) => handleBindingChange('displayMode', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+                      >
+                        <option value="grid">شبکه‌ای (Grid)</option>
+                        <option value="list">لیست عمودی (List)</option>
+                      </select>
+                    </div>
+                  )}
 
-                  {(selectedWidget.settings.binding.displayMode || 'grid') === 'grid' && (
+                  {(selectedWidget.type === 'dp-members'
+                    ? ['top', 'card-right', 'card-left'].includes(selectedWidget.settings.binding.avatarPosition || 'top')
+                    : (selectedWidget.settings.binding.displayMode || 'grid') === 'grid') && (
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تعداد ستون در هر ردیف</label>
                       <div className="flex items-center gap-1.5">
@@ -2221,7 +2225,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             type="button"
                             onClick={() => handleBindingChange('columnsCount', n)}
                             className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                              (selectedWidget.settings.binding.columnsCount || (selectedWidget.type === 'dp-gallery' ? 4 : 2)) === n
+                              (selectedWidget.settings.binding.columnsCount || (selectedWidget.type === 'dp-gallery' ? 4 : selectedWidget.type === 'dp-members' ? 3 : 2)) === n
                                 ? 'bg-violet-600 text-white border-violet-600'
                                 : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-violet-500/40'
                             }`}
@@ -2249,16 +2253,16 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">موقعیت تصویر</label>
                       <select
-                        value={selectedWidget.settings.binding.avatarPosition || 'right'}
+                        value={selectedWidget.settings.binding.avatarPosition || 'top'}
                         onChange={(e) => handleBindingChange('avatarPosition', e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
                       >
-                        <option value="right">تصویر راست، جزئیات چپ</option>
-                        <option value="left">تصویر چپ، جزئیات راست</option>
+                        <option value="top">تصویر بالا، جزئیات پایین (کارتی)</option>
+                        <option value="card-right">تصویر راست، جزئیات چپ (کارتی)</option>
+                        <option value="card-left">تصویر چپ، جزئیات راست (کارتی)</option>
+                        <option value="right">تصویر راست، جزئیات چپ (ردیفی)</option>
+                        <option value="left">تصویر چپ، جزئیات راست (ردیفی)</option>
                       </select>
-                      {(selectedWidget.settings.binding.displayMode || 'grid') === 'grid' && (
-                        <p className="text-[10px] text-slate-400">این تنظیم فقط در حالت چیدمان «لیست عمودی» اثر دارد.</p>
-                      )}
                     </div>
                   )}
 
