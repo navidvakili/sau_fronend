@@ -2019,6 +2019,18 @@ const DP_TYPE_DATE_LABEL: Record<string, string> = {
   journal_issue: 'تاریخ انتشار'
 };
 
+/** کلاس شبکهٔ ستونی بر اساس تعداد ستون انتخاب‌شده در تنظیمات — برای بلوک‌های dp-* حالت grid */
+const DP_GRID_COLS_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-2 lg:grid-cols-4',
+  5: 'grid-cols-2 lg:grid-cols-5',
+  6: 'grid-cols-2 lg:grid-cols-6'
+};
+const dpGridColsClass = (cols?: number, fallback = 2): string =>
+  DP_GRID_COLS_CLASS[Math.min(Math.max(Number(cols) || fallback, 1), 6)] || DP_GRID_COLS_CLASS[fallback];
+
 /** ویجت محتوای صفحهٔ اختصاصی — خبر/اطلاعیه/مقاله/رویداد/نسخهٔ نشریه (نوع از contentType تعیین می‌شود) */
 const DedicatedPageContentWidget: React.FC<{
   widget: WidgetInstance;
@@ -2059,7 +2071,7 @@ const DedicatedPageContentWidget: React.FC<{
     >
       {item.image_url && (
         <div className="h-28 bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
-          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+          <img src={item.image_url} alt={item.title} className="w-full h-full object-contain" />
         </div>
       )}
       <div className="p-3.5 space-y-1.5 flex-1 flex flex-col">
@@ -2091,7 +2103,7 @@ const DedicatedPageContentWidget: React.FC<{
         ) : !data ? (
           <SmartSkeleton variant={isGrid ? 'cards' : 'list'} count={binding.limit || 6} />
         ) : items.length === 0 ? null : isGrid ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.map(renderCard)}</div>
+          <div className={`grid ${dpGridColsClass(binding.columnsCount, 2)} gap-3`}>{items.map(renderCard)}</div>
         ) : (
           <div className="space-y-2.5">{items.map(renderCard)}</div>
         )}
@@ -2108,8 +2120,8 @@ const DedicatedPageContentWidget: React.FC<{
             onClick={(e) => e.stopPropagation()}
           >
             {modalItem.image_url && (
-              <div className="h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <img src={modalItem.image_url} alt={modalItem.title} className="w-full h-full object-cover" />
+              <div className="h-64 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <img src={modalItem.image_url} alt={modalItem.title} className="w-full h-full object-contain" />
               </div>
             )}
             <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-5 py-4 flex items-center justify-between gap-3">
@@ -2196,14 +2208,16 @@ const DedicatedPageGalleryWidget: React.FC<{
     )
   );
 
+  const isGridMode = (binding.displayMode || 'grid') === 'grid';
+
   return (
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
       ) : !data ? (
         <SmartSkeleton variant="gallery" count={4} />
-      ) : images.length === 0 ? null : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      ) : images.length === 0 ? null : isGridMode ? (
+        <div className={`grid ${dpGridColsClass(binding.columnsCount, 4)} gap-3`}>
           {images.map((img, idx) => (
             <div
               key={idx}
@@ -2212,11 +2226,25 @@ const DedicatedPageGalleryWidget: React.FC<{
               <img
                 src={img.url}
                 alt={img.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-contain"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white">
                 <span className="text-[11px] font-bold truncate">{img.title}</span>
               </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {images.map((img, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs"
+            >
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                <img src={img.url} alt={img.title} className="w-full h-full object-contain" />
+              </div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{img.title}</span>
             </div>
           ))}
         </div>
@@ -2247,39 +2275,58 @@ const DedicatedPageMembersWidget: React.FC<{
 
   const ordered = binding.sortBy === 'date_asc' ? [...(data || [])].reverse() : data || [];
   const members = ordered.slice(0, binding.limit || 12);
+  const isGridMode = (binding.displayMode || 'grid') === 'grid';
+
+  const avatarSrc = (m: DedicatedPageMemberItem) => m.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name);
+
+  const renderListRow = (m: DedicatedPageMemberItem) => (
+    <div
+      key={m.id}
+      className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
+    >
+      <img src={avatarSrc(m)} alt={m.name} className="w-12 h-12 rounded-full object-cover border border-violet-500/30 bg-slate-100" />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-black text-slate-900 dark:text-white truncate">{m.name}</div>
+        {(m.role_title || m.field_of_study) && (
+          <div className="text-[11px] text-violet-600 dark:text-violet-400 font-bold truncate">
+            {m.role_title}
+            {m.role_title && m.field_of_study ? ' · ' : ''}
+            {m.field_of_study}
+          </div>
+        )}
+        {m.email && <div className="text-[10px] text-slate-400 truncate">{m.email}</div>}
+      </div>
+    </div>
+  );
+
+  const renderGridCard = (m: DedicatedPageMemberItem) => (
+    <div
+      key={m.id}
+      className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex flex-col items-center text-center gap-1.5 shadow-xs"
+    >
+      <img src={avatarSrc(m)} alt={m.name} className="w-16 h-16 rounded-full object-cover border border-violet-500/30 bg-slate-100" />
+      <div className="text-xs font-black text-slate-900 dark:text-white truncate w-full">{m.name}</div>
+      {(m.role_title || m.field_of_study) && (
+        <div className="text-[11px] text-violet-600 dark:text-violet-400 font-bold truncate w-full">
+          {m.role_title}
+          {m.role_title && m.field_of_study ? ' · ' : ''}
+          {m.field_of_study}
+        </div>
+      )}
+      {m.email && <div className="text-[10px] text-slate-400 truncate w-full" dir="ltr">{m.email}</div>}
+    </div>
+  );
 
   return (
     <div style={containerStyle} className="space-y-4">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
       ) : !data ? (
-        <SmartSkeleton variant="list" count={binding.limit || 6} />
-      ) : members.length === 0 ? null : (
-        <div className="space-y-3">
-          {members.map((m) => (
-            <div
-              key={m.id}
-              className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
-            >
-              <img
-                src={m.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.name)}
-                alt={m.name}
-                className="w-12 h-12 rounded-full object-cover border border-violet-500/30 bg-slate-100"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-black text-slate-900 dark:text-white truncate">{m.name}</div>
-                {(m.role_title || m.field_of_study) && (
-                  <div className="text-[11px] text-violet-600 dark:text-violet-400 font-bold truncate">
-                    {m.role_title}
-                    {m.role_title && m.field_of_study ? ' · ' : ''}
-                    {m.field_of_study}
-                  </div>
-                )}
-                {m.email && <div className="text-[10px] text-slate-400 truncate">{m.email}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
+        <SmartSkeleton variant={isGridMode ? 'cards' : 'list'} count={binding.limit || 6} />
+      ) : members.length === 0 ? null : isGridMode ? (
+        <div className={`grid ${dpGridColsClass(binding.columnsCount, 3)} gap-3`}>{members.map(renderGridCard)}</div>
+      ) : (
+        <div className="space-y-3">{members.map(renderListRow)}</div>
       )}
     </div>
   );

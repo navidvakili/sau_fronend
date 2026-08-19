@@ -2211,6 +2211,28 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                   </div>
 
+                  {(selectedWidget.settings.binding.displayMode || 'grid') === 'grid' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تعداد ستون در هر ردیف</label>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => handleBindingChange('columnsCount', n)}
+                            className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                              (selectedWidget.settings.binding.columnsCount || (selectedWidget.type === 'dp-gallery' ? 4 : 2)) === n
+                                ? 'bg-violet-600 text-white border-violet-600'
+                                : 'bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-violet-500/40'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ترتیب نمایش</label>
                     <select
