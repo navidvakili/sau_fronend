@@ -27,7 +27,8 @@ import {
   RefreshCw,
   AlertCircle,
   Upload,
-  Loader2
+  Loader2,
+  Building2
 } from 'lucide-react';
 import {
   GalleryAsset,
@@ -98,8 +99,8 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   const [folders, setFolders] = useState<FolderType[]>([]);
   const loadSeqRef = useRef(0);
 
-  // Active View Tab: 'library' or 'analytics'
-  const [activeStudioTab, setActiveStudioTab] = useState<'library' | 'analytics'>('library');
+  // Active View Tab: 'library' or 'analytics' or 'dedicated-pages'
+  const [activeStudioTab, setActiveStudioTab] = useState<'library' | 'analytics' | 'dedicated-pages'>('library');
 
   // Filter state
   const [filters, setFilters] = useState<DamFilterState>({
@@ -160,6 +161,29 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     loadAll();
   }, [loadAll]);
 
+  // ===================== فایل‌های متعلق به صفحات اختصاصی (انجمن علمی/کانون/تشکل/نشریه) =====================
+  const dedicatedPageFolders = useMemo(
+    () => folders.filter((f) => f.dedicatedPageId != null),
+    [folders]
+  );
+
+  const dedicatedPageFolderIdSet = useMemo(
+    () => new Set(dedicatedPageFolders.map((f) => f.id)),
+    [dedicatedPageFolders]
+  );
+
+  // پوشهٔ ریشهٔ «صفحات اختصاصی» هم به همراه زیرپوشه‌های هر صفحه — پیش‌فرض از سایدبار/فهرست کلی پنهان است
+  const dedicatedPageHiddenFolderIds = useMemo(() => {
+    const ids = new Set(dedicatedPageFolderIdSet);
+    dedicatedPageFolders.forEach((f) => {
+      if (f.parentId) ids.add(f.parentId);
+    });
+    return ids;
+  }, [dedicatedPageFolders, dedicatedPageFolderIdSet]);
+
+  // نمایش پوشه‌های صفحات اختصاصی در سایدبار کتابخانهٔ رسانه — پیش‌فرض خاموش
+  const [showDedicatedPageFolders, setShowDedicatedPageFolders] = useState(false);
+
   // ===================== Filtering =====================
   const filteredAssets = useMemo(() => {
     const q = filters.searchQuery.trim().toLowerCase();
@@ -170,6 +194,14 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
           const inAnyGroup =
             (asset.folder_ids || []).includes(fid) || String(asset.folder_id ?? '') === String(fid);
           if (!inAnyGroup) return false;
+        } else if (!showDedicatedPageFolders && dedicatedPageFolderIdSet.size > 0) {
+          // پیش‌فرض: فایل‌های صفحات اختصاصی در فهرست بدون فیلتر نمایش داده نشود
+          const ids = asset.folder_ids && asset.folder_ids.length > 0
+            ? asset.folder_ids
+            : asset.folder_id != null
+              ? [asset.folder_id]
+              : [];
+          if (ids.some((id) => dedicatedPageFolderIdSet.has(String(id)))) return false;
         }
         if (filters.fileType !== 'all' && asset.fileType !== filters.fileType) return false;
         if (q && !asset.name.toLowerCase().includes(q)) return false;
@@ -182,7 +214,7 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
         if (filters.sortBy === 'size-desc') return b.size - a.size;
         return 0;
       });
-  }, [assets, filters]);
+  }, [assets, filters, showDedicatedPageFolders, dedicatedPageFolderIdSet]);
 
   const folderCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -200,6 +232,26 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
   }, [assets]);
 
   const totalSizeBytes = useMemo(() => assets.reduce((acc, a) => acc + (a.size || 0), 0), [assets]);
+
+  const dedicatedPageGroups = useMemo(() => {
+    if (dedicatedPageFolders.length === 0) return [];
+    const folderIds = new Set(dedicatedPageFolders.map((f) => f.id));
+    return dedicatedPageFolders
+      .map((folder) => {
+        const fid = Number(folder.id);
+        const items = assets.filter((a) => {
+          const ids = a.folder_ids && a.folder_ids.length > 0 ? a.folder_ids : a.folder_id != null ? [a.folder_id] : [];
+          return ids.some((id) => String(id) === folder.id) || String(a.folder_id ?? '') === folder.id;
+        });
+        return { folder, assets: items };
+      })
+      .filter((g) => g.assets.length > 0 || folderIds.has(g.folder.id));
+  }, [dedicatedPageFolders, assets]);
+
+  const dedicatedPagesTotalCount = useMemo(
+    () => dedicatedPageGroups.reduce((sum, g) => sum + g.assets.length, 0),
+    [dedicatedPageGroups]
+  );
 
   // ===================== Bulk Selection =====================
   const handleToggleSelectAsset = (id: string) => {
@@ -380,19 +432,26 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
     (parentId: string | null) =>
       folders
         .filter((f) => f.parentId === parentId)
+        .filter((f) => showDedicatedPageFolders || !dedicatedPageHiddenFolderIds.has(f.id))
         .sort((a, b) => a.name.localeCompare(b.name, 'fa')),
-    [folders]
+    [folders, showDedicatedPageFolders, dedicatedPageHiddenFolderIds]
   );
 
   const renderFolderNode = (folder: FolderType, depth: number): React.ReactElement => {
     const isSelected = filters.folderId === folder.id;
     const count = folderCounts[folder.id] || 0;
     const kids = childrenOf(folder.id);
+    const isDedicatedPageFolder = folder.dedicatedPageId != null;
+    const dedicatedColor = '#7c3aed';
     return (
       <div key={folder.id} className="space-y-1">
         <div
           className={`group flex items-center gap-1 rounded-xl transition-all cursor-pointer ${
-            isSelected ? 'bg-teal-500 text-white shadow-xs' : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+            isSelected
+              ? 'bg-teal-500 text-white shadow-xs'
+              : isDedicatedPageFolder
+                ? 'bg-violet-500/5 hover:bg-violet-500/10'
+                : 'hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
           style={{ paddingRight: depth > 0 ? depth * 12 + 4 : 4 }}
         >
@@ -402,9 +461,17 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
           >
             <Folder
               className="w-4 h-4 shrink-0"
-              style={{ color: isSelected ? '#fff' : folder.color || '#0d9488' }}
+              style={{ color: isSelected ? '#fff' : isDedicatedPageFolder ? dedicatedColor : folder.color || '#0d9488' }}
             />
-            <span className="truncate">{folder.name}</span>
+            <span className={`truncate ${!isSelected && isDedicatedPageFolder ? 'text-violet-700 dark:text-violet-400' : ''}`}>
+              {folder.name}
+            </span>
+            {isDedicatedPageFolder && (
+              <Building2
+                className="w-3 h-3 shrink-0"
+                style={{ color: isSelected ? '#fff' : dedicatedColor }}
+              />
+            )}
           </button>
           <span
             className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
@@ -482,6 +549,23 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
               <PieChart className="w-4 h-4" />
               <span>داشبورد و گزارشات</span>
             </button>
+
+            <button
+              onClick={() => setActiveStudioTab('dedicated-pages')}
+              className={`px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeStudioTab === 'dedicated-pages'
+                  ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-400 shadow-xs font-black'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>فایل‌های صفحات اختصاصی</span>
+              {dedicatedPagesTotalCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-md bg-teal-500/15 text-teal-600 dark:text-teal-400 text-[9px] font-black">
+                  {dedicatedPagesTotalCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Refresh from server */}
@@ -518,6 +602,62 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
             }}
           />
         </div>
+      ) : activeStudioTab === 'dedicated-pages' ? (
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {dedicatedPageGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-80 text-center space-y-3">
+              <div className="p-4 rounded-3xl bg-slate-100 dark:bg-slate-900 text-slate-400 border border-gray-200 dark:border-slate-800">
+                <Building2 className="w-8 h-8" />
+              </div>
+              <h4 className="text-sm font-black text-slate-700 dark:text-slate-300">
+                هنوز فایلی از سوی صفحات اختصاصی بارگذاری نشده است
+              </h4>
+              <p className="text-xs text-slate-400 max-w-sm">
+                فایل‌هایی که مسئولین صفحات اختصاصی (انجمن علمی، کانون فرهنگی هنری، تشکل دانشجویی، نشریه دانشجویی) از پرتال مدیریت صفحهٔ خود بارگذاری می‌کنند، اینجا نمایش داده می‌شود.
+              </p>
+            </div>
+          ) : (
+            dedicatedPageGroups.map(({ folder, assets: groupAssets }) => (
+              <div key={folder.id} className="space-y-3">
+                <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                        {folder.dedicatedPageTitle || folder.name}
+                      </h3>
+                      <p className="text-[10px] text-slate-400">
+                        {groupAssets.length.toLocaleString('fa-IR')} فایل ·{' '}
+                        {formatBytes(groupAssets.reduce((s, a) => s + (a.size || 0), 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {groupAssets.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 py-2">فایلی برای این صفحه بارگذاری نشده است.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    {groupAssets.map((asset) => (
+                      <AssetCard
+                        key={asset.id}
+                        asset={asset}
+                        isSelected={selectedAssetIds.includes(asset.id)}
+                        onSelect={() => setSelectedAssetForDrawer(asset)}
+                        onToggleSelect={() => handleToggleSelectAsset(asset.id)}
+                        onOpenLightbox={() => setLightboxInitialId(asset.id)}
+                        onOpenEditor={() => handleOpenEditor(asset)}
+                        ownerLabel={folder.dedicatedPageTitle || folder.name}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       ) : (
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar Navigation */}
@@ -545,6 +685,26 @@ export default function DigitalAssetManagement({ onOpenTab }: DigitalAssetManage
                 )}
                 {childrenOf(null).map((f) => renderFolderNode(f, 0))}
               </div>
+
+              {dedicatedPageFolderIdSet.size > 0 && (
+                <label className="flex items-center gap-2 px-2 py-2 rounded-xl cursor-pointer hover:bg-violet-500/5 transition-colors border-t border-gray-100 dark:border-slate-800/60 mt-1 pt-2.5">
+                  <input
+                    type="checkbox"
+                    checked={showDedicatedPageFolders}
+                    onChange={(e) => {
+                      setShowDedicatedPageFolders(e.target.checked);
+                      if (!e.target.checked && filters.folderId && dedicatedPageHiddenFolderIds.has(filters.folderId)) {
+                        setFilters((f) => ({ ...f, folderId: null }));
+                      }
+                    }}
+                    className="accent-violet-600 rounded cursor-pointer"
+                  />
+                  <Building2 className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                  <span className="text-[11px] font-bold text-violet-700 dark:text-violet-400">
+                    نمایش پوشه‌های صفحات اختصاصی
+                  </span>
+                </label>
+              )}
             </div>
 
             {/* Media Type Filters */}
@@ -1032,6 +1192,8 @@ interface AssetCardProps {
   onToggleSelect: () => void;
   onOpenLightbox: () => void;
   onOpenEditor: () => void;
+  /** برچسب نمایش «متعلق به کدام صفحهٔ اختصاصی» — فقط در تب فایل‌های صفحات اختصاصی */
+  ownerLabel?: string | null;
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({
@@ -1040,7 +1202,8 @@ const AssetCard: React.FC<AssetCardProps> = ({
   onSelect,
   onToggleSelect,
   onOpenLightbox,
-  onOpenEditor
+  onOpenEditor,
+  ownerLabel
 }) => {
   const isImage = asset.fileType === 'image';
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -1160,6 +1323,13 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
             {asset.description}
           </p>
+        )}
+
+        {ownerLabel && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-400 text-[9px] font-bold truncate max-w-full">
+            <Building2 className="w-2.5 h-2.5 shrink-0" />
+            <span className="truncate">{ownerLabel}</span>
+          </span>
         )}
 
         <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">

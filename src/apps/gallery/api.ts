@@ -137,6 +137,9 @@ export const folderToTreeItem = (dto: MediaFolderDto) => ({
   parentId: dto.parent_id !== null ? String(dto.parent_id) : null,
   color: dto.color || undefined,
   iconName: dto.icon || 'Folder',
+  dedicatedPageId: dto.dedicated_page_id ?? null,
+  dedicatedPageTitle: dto.dedicated_page_title ?? null,
+  dedicatedPageType: dto.dedicated_page_type ?? null,
 });
 
 /** بلوک‌بندی DTOها به درخت */

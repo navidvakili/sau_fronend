@@ -92,6 +92,10 @@ export interface Folder {
   color?: string;
   iconName?: string;
   assetCount?: number;
+  /** اگر این پوشه، پوشهٔ اختصاصیِ یک صفحهٔ اختصاصی (انجمن علمی/کانون/تشکل/نشریه) باشد */
+  dedicatedPageId?: number | null;
+  dedicatedPageTitle?: string | null;
+  dedicatedPageType?: string | null;
 }
 
 export interface Album {
@@ -166,6 +170,9 @@ export interface MediaFolderDto {
   color: string | null;
   icon: string | null;
   ordering: number;
+  dedicated_page_id: number | null;
+  dedicated_page_title: string | null;
+  dedicated_page_type: string | null;
 }
 
 /** پاسخ صفحه‌بندی‌شده GET media */
