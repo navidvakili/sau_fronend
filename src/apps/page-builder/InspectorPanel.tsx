@@ -2211,6 +2211,18 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </select>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ترتیب نمایش</label>
+                    <select
+                      value={selectedWidget.settings.binding.sortBy === 'date_asc' ? 'date_asc' : 'date_desc'}
+                      onChange={(e) => handleBindingChange('sortBy', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+                    >
+                      <option value="date_desc">نزولی (جدیدترین ابتدا)</option>
+                      <option value="date_asc">صعودی (قدیمی‌ترین ابتدا)</option>
+                    </select>
+                  </div>
+
                   {selectedWidget.type === 'dp-gallery' && (
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">دسته‌بندی گالری (اختیاری)</label>

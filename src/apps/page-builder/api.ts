@@ -300,9 +300,10 @@ export interface DedicatedPageContentItem {
 export const fetchDedicatedPageContentsForWidget = async (
   pageId: number | string,
   type: string,
-  limit: number
+  limit: number,
+  sort: 'asc' | 'desc' = 'desc'
 ): Promise<DedicatedPageContentItem[]> => {
-  const qs = new URLSearchParams({ type, status: 'published', per_page: String(limit) });
+  const qs = new URLSearchParams({ type, status: 'published', per_page: String(limit), sort });
   const res = await API<{ data: DedicatedPageContentItem[] }>(`dedicated-pages/${pageId}/contents?${qs.toString()}`);
   return res.data;
 };

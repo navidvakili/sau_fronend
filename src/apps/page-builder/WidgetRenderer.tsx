@@ -2027,12 +2027,15 @@ const DedicatedPageContentWidget: React.FC<{
   contentType: 'news' | 'announcement' | 'journal_issue' | 'article' | 'event';
   dedicatedPageId?: number | null;
 }> = ({ binding, containerStyle, contentType, dedicatedPageId }) => {
+  const sortDir: 'asc' | 'desc' = binding.sortBy === 'date_asc' ? 'asc' : 'desc';
+  const [modalItem, setModalItem] = useState<DedicatedPageContentItem | null>(null);
+
   const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
     () =>
       dedicatedPageId
-        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, contentType, binding.limit || 6)
+        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, contentType, binding.limit || 6, sortDir)
         : Promise.resolve([]),
-    [dedicatedPageId, contentType, binding.limit]
+    [dedicatedPageId, contentType, binding.limit, sortDir]
   );
 
   if (!dedicatedPageId) {
@@ -2048,9 +2051,11 @@ const DedicatedPageContentWidget: React.FC<{
   const dateLabel = DP_TYPE_DATE_LABEL[contentType];
 
   const renderCard = (item: DedicatedPageContentItem) => (
-    <div
+    <button
       key={item.id}
-      className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-violet-500/40 transition-all overflow-hidden shadow-xs flex flex-col"
+      type="button"
+      onClick={() => setModalItem(item)}
+      className="rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-violet-500/40 transition-all overflow-hidden shadow-xs flex flex-col text-right cursor-pointer w-full"
     >
       {item.image_url && (
         <div className="h-28 bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
@@ -2069,35 +2074,89 @@ const DedicatedPageContentWidget: React.FC<{
               {formatFaDate(item.published_date)}
             </span>
           )}
-          {item.file_url && (
-            <a
-              href={item.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 text-violet-600 dark:text-violet-400 font-bold"
-            >
-              <Download className="w-3 h-3" />
-              دانلود
-            </a>
-          )}
+          <span className="flex items-center gap-1 text-violet-600 dark:text-violet-400 font-bold">
+            مشاهدهٔ جزئیات
+            <ExternalLink className="w-3 h-3" />
+          </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 
   return (
-    <div style={containerStyle} className="space-y-4">
-      {error ? (
-        <SmartEmpty error={error} onRetry={retry} />
-      ) : !data ? (
-        <SmartSkeleton variant={isGrid ? 'cards' : 'list'} count={binding.limit || 6} />
-      ) : items.length === 0 ? null : isGrid ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.map(renderCard)}</div>
-      ) : (
-        <div className="space-y-2.5">{items.map(renderCard)}</div>
+    <>
+      <div style={containerStyle} className="space-y-4">
+        {error ? (
+          <SmartEmpty error={error} onRetry={retry} />
+        ) : !data ? (
+          <SmartSkeleton variant={isGrid ? 'cards' : 'list'} count={binding.limit || 6} />
+        ) : items.length === 0 ? null : isGrid ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.map(renderCard)}</div>
+        ) : (
+          <div className="space-y-2.5">{items.map(renderCard)}</div>
+        )}
+      </div>
+
+      {/* Modal جزئیات — چون آیتم‌های صفحات اختصاصی مسیر اختصاصی در سایت عمومی ندارند */}
+      {modalItem && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          onClick={() => setModalItem(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {modalItem.image_url && (
+              <div className="h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <img src={modalItem.image_url} alt={modalItem.title} className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-5 py-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">{modalItem.title}</h3>
+              <button
+                type="button"
+                onClick={() => setModalItem(null)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              {modalItem.published_date && (
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{formatFaDate(modalItem.published_date)}</span>
+                </div>
+              )}
+              {modalItem.content ? (
+                <div
+                  className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: modalItem.content }}
+                />
+              ) : (
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {modalItem.summary || 'بدون توضیحات'}
+                </p>
+              )}
+              {modalItem.file_url && (
+                <a
+                  href={modalItem.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-violet-500/40 transition-all"
+                >
+                  <div className="w-9 h-9 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">دانلود فایل پیوست</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 };
 
@@ -2108,12 +2167,14 @@ const DedicatedPageGalleryWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
 }> = ({ binding, containerStyle, dedicatedPageId }) => {
+  const sortDir: 'asc' | 'desc' = binding.sortBy === 'date_asc' ? 'asc' : 'desc';
+
   const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
     () =>
       dedicatedPageId
-        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'gallery', binding.limit || 12)
+        ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'gallery', binding.limit || 12, sortDir)
         : Promise.resolve([]),
-    [dedicatedPageId, binding.limit]
+    [dedicatedPageId, binding.limit, sortDir]
   );
 
   if (!dedicatedPageId) {
@@ -2184,7 +2245,8 @@ const DedicatedPageMembersWidget: React.FC<{
     );
   }
 
-  const members = (data || []).slice(0, binding.limit || 12);
+  const ordered = binding.sortBy === 'date_asc' ? [...(data || [])].reverse() : data || [];
+  const members = ordered.slice(0, binding.limit || 12);
 
   return (
     <div style={containerStyle} className="space-y-4">
