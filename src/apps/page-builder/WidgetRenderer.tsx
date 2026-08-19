@@ -2141,6 +2141,63 @@ const DedicatedPageContentWidget: React.FC<{
                   <span>{formatFaDate(modalItem.published_date)}</span>
                 </div>
               )}
+
+              {/* جزئیات اختصاصی رویداد — مدرس، زمان، مکان، ثبت‌نام و وضعیت */}
+              {contentType === 'event' && modalItem.metadata && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700">
+                  {modalItem.metadata.instructor && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <UserCheck className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                      <span>{modalItem.metadata.instructor}</span>
+                    </div>
+                  )}
+                  {modalItem.metadata.event_time && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <CalendarDays className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                      <span>{modalItem.metadata.event_time}</span>
+                    </div>
+                  )}
+                  {modalItem.metadata.location && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <MapPin className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                      <span>{modalItem.metadata.location}</span>
+                    </div>
+                  )}
+                  {modalItem.metadata.event_status && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          modalItem.metadata.event_status === 'active'
+                            ? 'bg-emerald-500'
+                            : modalItem.metadata.event_status === 'held'
+                              ? 'bg-slate-400'
+                              : 'bg-rose-400'
+                        }`}
+                      />
+                      <span>
+                        {modalItem.metadata.event_status === 'active'
+                          ? 'فعال'
+                          : modalItem.metadata.event_status === 'held'
+                            ? 'برگزار شده'
+                            : 'غیرفعال'}
+                      </span>
+                    </div>
+                  )}
+                  {modalItem.metadata.registration_link && (
+                    <a
+                      href={modalItem.metadata.registration_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400 font-bold sm:col-span-2"
+                    >
+                      <Link2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>لینک ثبت‌نام</span>
+                    </a>
+                  )}
+                </div>
+              )}
+
               {modalItem.content ? (
                 <div
                   className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"
@@ -2151,6 +2208,24 @@ const DedicatedPageContentWidget: React.FC<{
                   {modalItem.summary || 'بدون توضیحات'}
                 </p>
               )}
+
+              {/* گزارش تصویری */}
+              {modalItem.gallery_images && modalItem.gallery_images.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <Images className="w-3.5 h-3.5" />
+                    <span>گزارش تصویری</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {modalItem.gallery_images.map((url, idx) => (
+                      <div key={idx} className="h-20 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                        <img src={url} alt={`${modalItem.title} ${idx + 1}`} className="w-full h-full object-contain" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {modalItem.file_url && (
                 <a
                   href={modalItem.file_url}
@@ -2282,9 +2357,11 @@ const DedicatedPageMembersWidget: React.FC<{
   const renderListRow = (m: DedicatedPageMemberItem) => (
     <div
       key={m.id}
-      className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs"
+      className={`p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 flex items-center gap-3 shadow-xs ${
+        binding.avatarPosition === 'left' ? 'flex-row-reverse' : ''
+      }`}
     >
-      <img src={avatarSrc(m)} alt={m.name} className="w-12 h-12 rounded-full object-cover border border-violet-500/30 bg-slate-100" />
+      <img src={avatarSrc(m)} alt={m.name} className="w-12 h-12 rounded-full object-cover border border-violet-500/30 bg-slate-100 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-xs font-black text-slate-900 dark:text-white truncate">{m.name}</div>
         {(m.role_title || m.field_of_study) && (

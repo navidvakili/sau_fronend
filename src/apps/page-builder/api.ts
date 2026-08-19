@@ -294,6 +294,8 @@ export interface DedicatedPageContentItem {
   file_size: string | null;
   image_url: string | null;
   gallery_images?: string[] | null;
+  /** فیلدهای اختصاصی نوع رویداد: instructor, event_time, location, registration_link, event_status */
+  metadata?: Record<string, any> | null;
 }
 
 /** محتوای یک صفحهٔ اختصاصی، تفکیک‌شده براساس نوع — برای بلوک‌های dp-news/dp-announcements/dp-journal-issues/dp-articles/dp-gallery/dp-events */

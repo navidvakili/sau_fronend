@@ -210,6 +210,8 @@ export interface WidgetDataBinding {
   fileType?: 'all' | 'image' | 'video' | 'audio' | 'document';
   /** نحوه باز شدن اطلاعیه هنگام کلیک — صفحه جاری / صفحه جدید / پنجره modal */
   openMode?: 'self' | 'new' | 'modal';
+  /** موقعیت تصویر نسبت به جزئیات — فقط در حالت لیستی بلوک اعضای صفحهٔ اختصاصی */
+  avatarPosition?: 'right' | 'left';
 }
 
 export interface WidgetInstance {
