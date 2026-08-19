@@ -44,6 +44,7 @@ import IsolatedManagerPortal from './IsolatedManagerPortal';
 import LinkLayoutDialog from './LinkLayoutDialog';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import Pagination from '@/src/shared-components/Pagination';
+import ToastNotification from '@/src/shared-components/ToastNotification';
 import { getDedicatedPagePublicUrl } from './utils';
 import type { DedicatedPagesStats } from './types';
 
@@ -78,6 +79,11 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
   const [pageToDelete, setPageToDelete] = useState<DedicatedPage | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
   const [layoutDialogType, setLayoutDialogType] = useState<PageType | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'error') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,7 +211,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
       return result;
     } catch (e) {
       console.error('Error saving page:', e);
-      alert('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.');
+      showToast('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.', 'error');
       return null;
     }
   };
@@ -314,6 +320,8 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-6">
+      <ToastNotification toast={toast} />
+
       {/* Top Banner / Persona Switcher Bar */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 sm:p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -945,6 +953,7 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
             }}
             onSavePage={handleSavePage}
             initialPage={editingPage}
+            onNotify={showToast}
           />
         )}
       </AnimatePresence>

@@ -54,6 +54,8 @@ interface PageWizardModalProps {
   onClose: () => void;
   onSavePage: (page: DedicatedPage) => Promise<DedicatedPage | null>;
   initialPage?: DedicatedPage | null;
+  /** نمایش پیغام (Toast) در سطح کامپوننت والد — چون بستن این دیالوگ نباید پیغام را هم مخفی کند */
+  onNotify?: (text: string, type: 'success' | 'error' | 'info') => void;
 }
 
 const WIZARD_STEPS = [
@@ -67,7 +69,8 @@ export default function PageWizardModal({
   isOpen,
   onClose,
   onSavePage,
-  initialPage
+  initialPage,
+  onNotify
 }: PageWizardModalProps) {
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
@@ -442,24 +445,26 @@ export default function PageWizardModal({
 
     const savedPage = await onSavePage(newDedicatedPage);
 
+    // اگر خودِ صفحه ذخیره نشد (خطا از قبل به‌صورت Toast نمایش داده شده)،
+    // دیالوگ را باز نگه دار تا کاربر بتواند بدون از دست دادن اطلاعات دوباره تلاش کند.
+    if (!savedPage?.id) return;
+
     // ورود مسئول صفحه (page-manager) در جدول جداگانه‌ای ذخیره می‌شود — نه در
     // خودِ رکورد DedicatedPage — پس باید جدا و پس از ذخیرهٔ موفق صفحه ارسال شود.
     // فقط وقتی واقعاً نام‌کاربری/گذرواژه تغییر کرده یا صفحه تازه ایجاد شده
     // ارسال می‌شود؛ در غیر این صورت گذرواژهٔ فعلی مسئول صفحه دست‌نخورده می‌ماند.
-    if (savedPage?.id) {
-      const usernameChanged = ownerUsername && ownerUsername !== (realOwnerUsername ?? '');
-      const passwordChanged = isChangingPassword && newPassword.trim();
-      if (!isEditMode || usernameChanged || passwordChanged) {
-        try {
-          await setOwnerAccount(savedPage.id, {
-            username: ownerUsername || 'manager',
-            ...(passwordChanged || !isEditMode ? { password: finalPassword } : {})
-          });
-        } catch (e) {
-          console.error('Error saving owner account credentials:', e);
-          const reason = e instanceof Error ? e.message : 'خطای نامشخص';
-          alert(`صفحه ذخیره شد، اما تغییر نام‌کاربری/گذرواژهٔ ورود مسئول صفحه ذخیره نشد: ${reason}`);
-        }
+    const usernameChanged = ownerUsername && ownerUsername !== (realOwnerUsername ?? '');
+    const passwordChanged = isChangingPassword && newPassword.trim();
+    if (!isEditMode || usernameChanged || passwordChanged) {
+      try {
+        await setOwnerAccount(savedPage.id, {
+          username: ownerUsername || 'manager',
+          ...(passwordChanged || !isEditMode ? { password: finalPassword } : {})
+        });
+      } catch (e) {
+        console.error('Error saving owner account credentials:', e);
+        const reason = e instanceof Error ? e.message : 'خطای نامشخص';
+        onNotify?.(`صفحه ذخیره شد، اما تغییر نام‌کاربری/گذرواژهٔ ورود مسئول صفحه ذخیره نشد: ${reason}`, 'error');
       }
     }
 
