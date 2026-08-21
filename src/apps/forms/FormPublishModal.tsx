@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
-import { Globe, Code2, QrCode, Copy, Check, Share2, ExternalLink } from 'lucide-react';
+import { Globe, Code2, QrCode, Copy, Check, Share2, ExternalLink, Rocket } from 'lucide-react';
 import { FormDefinition } from './types';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 
 interface FormPublishModalProps {
   form: FormDefinition;
   isOpen: boolean;
   onClose: () => void;
+  /** انتشار واقعی فرم (تغییر وضعیت روی سرور) — قبل از انتشار، نشانی عمومی هنوز کار نمی‌کند */
+  onPublish?: () => void;
 }
 
-export const FormPublishModal: React.FC<FormPublishModalProps> = ({ form, isOpen, onClose }) => {
+export const FormPublishModal: React.FC<FormPublishModalProps> = ({ form, isOpen, onClose, onPublish }) => {
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const directUrl = `https://cms.university.ac.ir/forms/${form.id}`;
+  const isPublished = form.status === 'published';
+  const directUrl = `${PUBLIC_SITE_URL}/forms/${form.slug || form.id}`;
   const shortcode = `[nima_form id="${form.id}"]`;
   const iframeCode = `<iframe src="${directUrl}" width="100%" height="600" frameborder="0" style="border:0; border-radius: 16px;"></iframe>`;
 
@@ -46,6 +50,26 @@ export const FormPublishModal: React.FC<FormPublishModalProps> = ({ form, isOpen
 
         {/* Body */}
         <div className="p-6 space-y-6 text-xs">
+          {/* وضعیت انتشار — قبل از انتشار، نشانی عمومی زیر روی سرور در دسترس نیست */}
+          {isPublished ? (
+            <div className="flex items-center gap-2 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
+              <Check className="w-4 h-4" /> این فرم منتشر شده و نشانی زیر برای همه در دسترس است.
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+              <span className="text-amber-800 dark:text-amber-300 font-bold">
+                این فرم هنوز پیش‌نویس است — تا انتشار نشود، نشانی عمومی آن باز نمی‌شود.
+              </span>
+              <button
+                onClick={onPublish}
+                disabled={!onPublish}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center gap-1.5 shrink-0 transition-colors"
+              >
+                <Rocket className="w-4 h-4" /> انتشار فرم
+              </button>
+            </div>
+          )}
+
           {/* Direct Link */}
           <div className="space-y-2">
             <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">

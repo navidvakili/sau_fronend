@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Plus,
@@ -27,7 +27,17 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { FormDefinition, FormSubmission, FormStatus, FormType } from './types';
-import { sampleForms, sampleSubmissions, formTemplates, defaultTheme } from './mockData';
+import { formTemplates, defaultTheme } from './mockData';
+import {
+  fetchForms,
+  createForm,
+  updateForm,
+  updateFormStatus,
+  cloneForm,
+  deleteForm,
+  fetchSubmissions,
+  updateSubmissionStatus
+} from './api';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
 import { FormQuizScoring } from './FormQuizScoring';
@@ -44,10 +54,13 @@ interface SmartFormBuilderStudioProps {
 }
 
 export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () => {
-  const [forms, setForms] = useState<FormDefinition[]>(sampleForms);
-  const [submissions, setSubmissions] = useState<FormSubmission[]>(sampleSubmissions);
+  const [forms, setForms] = useState<FormDefinition[]>([]);
+  const [isLoadingForms, setIsLoadingForms] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -61,25 +74,49 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
   const activeForm = forms.find(f => f.id === activeFormId);
 
+  // بارگذاری فهرست فرم‌ها از وب‌سرویس واقعی هنگام باز شدن ماژول
+  useEffect(() => {
+    fetchForms({ per_page: 100 })
+      .then(res => setForms(res.data))
+      .catch(() => setLoadError('بارگذاری فهرست فرم‌ها از سرور ناموفق بود.'))
+      .finally(() => setIsLoadingForms(false));
+  }, []);
+
+  // بارگذاری پاسخ‌های فرم فعال — برای تب‌های «پاسخ‌ها» و «داشبورد آمار»
+  useEffect(() => {
+    if (!activeFormId) {
+      setSubmissions([]);
+      return;
+    }
+    fetchSubmissions(activeFormId, { per_page: 500 })
+      .then(res => setSubmissions(res.data))
+      .catch(() => setSubmissions([]));
+  }, [activeFormId]);
+
+  // ذخیرهٔ خودکار تغییرات فرم فعال روی سرور — با تاخیر کوتاه تا در هر ضربه کلید درخواست نزند
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistFormChange = (updatedForm: FormDefinition) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      updateForm(updatedForm.id, updatedForm).catch(() => setSaveError('ذخیرهٔ تغییرات این فرم روی سرور ناموفق بود.'));
+    }, 700);
+  };
+
   // Handle Form Update
   const handleUpdateActiveForm = (updatedForm: FormDefinition) => {
     setForms(prev => prev.map(f => (f.id === updatedForm.id ? updatedForm : f)));
+    persistFormChange(updatedForm);
   };
 
   // Create new blank form
   const handleCreateNewForm = (type: FormType = 'form') => {
-    const newForm: FormDefinition = {
-      id: `form_${Date.now()}`,
+    const draft: Partial<FormDefinition> & { title: string } = {
       title: type === 'quiz' ? 'آزمون آنلاین جدید' : type === 'survey' ? 'پرسشنامه جدید' : 'فرم داده‌آمای جدید',
       description: 'لطفاً توضیحات و راهنمای تکمیل فرم را اینجا وارد کنید...',
       type,
       status: 'draft',
       category: 'عمومی',
       tags: ['جدید'],
-      ownerName: 'مدیر سامانه',
-      version: 1,
-      createdAt: '۱۴۰۵/۰۵/۱۰',
-      updatedAt: '۱۴۰۵/۰۵/۱۰',
       steps: [{ id: 's1', title: 'گام نخست', order: 1 }],
       fields: [],
       logicRules: [],
@@ -100,42 +137,51 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         showProgressBar: true,
         customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
         generateTrackingCode: true,
-        trackingCodePrefix: 'FRM-2026',
+        trackingCodePrefix: 'FRM',
         sendEmailNotification: false,
         sendSmsNotification: false
-      },
-      auditLogs: [{ id: `al_${Date.now()}`, userName: 'کاربر سیستم', action: 'ایجاد اولیه فرم', timestamp: 'هم‌اکنون' }],
-      viewsCount: 0,
-      submissionsCount: 0,
-      avgCompletionTimeSeconds: 0
+      }
     };
 
-    setForms([newForm, ...forms]);
-    setActiveFormId(newForm.id);
-    setActiveTab('builder');
+    createForm(draft)
+      .then(newForm => {
+        setForms(prev => [newForm, ...prev]);
+        setActiveFormId(newForm.id);
+        setActiveTab('builder');
+      })
+      .catch(() => setSaveError('ایجاد فرم جدید روی سرور ناموفق بود.'));
   };
 
   // Clone Form
   const handleCloneForm = (formToClone: FormDefinition) => {
-    const cloned: FormDefinition = {
-      ...formToClone,
-      id: `form_${Date.now()}`,
-      title: `${formToClone.title} (نسخه کپی)`,
-      status: 'draft',
-      createdAt: '۱۴۰۵/۰۵/۱۰',
-      updatedAt: '۱۴۰۵/۰۵/۱۰',
-      viewsCount: 0,
-      submissionsCount: 0
-    };
-    setForms([cloned, ...forms]);
+    cloneForm(formToClone.id)
+      .then(cloned => setForms(prev => [cloned, ...prev]))
+      .catch(() => setSaveError('کپی کردن فرم ناموفق بود.'));
   };
 
   // Delete Form
   const handleDeleteForm = (formId: string) => {
-    setForms(forms.filter(f => f.id !== formId));
-    if (activeFormId === formId) {
-      setActiveFormId(null);
-    }
+    deleteForm(formId)
+      .then(() => {
+        setForms(prev => prev.filter(f => f.id !== formId));
+        if (activeFormId === formId) setActiveFormId(null);
+      })
+      .catch(() => setSaveError('حذف فرم ناموفق بود.'));
+  };
+
+  // انتشار فرم — نشانی عمومی واقعی فقط پس از این فعال می‌شود
+  const handlePublishForm = (formId: string) => {
+    updateFormStatus(formId, 'published')
+      .then(updated => setForms(prev => prev.map(f => (f.id === updated.id ? updated : f))))
+      .catch(() => setSaveError('انتشار فرم ناموفق بود.'));
+  };
+
+  // تغییر وضعیت بررسی یک پاسخ (تایید/رد/یادداشت کارشناس)
+  const handleUpdateSubmissionStatus = (subId: string, status: FormSubmission['status'], note?: string) => {
+    if (!activeFormId) return;
+    updateSubmissionStatus(activeFormId, subId, { status, internal_notes: note })
+      .then(updated => setSubmissions(prev => prev.map(s => (s.id === updated.id ? updated : s))))
+      .catch(() => setSaveError('به‌روزرسانی وضعیت پاسخ ناموفق بود.'));
   };
 
   // Filtered forms list
@@ -185,8 +231,22 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         </div>
       </div>
 
+      {/* نوار خطای ذخیره/بارگذاری — روی سرویس واقعی */}
+      {(loadError || saveError) && (
+        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-2xl p-3.5 flex items-center justify-between gap-3">
+          <span>{loadError || saveError}</span>
+          <button onClick={() => { setLoadError(null); setSaveError(null); }} className="text-rose-500 hover:text-rose-700 shrink-0">
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Main Studio Work Area */}
-      {activeForm ? (
+      {isLoadingForms ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center text-xs text-slate-400 font-bold">
+          در حال بارگذاری فرم‌ها...
+        </div>
+      ) : activeForm ? (
         /* Active Form Editor Layout */
         <div className="space-y-6">
           {/* Editor Header Navigation Bar */}
@@ -286,6 +346,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
             <SubmissionsManager
               form={activeForm}
               submissions={submissions.filter(s => s.formId === activeForm.id)}
+              onUpdateSubmissionStatus={handleUpdateSubmissionStatus}
             />
           )}
 
@@ -472,18 +533,13 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
         onFormGenerated={generatedForm => {
-          const newForm: FormDefinition = {
-            id: `form_${Date.now()}`,
+          const draft: Partial<FormDefinition> & { title: string } = {
             title: generatedForm.title || 'فرم هوشمند تولید شده',
             description: generatedForm.description || '',
             type: generatedForm.type || 'survey',
             status: 'draft',
             category: 'تولید شده با AI',
             tags: ['هوش مصنوعی'],
-            ownerName: 'دستیار AI سیستم',
-            version: 1,
-            createdAt: '۱۴۰۵/۰۵/۱۰',
-            updatedAt: '۱۴۰۵/۰۵/۱۰',
             steps: generatedForm.steps || [{ id: 's1', title: 'گام اصلی', order: 1 }],
             fields: generatedForm.fields || [],
             logicRules: generatedForm.logicRules || [],
@@ -504,19 +560,19 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
               showProgressBar: true,
               customSuccessMessage: 'اطلاعات با موفقیت ثبت شد.',
               generateTrackingCode: true,
-              trackingCodePrefix: 'AI-2026',
+              trackingCodePrefix: 'AI',
               sendEmailNotification: false,
               sendSmsNotification: false
-            },
-            auditLogs: [],
-            viewsCount: 0,
-            submissionsCount: 0,
-            avgCompletionTimeSeconds: 0
+            }
           };
 
-          setForms([newForm, ...forms]);
-          setActiveFormId(newForm.id);
-          setActiveTab('builder');
+          createForm(draft)
+            .then(newForm => {
+              setForms(prev => [newForm, ...prev]);
+              setActiveFormId(newForm.id);
+              setActiveTab('builder');
+            })
+            .catch(() => setSaveError('ایجاد فرم تولیدشده با AI روی سرور ناموفق بود.'));
         }}
       />
 
@@ -526,6 +582,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
           form={activeForm}
           isOpen={isPublishModalOpen}
           onClose={() => setIsPublishModalOpen(false)}
+          onPublish={() => handlePublishForm(activeForm.id)}
         />
       )}
 

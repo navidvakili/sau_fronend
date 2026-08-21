@@ -247,6 +247,8 @@ export interface AuditLogItem {
 
 export interface FormDefinition {
   id: string;
+  /** نامک — برای نشانی عمومی /forms/{slug} روی سایت public. اختیاری چون فرم‌های تولیدشده محلی (پیش از ذخیره) هنوز نامک ندارند */
+  slug?: string;
   title: string;
   description: string;
   type: FormType;
