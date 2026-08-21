@@ -41,6 +41,8 @@ SectionInstance
 ├─ visibility: { desktop: true, tablet: true, mobile: true }   // REQUIRED
 └─ conditionalDisplay: { enabled: false }                      // REQUIRED
 
+`layout: 'boxed'` renders `max-w-[1200px] mx-auto px-4` on that section's own wrapper; `'full-width'` renders `w-full px-4` (edge-to-edge). For a "showcase card" that overlaps the section above (`marginTop: -N`) and needs a distinct card background/shadow/radius, don't just set `layout: 'boxed'` on one flat section — nest two levels: outer section `layout: 'full-width'` (carries the overlap, no background of its own) → one `width: 12` column → its `blocks` holds one `{ kind: 'section', section: {...} }` whose inner section is `layout: 'boxed'` and carries the actual `backgroundColor`/`boxShadow`/`borderRadius`/padding and content columns. This is the same nested-section pattern used for any sub-grid inside a section (see `ColumnInstance.blocks` below).
+
 ColumnInstance
 ├─ id: string
 ├─ width: number                   // 1–12, desktop/fallback width; widths in one section's columns should sum to ≤12

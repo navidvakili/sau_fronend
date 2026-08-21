@@ -9,7 +9,7 @@ Condensed from `builderTypes.ts` (`WidgetType`, `WIDGET_TYPE_LABELS`) and `Compo
 | `heading` | any `<h1>`–`<h3>`-level title | `content` = the text. `settings.style.fontSize/fontWeight/textAlign/textColor` |
 | `text` | a short paragraph, subtitle, or plain description | `content` = plain text (no HTML) |
 | `richtext` | a longer block with mixed formatting — multiple paragraphs, inline links, lists | `content` = HTML string. Renders via `RichTextBlock`/`prose-editor`-style CSS |
-| `callout` | a highlighted note/warning/tip box | `content` = text. `iconName`. `settings.style.backgroundColor` sets the tint |
+| `callout` | a highlighted note/warning/tip box | `content` = text. `iconName`. `settings.style.backgroundColor` sets the tint. **Always full-width in its column by default — a `boxed` section does NOT shrink it.** To use it as a small centered pill/badge instead of a full-width bar, explicitly set `settings.style.widthMode: 'center'` + `settings.style.maxWidth` (px) on that widget instance |
 | `testimonial` | a quote/review with an attributed person | `content` = quote text. `customProps.author`, `customProps.role` |
 
 ## Media
@@ -50,7 +50,7 @@ Condensed from `builderTypes.ts` (`WidgetType`, `WIDGET_TYPE_LABELS`) and `Compo
 | `navigator` | a list of posts/pages of a chosen content type | `customProps.postType/limit` |
 | `child-pages` | auto-list of this page's sub-pages | `customProps.mode: 'tree'|'direct'`, `customProps.limit` |
 | `map` | an embedded location map | `customProps.embedUrl` or `customProps.address` |
-| `contact-info` | phone/email/address block | `customProps.items` — check the exact shape in `InspectorPanel.tsx` before use |
+| `contact-info` | phone/email/address block | Renders a **fixed 4-row card**: تلفن, ایمیل, نشانی, ساعات کاری (`customProps.phone/email/address/workHours`), always all four, in that order — cannot be limited to a custom subset or relabeled. If the source shows only e.g. email+phone as two individual compact rows (not a 4-row card), don't force it into `contact-info` — use two `icon-box` widgets instead (`customProps.layout: 'row'`, `title` = label, `content` = value, padding tightened via `settings.style`) |
 | `social-links` | row of social icons | `customProps.urls` |
 | `share-buttons` | "share this page" row | `customProps.pageUrl` |
 | `custom-html` | anything with no good match — raw HTML/embed | `content` = raw HTML string. Use as a last resort, not a default |
