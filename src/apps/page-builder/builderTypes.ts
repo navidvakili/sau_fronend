@@ -44,7 +44,10 @@ export type StaticWidgetType =
   | 'social-links'
   | 'share-buttons'
   | 'pricing-table'
-  | 'testimonial';
+  | 'testimonial'
+  | 'tabs'
+  | 'interactive-map'
+  | 'excel-table';
 
 export type SmartWidgetType =
   | 'announcements-feed'
@@ -96,6 +99,9 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'share-buttons': 'دکمه‌های اشتراک',
   'pricing-table': 'جدول قیمت',
   testimonial: 'نظر کاربر',
+  tabs: 'تب‌ها',
+  'interactive-map': 'نقشه تعاملی',
+  'excel-table': 'جدول اکسل',
   // ویجت‌های هوشمند (ماژول‌ها)
   'announcements-feed': 'خوراک اطلاعیه‌ها',
   'news-feed': 'خوراک اخبار',

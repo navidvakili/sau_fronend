@@ -39,7 +39,9 @@ import {
   Building2,
   CalendarDays,
   UsersRound,
-  BookOpen
+  BookOpen,
+  FileSpreadsheet,
+  Navigation
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -93,7 +95,10 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'testimonial', category: 'basic', name: 'نظر کاربر (Testimonial)', desc: 'گفت‌قول و تجربه کاربران با امضا', icon: MessageSquareQuote },
     { type: 'callout', category: 'basic', name: 'یادآوری/هشدار (Callout)', desc: 'جعبه نکته یا هشدار رنگی', icon: Info },
     { type: 'icon', category: 'basic', name: 'آیکون (Icon)', desc: 'نمایش تک آیکون تزئینی', icon: Sparkles },
-    
+    { type: 'tabs', category: 'basic', name: 'تب‌ها (Tabs)', desc: 'محتوای چندگانه با سوئیچ بین چند تب — هر تب یک بخش کامل و مستقل', icon: Layers, badge: 'تعاملی' },
+    { type: 'interactive-map', category: 'basic', name: 'نقشه تعاملی (Interactive Map)', desc: 'سوئیچ بین چند نقشه/مکان آماده با دکمه‌های انتخاب', icon: Navigation, badge: 'تعاملی' },
+    { type: 'excel-table', category: 'basic', name: 'جدول اکسل (Excel Table)', desc: 'آپلود فایل اکسل و نمایش آن به‌صورت جدول قابل جستجو', icon: FileSpreadsheet, badge: 'آپلود' },
+
     // Smart items
     { type: 'news-feed', category: 'smart', name: 'خوراک داینامیک اخبار', desc: 'اتصال زنده به ماژول اخبار با گرید و اسلایدر', icon: Newspaper, badge: 'ماژول اخبار' },
     { type: 'announcements-feed', category: 'smart', name: 'اطلاعیه‌های فوری و آموزشی', desc: 'نمایش لیست یا بنر اطلاعیه‌های رسمی', icon: Bell, badge: 'ماژول اطلاعیه‌ها' },

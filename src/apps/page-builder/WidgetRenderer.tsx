@@ -4,7 +4,9 @@ import {
   WidgetInstance,
   WidgetStyle,
   UserRoleCondition,
-  WidgetDataBinding
+  WidgetDataBinding,
+  SectionInstance,
+  getColumnBlocks
 } from './builderTypes';
 import {
   fetchDataSourceAnnouncements,
@@ -82,7 +84,8 @@ import {
   Maximize2,
   Minimize2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Search
 } from 'lucide-react';
 import {
   EitaaIcon,
@@ -3603,12 +3606,18 @@ const ChildPagesBlock: React.FC<{
 };
 
 /** نقشه — جاسازی نقشه گوگل */
+/** آدرس جاسازی نقشه OpenStreetMap از روی مختصات دقیق (بدون نیاز به کلید API) */
+const buildOsmEmbedUrl = (lat: number, lng: number, delta = 0.01): string => {
+  const bbox = `${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+};
+
 const MapBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const props = widget.settings.customProps || {};
-  const embedUrl =
-    props.embedUrl ||
-    widget.content ||
-    'https://www.google.com/maps?q=Yazd&output=embed';
+  const hasCoords = typeof props.latitude === 'number' && typeof props.longitude === 'number';
+  const embedUrl = hasCoords
+    ? buildOsmEmbedUrl(props.latitude, props.longitude)
+    : props.embedUrl || widget.content || 'https://www.google.com/maps?q=Yazd&output=embed';
 
   return (
     <div style={containerStyle} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-800">
@@ -3808,6 +3817,267 @@ const TestimonialBlock: React.FC<{ widget: WidgetInstance; containerStyle: React
           <div className="text-xs font-black text-slate-900 dark:text-white">{props.author || 'کاربر نمونه'}</div>
           <div className="text-[10px] text-slate-400">{props.role || 'دانشجوی دانشگاه'}</div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * رندر خواندنی (بدون قابلیت ویرایش/انتخاب) یک SectionInstance — برای پیش‌نمایش بوم، پیش‌نمایش زنده
+ * و بلوک تب‌ها که باید محتوای تب فعال را نشان دهد. مشابه سبک‌تری از renderSectionBlock در Canvas.tsx
+ * (که یک closure خصوصی است و اینجا در دسترس نیست) — بدون منطق انتخاب/کشیدن‌ورها.
+ */
+export const RenderSectionReadOnly: React.FC<{
+  section: SectionInstance;
+  depth?: number;
+  currentUserRole?: UserRoleCondition;
+  isEditorPreview?: boolean;
+  pageId?: number | null;
+  pageSlug?: string | null;
+  variables?: Record<string, string>;
+  dedicatedPageId?: number | null;
+}> = ({ section, depth = 0, currentUserRole = 'all', isEditorPreview = false, pageId, pageSlug, variables, dedicatedPageId }) => {
+  if (depth > 6) return null;
+
+  const bg = applyBackgroundOpacity(section.backgroundGradient || section.backgroundColor, section.backgroundOpacity);
+
+  return (
+    <div
+      style={{
+        backgroundColor: section.backgroundGradient ? undefined : bg,
+        backgroundImage: section.backgroundGradient ? bg : section.backgroundImage,
+        backgroundPosition: section.backgroundPosition,
+        backgroundSize: section.backgroundSize,
+        backgroundRepeat: section.backgroundRepeat,
+        paddingTop: section.paddingTop,
+        paddingBottom: section.paddingBottom,
+        paddingLeft: section.paddingLeft,
+        paddingRight: section.paddingRight,
+        boxShadow: resolveBoxShadow(section.boxShadow),
+        borderTopLeftRadius: section.borderRadius?.topLeft,
+        borderTopRightRadius: section.borderRadius?.topRight,
+        borderBottomLeftRadius: section.borderRadius?.bottomLeft,
+        borderBottomRightRadius: section.borderRadius?.bottomRight
+      }}
+      className="transition-all"
+    >
+      <div className={section.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4' : 'w-full px-4'}>
+        <div className="grid grid-cols-12 gap-4">
+          {section.columns.map((col) => (
+            <div
+              key={col.id}
+              style={{ gridColumn: `span ${Math.min(12, Math.max(1, col.width))} / span ${Math.min(12, Math.max(1, col.width))}` }}
+              className="space-y-4"
+            >
+              {getColumnBlocks(col).map((block) =>
+                block.kind === 'widget' ? (
+                  <WidgetRenderer
+                    key={block.widget.id}
+                    widget={block.widget}
+                    currentUserRole={currentUserRole}
+                    isEditorPreview={isEditorPreview}
+                    depth={depth + 1}
+                    pageId={pageId}
+                    pageSlug={pageSlug}
+                    variables={variables}
+                    dedicatedPageId={dedicatedPageId}
+                  />
+                ) : (
+                  <RenderSectionReadOnly
+                    key={block.section.id}
+                    section={block.section}
+                    depth={depth + 1}
+                    currentUserRole={currentUserRole}
+                    isEditorPreview={isEditorPreview}
+                    pageId={pageId}
+                    pageSlug={pageSlug}
+                    variables={variables}
+                    dedicatedPageId={dedicatedPageId}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** تب‌ها — سوئیچ بین چند SectionInstance مستقل */
+const TabsBlock: React.FC<{
+  widget: WidgetInstance;
+  containerStyle: React.CSSProperties;
+  isEditorPreview: boolean;
+  pageId?: number | null;
+  pageSlug?: string | null;
+  variables?: Record<string, string>;
+  dedicatedPageId?: number | null;
+}> = ({ widget, containerStyle, isEditorPreview, pageId, pageSlug, variables, dedicatedPageId }) => {
+  const [active, setActive] = useState(0);
+  const tabs: { id: string; label: string; section: SectionInstance }[] = widget.settings.customProps?.tabs || [];
+
+  if (tabs.length === 0) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-slate-700 text-center text-xs text-slate-400">
+        هنوز هیچ تبی برای این بلوک تعریف نشده است.
+      </div>
+    );
+  }
+
+  const activeTab = tabs[Math.min(active, tabs.length - 1)];
+
+  return (
+    <div style={containerStyle}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-slate-800 pb-2 mb-4">
+        {tabs.map((tab, i) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              i === active
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {activeTab?.section && (
+        <RenderSectionReadOnly
+          section={activeTab.section}
+          isEditorPreview={isEditorPreview}
+          pageId={pageId}
+          pageSlug={pageSlug}
+          variables={variables}
+          dedicatedPageId={dedicatedPageId}
+        />
+      )}
+    </div>
+  );
+};
+
+/** نقشه تعاملی — سوئیچ بین چند embed آماده */
+const InteractiveMapBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const [active, setActive] = useState(0);
+  const locations: { id: string; label: string; latitude?: number; longitude?: number; embedUrl?: string; address?: string }[] =
+    widget.settings.customProps?.locations || [];
+
+  if (locations.length === 0) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-slate-700 text-center text-xs text-slate-400">
+        هنوز هیچ مکانی برای این نقشه تعریف نشده است.
+      </div>
+    );
+  }
+
+  const activeLoc = locations[Math.min(active, locations.length - 1)];
+  const activeEmbedUrl =
+    activeLoc && typeof activeLoc.latitude === 'number' && typeof activeLoc.longitude === 'number'
+      ? buildOsmEmbedUrl(activeLoc.latitude, activeLoc.longitude)
+      : activeLoc?.embedUrl;
+
+  return (
+    <div style={containerStyle} className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {locations.map((loc, i) => (
+          <button
+            key={loc.id}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              i === active ? 'bg-slate-900 text-amber-400 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <MapPin className={`w-3.5 h-3.5 ${i === active ? 'text-amber-400' : 'text-slate-400'}`} />
+            {loc.label}
+          </button>
+        ))}
+      </div>
+      <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-800 bg-slate-900 h-[360px]">
+        {activeEmbedUrl && (
+          <iframe
+            title={activeLoc.label}
+            src={activeEmbedUrl}
+            className="w-full h-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        )}
+        {activeLoc?.address && (
+          <div className="absolute bottom-3 right-3 max-w-sm bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl px-3 py-2 shadow-lg border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            {activeLoc.address}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/** جدول اکسل — داده‌های واردشده به‌صورت JSON ثابت (پردازش‌شده هنگام آپلود) با جستجوی اختیاری */
+const ExcelTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const [search, setSearch] = useState('');
+  const props = widget.settings.customProps || {};
+  const columns: string[] = props.columns || [];
+  const rows: string[][] = props.rows || [];
+  const enableSearch = props.enableSearch !== false;
+
+  if (columns.length === 0) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-slate-700 text-center text-xs text-slate-400">
+        هنوز فایل اکسلی برای این بلوک آپلود نشده است.
+      </div>
+    );
+  }
+
+  const filteredRows = search.trim()
+    ? rows.filter((r) => r.some((cell) => cell.toLowerCase().includes(search.trim().toLowerCase())))
+    : rows;
+
+  return (
+    <div style={containerStyle} className="space-y-3">
+      {enableSearch && (
+        <div className="relative max-w-sm">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="جستجو در جدول..."
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl pr-9 pl-3 py-2 text-xs focus:outline-none focus:border-teal-500 transition"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800">
+        <table className="w-full text-right border-collapse text-xs">
+          <thead className="bg-slate-900 text-white font-bold">
+            <tr>
+              {columns.map((c, i) => (
+                <th key={i} className="p-3">{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+            {filteredRows.length > 0 ? (
+              filteredRows.map((row, ri) => (
+                <tr key={ri} className="hover:bg-teal-50/50 dark:hover:bg-teal-500/5 transition-colors">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="p-3 text-slate-700 dark:text-slate-200">{cell}</td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length} className="p-6 text-center text-slate-400 text-xs">
+                  نتیجه‌ای یافت نشد.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -4191,6 +4461,25 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </span>
         </div>
       );
+
+    case 'tabs':
+      return (
+        <TabsBlock
+          widget={widget}
+          containerStyle={containerStyle}
+          isEditorPreview={isEditorPreview}
+          pageId={pageId}
+          pageSlug={pageSlug}
+          variables={variables}
+          dedicatedPageId={dedicatedPageId}
+        />
+      );
+
+    case 'interactive-map':
+      return <InteractiveMapBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'excel-table':
+      return <ExcelTableBlock widget={widget} containerStyle={containerStyle} />;
 
     // -------------------------------------------------------------
     // SMART DYNAMIC WIDGETS — اتصال به وب‌سرویس‌های واقعی

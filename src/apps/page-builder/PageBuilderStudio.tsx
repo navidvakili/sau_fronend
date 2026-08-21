@@ -23,6 +23,7 @@ import { TemplateModal } from './TemplateModal';
 import { PreviewModal } from './PreviewModal';
 import { ExportModal } from './ExportModal';
 import { ComponentPickerModal } from './ComponentPickerModal';
+import { TabSectionEditorModal } from './TabSectionEditorModal';
 import { PagesList, buildPagePath } from './PagesList';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { PageSettingsModal } from './PageSettingsModal';
@@ -405,6 +406,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [showComponentPickerModal, setShowComponentPickerModal] = useState(false);
   const [pickerTargetInsertIndex, setPickerTargetInsertIndex] = useState<number | null>(null);
   const [pickerTargetColumnId, setPickerTargetColumnId] = useState<string | null>(null);
+  // ویرایشگر محتوای یک تب (ویجت tabs) — کدام ویجت و کدام ایندکس تب
+  const [editingTabWidgetId, setEditingTabWidgetId] = useState<string | null>(null);
+  const [editingTabIndex, setEditingTabIndex] = useState<number | null>(null);
 
   // Status notification state
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -457,6 +461,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       for (const col of s.columns) {
         const found = findSectionRecursive(col.subSections || [], id);
         if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  /** یافتن یک ویجت در هر جای درخت (سطح اصلی یا زیربلوک) — برای ویرایشگر محتوای تب */
+  const findWidgetInTree = (sections: SectionInstance[], widgetId: string): WidgetInstance | null => {
+    for (const sec of sections) {
+      for (const col of sec.columns) {
+        const blocks = getColumnBlocks(col);
+        const found = blocks.find((b) => b.kind === 'widget' && b.widget.id === widgetId);
+        if (found && found.kind === 'widget') return found.widget;
+        const inSub = findWidgetInTree(col.subSections || [], widgetId);
+        if (inSub) return inSub;
       }
     }
     return null;
@@ -755,6 +773,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'tabs') {
+      title = 'تب‌های محتوا';
+    } else if (widgetType === 'interactive-map') {
+      title = 'نقشه تعاملی پردیس‌ها';
+    } else if (widgetType === 'excel-table') {
+      title = 'جدول وارد شده از اکسل';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -946,6 +970,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'tabs') {
+      title = 'تب‌های محتوا';
+    } else if (widgetType === 'interactive-map') {
+      title = 'نقشه تعاملی پردیس‌ها';
+    } else if (widgetType === 'excel-table') {
+      title = 'جدول وارد شده از اکسل';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -1753,6 +1783,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDeleteSection={handleDeleteSection}
           onDuplicateWidget={handleDuplicateWidget}
           dedicatedPageId={previewDedicatedPageId}
+          onEditTabSection={(widgetId, tabIndex) => {
+            setEditingTabWidgetId(widgetId);
+            setEditingTabIndex(tabIndex);
+          }}
         />
       </div>
       </div>
@@ -1777,6 +1811,36 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onClose={() => setShowComponentPickerModal(false)}
         />
       )}
+      {editingTabWidgetId !== null && editingTabIndex !== null && (() => {
+        const editingTabWidget = findWidgetInTree(pageSchema.sections, editingTabWidgetId);
+        const tabs = editingTabWidget?.settings.customProps?.tabs || [];
+        const editingSection: SectionInstance | null = tabs[editingTabIndex]?.section ?? null;
+        return (
+          <TabSectionEditorModal
+            open={!!editingTabWidget && !!editingSection}
+            section={editingSection}
+            tabLabel={tabs[editingTabIndex]?.label}
+            onClose={() => {
+              setEditingTabWidgetId(null);
+              setEditingTabIndex(null);
+            }}
+            onSave={(updatedSection) => {
+              if (!editingTabWidget) return;
+              const newTabs = [...tabs];
+              newTabs[editingTabIndex] = { ...newTabs[editingTabIndex], section: updatedSection };
+              handleUpdateWidget({
+                ...editingTabWidget,
+                settings: {
+                  ...editingTabWidget.settings,
+                  customProps: { ...(editingTabWidget.settings.customProps || {}), tabs: newTabs }
+                }
+              });
+              setEditingTabWidgetId(null);
+              setEditingTabIndex(null);
+            }}
+          />
+        );
+      })()}
       {showGlobalStylesModal && (
         <GlobalStyleModal
           globalStyles={pageSchema.globalStyles}

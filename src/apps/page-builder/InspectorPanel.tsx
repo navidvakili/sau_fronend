@@ -53,7 +53,11 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Check
+  Check,
+  Pencil,
+  Upload,
+  FileSpreadsheet,
+  FileX
 } from 'lucide-react';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
@@ -146,6 +150,9 @@ interface InspectorPanelProps {
   onDuplicateWidget: (widget: WidgetInstance) => void;
   /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ متصل به این لایوت — برای دسته‌بندی‌های بلوک گالری صفحات اختصاصی */
   dedicatedPageId?: number;
+  /** درخواست باز کردن ویرایشگر محتوای یک تب (ویجت tabs) — مودال واقعی در PageBuilderStudio.tsx مانت می‌شود
+   *  تا از circular import بین InspectorPanel و TabSectionEditorModal (که خودِ InspectorPanel را رندر می‌کند) جلوگیری شود */
+  onEditTabSection?: (widgetId: string, tabIndex: number) => void;
 }
 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
@@ -160,11 +167,14 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onDeleteWidget,
   onDeleteSection,
   onDuplicateWidget,
-  dedicatedPageId
+  dedicatedPageId,
+  onEditTabSection
 }) => {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'style' | 'logic'>('content');
   const [colBp, setColBp] = useState<Breakpoint>('desktop');
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'sectionBg' | 'widgetImage' | 'videoPoster' | null>(null);
+  const [excelUploading, setExcelUploading] = useState(false);
+  const [excelError, setExcelError] = useState<string | null>(null);
   /** دیالوگ نسخهٔ کامل ویرایشگر متن غنی (WYSIWYG) */
   const [richtextFullscreen, setRichtextFullscreen] = useState(false);
 
@@ -422,6 +432,73 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     };
 
     const customProps = selectedWidget.settings.customProps || {};
+
+    /** افزودن تب جدید به ویجت تب‌ها — هر تب یک SectionInstance کامل و مستقل دارد */
+    const addTab = () => {
+      const tabs = [...(customProps.tabs || [])];
+      const n = tabs.length + 1;
+      const newColId = `col-${Date.now()}-1`;
+      tabs.push({
+        id: `tab-${Date.now()}`,
+        label: `تب ${n}`,
+        section: {
+          id: `tab-section-${Date.now()}`,
+          name: `محتوای تب ${n}`,
+          layout: 'boxed',
+          paddingTop: 24,
+          paddingBottom: 24,
+          columns: [{ id: newColId, width: 12, widths: { desktop: 12, tablet: 12, mobile: 12 }, widgets: [], subSections: [] }],
+          visibility: { desktop: true, tablet: true, mobile: true },
+          conditionalDisplay: { enabled: false, userRole: 'all' }
+        }
+      });
+      updateCustomProps({ tabs });
+    };
+
+    const removeTab = (idx: number) => {
+      const tabs = [...(customProps.tabs || [])];
+      tabs.splice(idx, 1);
+      updateCustomProps({ tabs });
+    };
+
+    const moveTab = (idx: number, dir: -1 | 1) => {
+      const tabs = [...(customProps.tabs || [])];
+      const target = idx + dir;
+      if (target < 0 || target >= tabs.length) return;
+      const t = tabs[idx];
+      tabs[idx] = tabs[target];
+      tabs[target] = t;
+      updateCustomProps({ tabs });
+    };
+
+    /** افزودن/ویرایش/حذف مکان‌های ویجت نقشه تعاملی */
+    const addLocation = () => {
+      const locations = [...(customProps.locations || [])];
+      locations.push({ id: `loc-${Date.now()}`, label: `مکان ${locations.length + 1}`, latitude: undefined, longitude: undefined, embedUrl: '', address: '' });
+      updateCustomProps({ locations });
+    };
+
+    const updateLocation = (idx: number, patch: Record<string, any>) => {
+      const locations = [...(customProps.locations || [])];
+      locations[idx] = { ...locations[idx], ...patch };
+      updateCustomProps({ locations });
+    };
+
+    const removeLocation = (idx: number) => {
+      const locations = [...(customProps.locations || [])];
+      locations.splice(idx, 1);
+      updateCustomProps({ locations });
+    };
+
+    const moveLocation = (idx: number, dir: -1 | 1) => {
+      const locations = [...(customProps.locations || [])];
+      const target = idx + dir;
+      if (target < 0 || target >= locations.length) return;
+      const t = locations[idx];
+      locations[idx] = locations[target];
+      locations[target] = t;
+      updateCustomProps({ locations });
+    };
 
     /** آیتم‌های منوی نوار راهبری — اولویت: customProps.items ساختاریافته ← fallback: content (هر خط عنوان|لینک) ← [] */
     const navItems: { label: string; url: string; color?: string; fontSize?: number; animation?: string; bold?: boolean }[] =
@@ -1337,6 +1414,211 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </>
               )}
 
+              {/* تب‌ها — هر تب یک SectionInstance کامل و مستقل دارد */}
+              {selectedWidget.type === 'tabs' && (
+                <div className="space-y-3">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تب‌ها</label>
+                  {(customProps.tabs || []).map((tab: any, idx: number) => (
+                    <div key={tab.id} className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={tab.label}
+                          onChange={(e) => {
+                            const tabs = [...(customProps.tabs || [])];
+                            tabs[idx] = { ...tabs[idx], label: e.target.value };
+                            updateCustomProps({ tabs });
+                          }}
+                          placeholder="برچسب تب"
+                          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => moveTab(idx, -1)}
+                          disabled={idx === 0}
+                          title="جابه‌جایی به بالا"
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 cursor-pointer"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTab(idx, 1)}
+                          disabled={idx === (customProps.tabs || []).length - 1}
+                          title="جابه‌جایی به پایین"
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 cursor-pointer"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeTab(idx)}
+                          title="حذف تب"
+                          className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onEditTabSection && onEditTabSection(selectedWidget.id, idx)}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[11px] font-bold transition-all cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        ویرایش محتوای این تب
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addTab}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> افزودن تب جدید
+                  </button>
+                  {(customProps.tabs || []).length === 0 && (
+                    <p className="text-[10px] text-slate-400">هنوز هیچ تبی اضافه نشده — با دکمه بالا اولین تب را بسازید.</p>
+                  )}
+                </div>
+              )}
+
+              {/* نقشه تعاملی — سوئیچ بین چند مکان، هرکدام با مختصات دقیق یا لینک جاسازی دستی */}
+              {selectedWidget.type === 'interactive-map' && (
+                <div className="space-y-3">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">مکان‌ها</label>
+                  {(customProps.locations || []).map((loc: any, idx: number) => (
+                    <div key={loc.id} className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={loc.label}
+                          onChange={(e) => updateLocation(idx, { label: e.target.value })}
+                          placeholder="برچسب مکان"
+                          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                        <button type="button" onClick={() => moveLocation(idx, -1)} disabled={idx === 0} title="جابه‌جایی به بالا" className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 cursor-pointer">
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => moveLocation(idx, 1)} disabled={idx === (customProps.locations || []).length - 1} title="جابه‌جایی به پایین" className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 cursor-pointer">
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => removeLocation(idx)} title="حذف مکان" className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          step="any"
+                          value={loc.latitude ?? ''}
+                          onChange={(e) => updateLocation(idx, { latitude: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                          placeholder="عرض جغرافیایی (Lat)"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                        <input
+                          type="number"
+                          step="any"
+                          value={loc.longitude ?? ''}
+                          onChange={(e) => updateLocation(idx, { longitude: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                          placeholder="طول جغرافیایی (Lng)"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={loc.address || ''}
+                        onChange={(e) => updateLocation(idx, { address: e.target.value })}
+                        placeholder="نشانی نمایشی (اختیاری)"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                      <input
+                        type="text"
+                        value={loc.embedUrl || ''}
+                        onChange={(e) => updateLocation(idx, { embedUrl: e.target.value })}
+                        placeholder="لینک embed دستی (فقط در نبود مختصات استفاده می‌شود)"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] text-indigo-500 focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addLocation}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> افزودن مکان جدید
+                  </button>
+                  <p className="text-[10px] text-slate-400">با پر کردن عرض/طول جغرافیایی، نقشه دقیقاً روی همان مختصات ساخته می‌شود (اولویت با مختصات است). در غیر این صورت لینک embed دستی استفاده می‌شود.</p>
+                </div>
+              )}
+
+              {/* جدول اکسل — آپلود و پردازش یک‌باره در همین‌جا */}
+              {selectedWidget.type === 'excel-table' && (
+                <div className="space-y-3">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فایل اکسل (ردیف اول = سرستون‌ها)</label>
+                  {(customProps.rows || []).length > 0 ? (
+                    <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2 bg-slate-50 dark:bg-slate-950">
+                      <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-bold truncate">{customProps.sourceFileName || 'فایل اکسل'}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        {(customProps.columns || []).length} ستون، {(customProps.rows || []).length} ردیف
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => updateCustomProps({ columns: [], rows: [], sourceFileName: undefined })}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white text-[11px] font-bold transition-all cursor-pointer"
+                      >
+                        <FileX className="w-3.5 h-3.5" /> پاکسازی و آپلود مجدد
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 cursor-pointer hover:border-teal-500 hover:text-teal-600 transition-all">
+                      <Upload className="w-6 h-6" />
+                      <span className="text-xs font-bold">{excelUploading ? 'در حال پردازش فایل...' : 'انتخاب فایل اکسل (.xlsx)'}</span>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls"
+                        className="hidden"
+                        disabled={excelUploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          if (!file) return;
+                          setExcelError(null);
+                          setExcelUploading(true);
+                          try {
+                            const XLSX = await import('xlsx');
+                            const bytes = await file.arrayBuffer();
+                            const wb = XLSX.read(bytes, { type: 'array' });
+                            const ws = wb.Sheets[wb.SheetNames[0]];
+                            const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+                            if (!rawRows.length) throw new Error('فایل خالی است');
+                            const columns = (rawRows[0] || []).map((c: any) => String(c ?? ''));
+                            const dataRows = rawRows.slice(1).map((r) => columns.map((_: string, i: number) => String(r[i] ?? '')));
+                            updateCustomProps({ columns, rows: dataRows, sourceFileName: file.name });
+                          } catch (err) {
+                            setExcelError('خواندن فایل اکسل ناموفق بود — قالب فایل را بررسی کنید.');
+                          } finally {
+                            setExcelUploading(false);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                  {excelError && <p className="text-[10px] text-rose-500 font-bold">{excelError}</p>}
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={customProps.enableSearch !== false}
+                      onChange={(e) => updateCustomProps({ enableSearch: e.target.checked })}
+                      className="accent-teal-600 w-4 h-4"
+                    />
+                    نمایش کادر جستجو در بالای جدول
+                  </label>
+                </div>
+              )}
+
               {/* نوار راهبری (منو) */}
               {selectedWidget.type === 'nav-menu' && (
                 <>
@@ -1677,8 +1959,33 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* نقشه */}
               {selectedWidget.type === 'map' && (
                 <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عرض جغرافیایی (Latitude)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={customProps.latitude ?? ''}
+                        onChange={(e) => updateCustomProps({ latitude: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                        placeholder="31.8967"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">طول جغرافیایی (Longitude)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={customProps.longitude ?? ''}
+                        onChange={(e) => updateCustomProps({ longitude: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
+                        placeholder="54.3562"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">با پر کردن عرض/طول جغرافیایی، نقشه دقیقاً روی همان مختصات با یک نشانگر ساخته می‌شود (اولویت با مختصات است). برای موقعیت‌یابی مختصات از گوگل‌مپ (کلیک راست روی نقطه) استفاده کنید.</p>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لینک جاسازی نقشه (Embed URL)</label>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">لینک جاسازی نقشه (Embed URL) — در صورت خالی بودن مختصات بالا</label>
                     <input
                       type="text"
                       value={customProps.embedUrl || ''}
