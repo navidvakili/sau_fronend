@@ -2,6 +2,22 @@
 
 Condensed from `builderTypes.ts` (`WidgetType`, `WIDGET_TYPE_LABELS`) and `ComponentPickerModal.tsx`. For any `customProps` field not listed here, grep `frontend/src/apps/page-builder/InspectorPanel.tsx` for `selectedWidget.type === '<type>'` — that block is the authoritative shape.
 
+## Valid icon names — a small fixed list, NOT arbitrary lucide-react names
+
+Every `iconName` value (on `WidgetInstance.iconName`, `icon-box`/`counter`'s `customProps.iconName`, etc.) **and** every inline `[icon:name]` token (used inside `heading`/`text`/`richtext`/`accordion` content — see the badge/chip pattern below) is looked up in ONE fixed `iconMap` in `frontend/src/apps/page-builder/WidgetRenderer.tsx` (grep `const iconMap`). An unrecognized name silently falls back to a generic default icon (`info`/`sparkles` depending on widget) with no error — so a wrong guess doesn't fail loudly, it just renders the wrong icon. Re-grep that map fresh each time in case it changed, but as of this writing the valid keys are exactly:
+
+`map`, `phone`, `mail`, `share`, `chat`, `link`, `type`, `columns`, `rows`, `images`, `gauge`, `compass`, `code`, `quote`, `info`, `send`, `globe`, `hash`, `heart`, `clock`, `check`, `arrow`, `users`, `dollar`, `external`, `students`, `book`, `award`, `unlock`, `lock`, `grad`, `sparkles`, `stat`, `monitor`, `file-check`, `bookmark-check`, `layers`, `box`, `shield-check`, `user-check`, `file-text`, `circle-question-mark`, `linkedin`, `instagram`, `x`, `youtube`, `telegram`, plus a few payment/social-app brand icons (`aparat`, `bale`, `eitaa`, `cafebazaar`, `enamad`, `gap`, `sapp`, `shetab`, `adobe*`).
+
+Common near-misses that do **not** exist: `star`, `check-circle` (use `check`), `printer`/`fax` (nothing fax-specific — use `file-text` or `box`), `message-square` (use `chat`), `graduation-cap` (use `grad`), `user` singular (use `users`). Always pick from the real list above, not from general lucide-react icon-name conventions.
+
+## Icon + short-text "badge/chip" pattern (pill-shaped label, e.g. a small tag above a heading)
+
+Do **not** use `callout` for this — `callout` is a full alert-box component (icon-in-a-square + bold title line + separate body paragraph), not a small pill. For a compact "[icon] short label" chip:
+- Use `heading` (or `text`) with `content` starting with an inline icon token: `"[icon:sparkles] عالی‌ترین مرجع سیاست‌گذاری..."`. This is a real, first-class mechanism — `InspectorPanel.tsx` shows a "درج آیکون" (insert icon) button for exactly `heading`/`text`/`accordion` widgets that inserts this same `[icon:name]` token; it renders as an inline SVG next to the text (see `renderTextWithIcons` in `WidgetRenderer.tsx`).
+- Colored, semi-transparent background: set `settings.style.backgroundColor` to a plain 6-digit hex **plus** `settings.style.backgroundOpacity` (0–100) — `WidgetRenderer.tsx`'s `resolveBackgroundColor` converts the pair into an `rgba(...)` value at render time. Do not use an 8-digit alpha hex directly (`#ffffff1a`); it isn't parsed by that resolver and falls back to being passed through as a literal (unreliable across browsers) — `backgroundColor` + `backgroundOpacity` is the supported way to get a tinted/transparent fill.
+- Outline: `settings.style.borderWidth` (px) + `settings.style.borderColor`.
+- Pill shape + compact sizing: `settings.style.borderRadius: 999`, small `fontSize`/`fontWeight`, `paddingTop/Bottom/Left/Right`, and `widthMode: 'center'` (or `'auto'`) + `maxWidth` so it doesn't stretch to the column's full width (a plain `heading`/`text` widget is full-width by default, same caveat as `callout`).
+
 ## Text & headings
 
 | type | use for | key fields |
@@ -9,7 +25,7 @@ Condensed from `builderTypes.ts` (`WidgetType`, `WIDGET_TYPE_LABELS`) and `Compo
 | `heading` | any `<h1>`–`<h3>`-level title | `content` = the text. `settings.style.fontSize/fontWeight/textAlign/textColor` |
 | `text` | a short paragraph, subtitle, or plain description | `content` = plain text (no HTML) |
 | `richtext` | a longer block with mixed formatting — multiple paragraphs, inline links, lists | `content` = HTML string. Renders via `RichTextBlock`/`prose-editor`-style CSS |
-| `callout` | a highlighted note/warning/tip box | `content` = text. `iconName`. `settings.style.backgroundColor` sets the tint. **Always full-width in its column by default — a `boxed` section does NOT shrink it.** To use it as a small centered pill/badge instead of a full-width bar, explicitly set `settings.style.widthMode: 'center'` + `settings.style.maxWidth` (px) on that widget instance |
+| `callout` | a highlighted note/warning/tip **box** — icon-in-a-square + bold title line + separate body paragraph (NOT a small pill/badge — see the badge/chip pattern above for that case) | `content` = body text, `title` = the bold heading line. `iconName`. `settings.style.backgroundColor` sets the tint. **Always full-width in its column by default — a `boxed` section does NOT shrink it.** If ever used for something narrower, set `settings.style.widthMode: 'center'` + `settings.style.maxWidth` (px) |
 | `testimonial` | a quote/review with an attributed person | `content` = quote text. `customProps.author`, `customProps.role` |
 
 ## Media
@@ -19,7 +35,7 @@ Condensed from `builderTypes.ts` (`WidgetType`, `WIDGET_TYPE_LABELS`) and `Compo
 | `image` | a single photo/banner | `imageUrl`. `settings.style.borderRadius/shadow/objectFit/imageFrame` (`rounded`\|`square`\|`circle`) |
 | `image-slider` | a carousel/slideshow of images | `customProps.images: string[]` (or `sliderSource`/`mediaFolder` for a media-library-backed slider — leave as static `images` for cloned content) |
 | `video` | an embedded/uploaded video | `videoUrl`. `settings.style.videoAutoplay/videoLoop/videoMuted/videoControls/videoPoster/aspectRatio` |
-| `icon` | a single decorative icon | `iconName` (see `IconPicker.tsx`/`ICON_CHOICES` for valid names — stick to common lucide-react names like `sparkles`, `star`, `check-circle`, `graduation-cap`) |
+| `icon` | a single decorative icon | `iconName` — must be one of the fixed valid keys listed at the top of this file, not an arbitrary lucide-react name |
 
 ## Cards, stats, structured content
 
