@@ -4020,10 +4020,19 @@ const InteractiveMapBlock: React.FC<{ widget: WidgetInstance; containerStyle: Re
 /** جدول اکسل — داده‌های واردشده به‌صورت JSON ثابت (پردازش‌شده هنگام آپلود) با جستجوی اختیاری */
 const ExcelTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
   const [search, setSearch] = useState('');
+  const [activeGroup, setActiveGroup] = useState('all');
   const props = widget.settings.customProps || {};
   const columns: string[] = props.columns || [];
   const rows: string[][] = props.rows || [];
   const enableSearch = props.enableSearch !== false;
+  const maxHeight: number | undefined = props.maxHeight || undefined;
+  const headerBgColor = props.headerBgColor || '#0f172a';
+  const headerTextColor = props.headerTextColor || '#ffffff';
+  const rowBgColor = props.rowBgColor || undefined;
+  const rowAltBgColor = props.rowAltBgColor || undefined;
+  const rowTextColor = props.rowTextColor || undefined;
+  const groupByColumn: string = props.groupByColumn || '';
+  const groupColIndex = groupByColumn ? columns.indexOf(groupByColumn) : -1;
 
   if (columns.length === 0) {
     return (
@@ -4033,12 +4042,35 @@ const ExcelTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.
     );
   }
 
-  const filteredRows = search.trim()
-    ? rows.filter((r) => r.some((cell) => cell.toLowerCase().includes(search.trim().toLowerCase())))
-    : rows;
+  const groupValues = groupColIndex >= 0 ? Array.from(new Set(rows.map((r) => r[groupColIndex]).filter(Boolean))) : [];
+
+  const filteredRows = rows
+    .filter((r) => (activeGroup === 'all' || groupColIndex < 0 ? true : r[groupColIndex] === activeGroup))
+    .filter((r) => (search.trim() ? r.some((cell) => cell.toLowerCase().includes(search.trim().toLowerCase())) : true));
 
   return (
     <div style={containerStyle} className="space-y-3">
+      {groupValues.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveGroup('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${activeGroup === 'all' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+          >
+            همه
+          </button>
+          {groupValues.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setActiveGroup(v)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${activeGroup === v ? 'bg-teal-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
       {enableSearch && (
         <div className="relative max-w-sm">
           <input
@@ -4051,21 +4083,30 @@ const ExcelTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.
           <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
         </div>
       )}
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800">
+      <div
+        className="rounded-2xl border border-gray-200 dark:border-slate-800"
+        style={{ overflowX: 'auto', overflowY: maxHeight ? 'auto' : undefined, maxHeight: maxHeight ? `${maxHeight}px` : undefined }}
+      >
         <table className="w-full text-right border-collapse text-xs">
-          <thead className="bg-slate-900 text-white font-bold">
+          <thead style={{ backgroundColor: headerBgColor, color: headerTextColor, position: maxHeight ? 'sticky' : undefined, top: maxHeight ? 0 : undefined, zIndex: maxHeight ? 1 : undefined }} className="font-bold">
             <tr>
               {columns.map((c, i) => (
                 <th key={i} className="p-3">{c}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+          <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
             {filteredRows.length > 0 ? (
               filteredRows.map((row, ri) => (
-                <tr key={ri} className="hover:bg-teal-50/50 dark:hover:bg-teal-500/5 transition-colors">
+                <tr
+                  key={ri}
+                  className="hover:bg-teal-50/50 dark:hover:bg-teal-500/5 transition-colors"
+                  style={{ backgroundColor: (ri % 2 === 1 ? rowAltBgColor : undefined) ?? rowBgColor }}
+                >
                   {row.map((cell, ci) => (
-                    <td key={ci} className="p-3 text-slate-700 dark:text-slate-200">{cell}</td>
+                    <td key={ci} className="p-3" style={{ color: rowTextColor }}>
+                      <span className={rowTextColor ? undefined : 'text-slate-700 dark:text-slate-200'}>{cell}</span>
+                    </td>
                   ))}
                 </tr>
               ))

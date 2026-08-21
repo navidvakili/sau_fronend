@@ -1616,6 +1616,63 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     />
                     نمایش کادر جستجو در بالای جدول
                   </label>
+
+                  {/* اسکرول برای داده‌های طولانی */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حداکثر ارتفاع جدول برای اسکرول عمودی (px) — خالی = بدون محدودیت</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={customProps.maxHeight ?? ''}
+                      onChange={(e) => updateCustomProps({ maxHeight: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                      placeholder="مثلاً 420"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                    <p className="text-[10px] text-slate-400">با تعیین ارتفاع، هدر جدول ثابت (sticky) می‌ماند و بدنه به‌صورت عمودی اسکرول می‌شود.</p>
+                  </div>
+
+                  {/* رنگ‌بندی هدر و رکوردها */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ‌بندی هدر و رکوردها</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">پس‌زمینه هدر</span>
+                        <ColorBox value={customProps.headerBgColor || '#0f172a'} onChange={(c) => updateCustomProps({ headerBgColor: c })} className="w-full h-9" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">متن هدر</span>
+                        <ColorBox value={customProps.headerTextColor || '#ffffff'} onChange={(c) => updateCustomProps({ headerTextColor: c })} className="w-full h-9" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">پس‌زمینه ردیف‌ها</span>
+                        <ColorBox value={customProps.rowBgColor || ''} onChange={(c) => updateCustomProps({ rowBgColor: c || undefined })} className="w-full h-9" clearable />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">پس‌زمینه ردیف‌های زوج (راه‌راه)</span>
+                        <ColorBox value={customProps.rowAltBgColor || ''} onChange={(c) => updateCustomProps({ rowAltBgColor: c || undefined })} className="w-full h-9" clearable />
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">رنگ متن ردیف‌ها</span>
+                        <ColorBox value={customProps.rowTextColor || ''} onChange={(c) => updateCustomProps({ rowTextColor: c || undefined })} className="w-full h-9" clearable />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* تقسیم‌بندی داده‌ها بر اساس یکی از ستون‌ها */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">تقسیم‌بندی داده‌ها بر اساس ستون (فیلتر گروهی)</label>
+                    <select
+                      value={customProps.groupByColumn || ''}
+                      onChange={(e) => updateCustomProps({ groupByColumn: e.target.value || undefined })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="">بدون تقسیم‌بندی</option>
+                      {(customProps.columns || []).map((c: string) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400">با انتخاب یک ستون، بالای جدول دکمه‌های فیلتر بر اساس مقادیر یکتای همان ستون نمایش داده می‌شود.</p>
+                  </div>
                 </div>
               )}
 
