@@ -76,9 +76,35 @@ const toFormDefinition = (row: FormRowDto): FormDefinition => ({
   steps: row.steps || [],
   fields: row.fields || [],
   logicRules: row.logic_rules || [],
-  quizConfig: row.quiz_config as FormDefinition['quizConfig'],
-  theme: row.theme as FormDefinition['theme'],
-  settings: row.settings as FormDefinition['settings'],
+  quizConfig: row.quiz_config || {
+    isQuiz: row.type === 'quiz',
+    showInstantResult: row.type === 'quiz',
+    allowNegativeScore: false,
+    randomizeQuestions: false,
+    gradeThresholds: []
+  },
+  theme: row.theme || {
+    primaryColor: '#0d9488',
+    backgroundColor: '#f8fafc',
+    cardColor: '#ffffff',
+    textColor: '#0f172a',
+    borderRadius: 'lg',
+    fontFamily: 'Vazirmatn',
+    showLogo: false
+  },
+  settings: row.settings || {
+    allowAnonymous: true,
+    limitOnePerUser: false,
+    requireAuth: false,
+    enableCaptcha: false,
+    enableAutoSave: true,
+    showProgressBar: true,
+    customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
+    generateTrackingCode: true,
+    trackingCodePrefix: 'FRM',
+    sendEmailNotification: false,
+    sendSmsNotification: false
+  },
   userAccessRules: [],
   publicResultConfig: undefined,
   reportViews: [],
@@ -204,6 +230,24 @@ export const fetchSubmissions = async (
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const res = await API<PaginatedResponse<SubmissionRowDto>>(`forms/${formId}/submissions${suffix}`);
   return { data: res.data.map(toFormSubmission), total: res.total };
+};
+
+export const submitForm = async (
+  formId: string | number,
+  data: {
+    answers: Record<string, any>;
+    respondent_name?: string;
+    respondent_email?: string;
+    respondent_role?: string;
+    completion_time_seconds?: number;
+  }
+): Promise<{ tracking_code: string; score_total?: number; grade_label?: string }> => {
+  const res = await API<{ message: string; data: { tracking_code: string; score_total?: number; grade_label?: string } }>(
+    `forms/${formId}/submit`,
+    data,
+    'POST'
+  );
+  return res.data;
 };
 
 export const updateSubmissionStatus = async (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText,
@@ -50,7 +50,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { FormDefinition, FormField, FormSubmission, FormStatus, FormType, FieldType } from './types';
-import { sampleForms, sampleSubmissions, formTemplates, defaultTheme } from './mockData';
+import { sampleForms, formTemplates, defaultTheme } from './mockData';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
 import { FormQuizScoring } from './FormQuizScoring';
@@ -64,14 +64,16 @@ import { FormPublishModal } from './FormPublishModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import FormCodeExportModal from './FormCodeExportModal';
 import { FormRespondentView } from './FormRespondentView';
+import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, cloneForm as cloneFormApi, updateSubmissionStatus } from './api';
 
 interface SmartFormBuilderStudioProps {
   onOpenTab?: (tabId: string, title?: string) => void;
 }
 
 export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () => {
-  const [forms, setForms] = useState<FormDefinition[]>(sampleForms);
-  const [submissions, setSubmissions] = useState<FormSubmission[]>(sampleSubmissions);
+  const [forms, setForms] = useState<FormDefinition[]>([]);
+  const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
+  const [isLoadingForms, setIsLoadingForms] = useState(true);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [scrollToFieldId, setScrollToFieldId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
@@ -91,16 +93,67 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | FormType>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | FormStatus>('all');
+  const saveTimers = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchForms({ per_page: 500 })
+      .then(result => {
+        if (!cancelled) setForms(result.data);
+      })
+      .catch(error => {
+        console.error('Failed to load forms:', error);
+        if (!cancelled) setForms(sampleForms);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingForms(false);
+      });
+
+    return () => {
+      cancelled = true;
+      Object.values(saveTimers.current).forEach(window.clearTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeFormId) {
+      setSubmissions([]);
+      return;
+    }
+
+    let cancelled = false;
+    fetchSubmissions(activeFormId, { per_page: 500 })
+      .then(result => {
+        if (!cancelled) setSubmissions(result.data);
+      })
+      .catch(error => {
+        console.error('Failed to load form submissions:', error);
+        if (!cancelled) setSubmissions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFormId]);
 
   const activeForm = forms.find(f => f.id === activeFormId) || null;
 
   // Handle Form Update
   const handleUpdateActiveForm = (updatedForm: FormDefinition) => {
     setForms(prev => prev.map(f => (f.id === updatedForm.id ? updatedForm : f)));
+    if (saveTimers.current[updatedForm.id]) window.clearTimeout(saveTimers.current[updatedForm.id]);
+    saveTimers.current[updatedForm.id] = window.setTimeout(() => {
+      updateForm(updatedForm.id, updatedForm)
+        .then(savedForm => {
+          setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
+        })
+        .catch(error => console.error('Failed to save form:', error));
+      delete saveTimers.current[updatedForm.id];
+    }, 600);
   };
 
   // Create new blank form
-  const handleCreateNewForm = (type: FormType = 'form') => {
+  const handleCreateNewForm = async (type: FormType = 'form') => {
     const newForm: FormDefinition = {
       id: `form_${Date.now()}`,
       title: type === 'quiz' ? 'آزمون آنلاین جدید' : type === 'survey' ? 'پرسشنامه جدید' : 'فرم داده‌آمای جدید',
@@ -162,8 +215,15 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
       avgCompletionTimeSeconds: 0
     };
 
-    setForms([newForm, ...forms]);
-    setActiveFormId(newForm.id);
+    try {
+      const savedForm = await createForm(newForm);
+      setForms(prev => [savedForm, ...prev]);
+      setActiveFormId(savedForm.id);
+    } catch (error) {
+      console.error('Failed to create form:', error);
+      setForms(prev => [newForm, ...prev]);
+      setActiveFormId(newForm.id);
+    }
     setActiveTab('builder');
   };
 
@@ -195,25 +255,42 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   };
 
   // Clone Form
-  const handleCloneForm = (formToClone: FormDefinition) => {
-    const cloned: FormDefinition = {
-      ...formToClone,
-      id: `form_${Date.now()}`,
-      title: `${formToClone.title} (نسخه کپی)`,
-      status: 'draft',
-      createdAt: '۱۴۰۵/۰۵/۱۰',
-      updatedAt: '۱۴۰۵/۰۵/۱۰',
-      viewsCount: 0,
-      submissionsCount: 0
-    };
-    setForms([cloned, ...forms]);
+  const handleCloneForm = async (formToClone: FormDefinition) => {
+    try {
+      const cloned = await cloneFormApi(formToClone.id);
+      setForms(prev => [cloned, ...prev]);
+    } catch (error) {
+      console.error('Failed to clone form:', error);
+    }
   };
 
   // Delete Form
-  const handleDeleteForm = (formId: string) => {
-    setForms(forms.filter(f => f.id !== formId));
-    if (activeFormId === formId) {
-      setActiveFormId(null);
+  const handleDeleteForm = async (formId: string) => {
+    try {
+      await deleteForm(formId);
+      setForms(prev => prev.filter(f => f.id !== formId));
+      if (activeFormId === formId) {
+        setActiveFormId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete form:', error);
+    }
+  };
+
+  const handleUpdateSubmissionStatus = async (
+    submissionId: string,
+    status: FormSubmission['status'],
+    note?: string
+  ) => {
+    if (!activeFormId) return;
+    try {
+      const updated = await updateSubmissionStatus(activeFormId, submissionId, {
+        status,
+        internal_notes: note
+      });
+      setSubmissions(prev => prev.map(item => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      console.error('Failed to update submission:', error);
     }
   };
 
@@ -451,6 +528,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
               <SubmissionsManager
                 form={activeForm}
                 submissions={submissions.filter(s => s.formId === activeForm.id)}
+                onUpdateSubmissionStatus={handleUpdateSubmissionStatus}
               />
             </div>
           )}
@@ -565,8 +643,13 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
           </div>
 
           {/* Forms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredForms.map(formItem => (
+          {isLoadingForms ? (
+            <div className="py-16 text-center text-sm font-bold text-slate-500">در حال دریافت فرم‌ها...</div>
+          ) : filteredForms.length === 0 ? (
+            <div className="py-16 text-center text-sm font-bold text-slate-500">فرمی برای نمایش یافت نشد.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredForms.map(formItem => (
               <div
                 key={formItem.id}
                 className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-5 hover:border-teal-500 dark:hover:border-teal-500 transition-all hover:shadow-xl flex flex-col justify-between group"
@@ -644,8 +727,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -654,9 +738,16 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
       <FormTemplateLibraryModal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        onSelectForm={f => {
-          setForms([f, ...forms]);
-          setActiveFormId(f.id);
+        onSelectForm={async f => {
+          try {
+            const savedForm = await createForm(f);
+            setForms(prev => [savedForm, ...prev]);
+            setActiveFormId(savedForm.id);
+          } catch (error) {
+            console.error('Failed to create form from template:', error);
+            setForms(prev => [f, ...prev]);
+            setActiveFormId(f.id);
+          }
           setActiveTab('builder');
         }}
         currentForm={activeForm}
@@ -675,7 +766,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
       <AiFormAssistantModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
-        onFormGenerated={newAiForm => {
+        onFormGenerated={async newAiForm => {
           const generatedForm: FormDefinition = {
             ...sampleForms[0],
             ...newAiForm,
@@ -689,8 +780,15 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
             submissionsCount: 0,
             avgCompletionTimeSeconds: 0
           };
-          setForms([generatedForm, ...forms]);
-          setActiveFormId(generatedForm.id);
+          try {
+            const savedForm = await createForm(generatedForm);
+            setForms(prev => [savedForm, ...prev]);
+            setActiveFormId(savedForm.id);
+          } catch (error) {
+            console.error('Failed to save AI-generated form:', error);
+            setForms(prev => [generatedForm, ...prev]);
+            setActiveFormId(generatedForm.id);
+          }
           setActiveTab('builder');
         }}
       />
@@ -740,7 +838,24 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
           <div className="flex-1 overflow-y-auto max-w-4xl w-full mx-auto pb-12">
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-slate-800 shadow-2xl">
-              <FormRespondentView form={activeForm} />
+              <FormRespondentView
+                form={activeForm}
+                onSubmitted={async answers => {
+                  if (activeForm.status !== 'published') return;
+                  try {
+                    const submission = await submitForm(activeForm.id, { answers });
+                    const result = await fetchSubmissions(activeForm.id, { per_page: 500 });
+                    setSubmissions(result.data);
+                    return {
+                      trackingCode: submission.tracking_code,
+                      scoreTotal: submission.score_total,
+                      gradeLabel: submission.grade_label
+                    };
+                  } catch (error) {
+                    console.error('Failed to submit form response:', error);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

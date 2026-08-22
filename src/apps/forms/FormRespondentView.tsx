@@ -19,7 +19,11 @@ import { FormDefinition, FormField, FormStep, LogicRule } from './types';
 
 interface FormRespondentViewProps {
   form: FormDefinition;
-  onSubmitted?: (answers: Record<string, any>, trackingCode: string, totalScore?: number) => void;
+  onSubmitted?: (
+    answers: Record<string, any>,
+    trackingCode: string,
+    totalScore?: number
+  ) => Promise<{ trackingCode?: string; scoreTotal?: number; gradeLabel?: string } | void> | void;
   isEmbedPreview?: boolean;
 }
 
@@ -129,7 +133,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (validateStep()) {
       if (currentPageIndex < totalPages - 1) {
         setCurrentPageIndex(prev => prev + 1);
@@ -139,7 +143,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
         setCurrentPageIndex(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        handleSubmit();
+        await handleSubmit();
       }
     }
   };
@@ -153,7 +157,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateStep()) return;
 
     // Calculate score if quiz
@@ -170,7 +174,12 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     }
 
     const code = `${form.settings.trackingCodePrefix || 'FRM'}-${Math.floor(100000 + Math.random() * 900000)}`;
-    setTrackingCode(code);
+    const serverResult = onSubmitted
+      ? await onSubmitted(answers, code, computedScore)
+      : undefined;
+    const persistedResult = serverResult && typeof serverResult === 'object' ? serverResult : undefined;
+    setTrackingCode(persistedResult?.trackingCode || code);
+    if (persistedResult?.scoreTotal !== undefined) setFinalScore(persistedResult.scoreTotal);
     setIsSubmitted(true);
 
     if (onSubmitted) {
