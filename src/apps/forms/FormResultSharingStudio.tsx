@@ -21,7 +21,6 @@ import {
   Sliders,
   AlertTriangle,
   Key,
-  Layers,
   Sparkles,
   Info
 } from 'lucide-react';
@@ -217,29 +216,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
         >
           <ExternalLink className="w-4 h-4" /> پیش‌نمایش داشبورد عمومی نتایج
         </button>
-      </div>
-
-      {/* Architecture Concept Box */}
-      <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
-          <Layers className="w-4 h-4 text-teal-600" />
-          <span>معماری تفکیک‌پذیر نتایج و گزارش‌ها (Report & Result Sharing Architecture)</span>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="bg-teal-100 text-teal-800 px-2.5 py-1 rounded-lg">فرم / پرسشنامه</span>
-          <span>➔</span>
-          <span className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg">پاسخ‌های ثبت‌شده</span>
-          <span>➔</span>
-          <span className="bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg">آمار و نمودارها</span>
-          <span>➔</span>
-          <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg font-bold">اشتراک‌گذاری نتایج</span>
-          <div className="w-full pt-2 flex flex-wrap gap-2 text-[10px]">
-            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">✓ دسترسی اختصاصی کاربر</span>
-            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">✓ لینک عمومی نتایج</span>
-            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">✓ لینک رمزگذاری‌شده</span>
-            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">✓ گزارش Embed سایت</span>
-          </div>
-        </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
