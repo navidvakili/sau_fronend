@@ -44,7 +44,6 @@ import {
   ListFilter,
   CircleDot,
   SlidersHorizontal,
-  ChevronLeft,
   LayoutGrid,
   Users,
   Activity,
@@ -235,6 +234,15 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
       <div className="h-14 border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 flex items-center justify-between px-4 z-20 shadow-xs shrink-0">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
+          {activeForm && (
+            <button
+              onClick={() => setActiveFormId(null)}
+              className="p-2 rounded-xl bg-teal-50 dark:bg-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 transition-colors cursor-pointer"
+              title="بازگشت به فهرست فرم‌ها"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          )}
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-600 dark:from-teal-500 dark:to-indigo-500 flex items-center justify-center font-black text-lg text-white shadow-md shadow-teal-500/20">
             F
           </div>
@@ -277,16 +285,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
-          {activeForm && (
-            <button
-              onClick={() => setActiveFormId(null)}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-              title="بازگشت به فهرست فرم‌ها"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-          )}
-
           <button
             onClick={() => setIsTemplateModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -383,15 +381,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         {/* Right Form Tabs / Switcher */}
         {activeForm ? (
           <div className="flex items-center gap-1 overflow-x-auto">
-            <button
-              onClick={() => setActiveFormId(null)}
-              className="px-2.5 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1 text-[11px] shrink-0"
-              title="فهرست فرم‌ها"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>فهرست فرم‌ها</span>
-            </button>
-
             {[
               { id: 'builder', label: 'طراح دیداری', icon: FileText },
               { id: 'logic', label: 'منطق شرطی', icon: GitBranch },
