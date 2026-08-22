@@ -318,12 +318,14 @@ export default function App() {
     setSelectedMainCat(null);
   }, [activeTabId, tabs, menuCategories]);
 
-  // Page-builder uses a full-bleed canvas — main padding removed so the studio fills the whole area
+  // Builder studios use a full-bleed canvas so they fill the whole workspace.
   const isPageBuilderActive = useMemo(() => {
     if (!activeTabId) return false;
     const tab = tabs.find(t => t.id === activeTabId);
     const moduleType = tab?.moduleType || activeTabId;
-    return moduleType === 'page-builder' || moduleType === 'smart-page-builder';
+    return moduleType === 'page-builder' || moduleType === 'smart-page-builder'
+      || moduleType === 'forms' || moduleType === 'forms-studio'
+      || moduleType === 'form-builder' || moduleType === 'survey-builder';
   }, [activeTabId, tabs]);
 
   // Tab management

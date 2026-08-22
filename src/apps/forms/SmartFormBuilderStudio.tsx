@@ -45,6 +45,7 @@ import {
   CircleDot,
   SlidersHorizontal,
   ChevronLeft,
+  LayoutGrid,
   Users,
   Activity,
   Sliders
@@ -72,7 +73,7 @@ interface SmartFormBuilderStudioProps {
 export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () => {
   const [forms, setForms] = useState<FormDefinition[]>(sampleForms);
   const [submissions, setSubmissions] = useState<FormSubmission[]>(sampleSubmissions);
-  const [activeFormId, setActiveFormId] = useState<string | null>(sampleForms[0]?.id || null);
+  const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
 
   // Breakpoints / Viewport width
@@ -229,7 +230,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden select-none rtl text-right transition-colors rounded-2xl border border-gray-200 dark:border-slate-800">
+    <div className="flex flex-col flex-1 min-h-0 w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden select-none rtl text-right transition-colors">
       {/* 1. TOP STUDIO HEADER TOOLBAR */}
       <div className="h-14 border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 flex items-center justify-between px-4 z-20 shadow-xs shrink-0">
         {/* Brand Logo & Name */}
@@ -276,6 +277,16 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
+          {activeForm && (
+            <button
+              onClick={() => setActiveFormId(null)}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              title="بازگشت به فهرست فرم‌ها"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={() => setIsTemplateModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
