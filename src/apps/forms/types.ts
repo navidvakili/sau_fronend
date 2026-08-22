@@ -392,6 +392,7 @@ export interface AuditLogItem {
 
 export interface FormDefinition {
   id: string;
+  slug: string;
   title: string;
   description: string;
   type: FormType;

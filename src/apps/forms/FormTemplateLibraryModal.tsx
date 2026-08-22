@@ -106,6 +106,7 @@ export default function FormTemplateLibraryModal({
     // Generate fallback template
     const newForm: FormDefinition = {
       id: `form_${Date.now()}`,
+      slug: `form-${Date.now()}`,
       title: formTemplates.find(t => t.id === tplId)?.title || 'فرم الگوی جدید',
       description: formTemplates.find(t => t.id === tplId)?.description || '',
       type: tplId.includes('quiz') ? 'quiz' : tplId.includes('eval') ? 'survey' : 'form',

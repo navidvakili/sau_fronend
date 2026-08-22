@@ -14,6 +14,7 @@ export const defaultTheme: FormTheme = {
 export const sampleForms: FormDefinition[] = [
   {
     id: 'form-101',
+    slug: 'form-101',
     title: 'پرسشنامه جامع ارزیابی اساتید و کیفیت آموزش نیمسال اول',
     description: 'نظر سنجی پژوهشی اعضای هیئت علمی و ارزشیابی دانشجویی جهت ارتقای سطح کیفی آموزش عالی',
     type: 'survey',
@@ -246,6 +247,7 @@ export const sampleForms: FormDefinition[] = [
   },
   {
     id: 'form-cultural-survey',
+    slug: 'form-cultural-survey',
     title: 'نظرسنجی میزان رضایت دانشجویان از خدمات فرهنگی دانشگاه',
     description: 'سنجش دیدگاه‌ها، ارزیابی کیفیت برنامه‌های فرهنگی، هنری، فوق‌برنامه و تسهیلات رفاهی دانشجویان',
     type: 'survey',
@@ -394,6 +396,7 @@ export const sampleForms: FormDefinition[] = [
   },
   {
     id: 'form-102',
+    slug: 'form-102',
     title: 'آزمون آنلاین سنجش اطلاعات آیین‌نامه پژوهشی و گرنت',
     description: 'آزمون خودسنجی پژوهشگران و اعضای هیئت علمی با نمره‌دهی لحظه‌ای و صدور گواهی قبولی',
     type: 'quiz',
@@ -502,6 +505,7 @@ export const sampleForms: FormDefinition[] = [
   },
   {
     id: 'form-103',
+    slug: 'form-103',
     title: 'فرم ثبت‌نام همایش ملی هوش مصنوعی و تحلیل داده‌های دانشگاهی',
     description: 'دریافت مقاله، محاسبه خودکار هزینه ثبت‌نام، انتخاب کارگاه آموزشی و صدور رسید دیجیتال',
     type: 'registration',

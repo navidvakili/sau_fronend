@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Globe, Code2, QrCode, Copy, Check, Share2, ExternalLink } from 'lucide-react';
+import { Globe, Code2, QrCode, Copy, Check, Share2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { FormDefinition } from './types';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 
 interface FormPublishModalProps {
   form: FormDefinition;
@@ -13,7 +14,7 @@ export const FormPublishModal: React.FC<FormPublishModalProps> = ({ form, isOpen
 
   if (!isOpen) return null;
 
-  const directUrl = `https://cms.university.ac.ir/forms/${form.id}`;
+  const directUrl = `${PUBLIC_SITE_URL}/forms/${form.slug}`;
   const shortcode = `[nima_form id="${form.id}"]`;
   const iframeCode = `<iframe src="${directUrl}" width="100%" height="600" frameborder="0" style="border:0; border-radius: 16px;"></iframe>`;
 
@@ -46,6 +47,13 @@ export const FormPublishModal: React.FC<FormPublishModalProps> = ({ form, isOpen
 
         {/* Body */}
         <div className="p-6 space-y-6 text-xs">
+          {form.status !== 'published' && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>این فرم هنوز منتشر نشده است؛ لینک زیر تا انتشار فرم برای بازدیدکنندگان کار نمی‌کند.</span>
+            </div>
+          )}
+
           {/* Direct Link */}
           <div className="space-y-2">
             <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">

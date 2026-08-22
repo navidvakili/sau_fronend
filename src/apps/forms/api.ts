@@ -62,6 +62,7 @@ interface SubmissionRowDto {
 /** نگاشت ردیف خام سرور به FormDefinition — فیلدهای فاز ۴/۵ (دسترسی گزارش، نتایج عمومی، ...) هنوز در backend ذخیره نمی‌شوند و آرایهٔ خالی برمی‌گردند */
 const toFormDefinition = (row: FormRowDto): FormDefinition => ({
   id: String(row.id),
+  slug: row.slug,
   title: row.title,
   description: row.description || '',
   type: row.type,

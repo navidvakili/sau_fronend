@@ -65,8 +65,9 @@ import { FormPublishModal } from './FormPublishModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import FormCodeExportModal from './FormCodeExportModal';
 import { FormRespondentView } from './FormRespondentView';
-import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, cloneForm as cloneFormApi, updateSubmissionStatus } from './api';
+import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, updateSubmissionStatus, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
+import ToastNotification from '@/src/shared-components/ToastNotification';
 
 interface SmartFormBuilderStudioProps {
   onOpenTab?: (tabId: string, title?: string) => void;
@@ -98,6 +99,14 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [statusFilter, setStatusFilter] = useState<'all' | FormStatus>('all');
   const [unsavedFormIds, setUnsavedFormIds] = useState<Record<string, boolean>>({});
   const [isSavingForm, setIsSavingForm] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // ===== Toast state =====
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 4000);
+  };
   const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
@@ -159,10 +168,35 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       const savedForm = await updateForm(activeForm.id, activeForm);
       setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
       setUnsavedFormIds(prev => ({ ...prev, [savedForm.id]: false }));
-    } catch (error) {
+      showToast('فرم با موفقیت ذخیره شد.', 'success');
+    } catch (error: any) {
       console.error('Failed to save form:', error);
+      showToast(error?.message || 'خطا در ذخیره فرم', 'error');
     } finally {
       setIsSavingForm(false);
+    }
+  };
+
+  // Publish / unpublish the active form
+  const handleTogglePublish = async () => {
+    if (!activeForm) return;
+    const nextStatus: FormStatus = activeForm.status === 'published' ? 'draft' : 'published';
+    setIsPublishing(true);
+    try {
+      const savedForm = await updateFormStatus(activeForm.id, nextStatus);
+      setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
+      showToast(
+        nextStatus === 'published' ? 'فرم با موفقیت منتشر شد.' : 'انتشار فرم لغو شد.',
+        'success'
+      );
+      if (nextStatus === 'published') {
+        setIsPublishModalOpen(true);
+      }
+    } catch (error: any) {
+      console.error('Failed to update form status:', error);
+      showToast(error?.message || 'خطا در تغییر وضعیت انتشار فرم', 'error');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -184,9 +218,11 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
   // Create new blank form
   const handleCreateNewForm = async (type: FormType = 'form') => {
+    const title = type === 'quiz' ? 'آزمون آنلاین جدید' : type === 'survey' ? 'پرسشنامه جدید' : 'فرم داده‌آمای جدید';
     const newForm: FormDefinition = {
       id: `form_${Date.now()}`,
-      title: type === 'quiz' ? 'آزمون آنلاین جدید' : type === 'survey' ? 'پرسشنامه جدید' : 'فرم داده‌آمای جدید',
+      slug: slugifyFormTitle(title),
+      title,
       description: 'لطفاً توضیحات و راهنمای تکمیل فرم را اینجا وارد کنید...',
       type,
       status: 'draft',
@@ -249,12 +285,11 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       const savedForm = await createForm(newForm);
       setForms(prev => [savedForm, ...prev]);
       setActiveFormId(savedForm.id);
-    } catch (error) {
+      setActiveTab('builder');
+    } catch (error: any) {
       console.error('Failed to create form:', error);
-      setForms(prev => [newForm, ...prev]);
-      setActiveFormId(newForm.id);
+      showToast(error?.message || 'خطا در ایجاد فرم جدید', 'error');
     }
-    setActiveTab('builder');
   };
 
   // Quick Insert Field from Subtoolbar
@@ -289,8 +324,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     try {
       const cloned = await cloneFormApi(formToClone.id);
       setForms(prev => [cloned, ...prev]);
-    } catch (error) {
+      showToast('فرم با موفقیت کپی شد.', 'success');
+    } catch (error: any) {
       console.error('Failed to clone form:', error);
+      showToast(error?.message || 'خطا در کپی فرم', 'error');
     }
   };
 
@@ -302,8 +339,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       if (activeFormId === formId) {
         setActiveFormId(null);
       }
-    } catch (error) {
+      showToast('فرم با موفقیت حذف شد.', 'success');
+    } catch (error: any) {
       console.error('Failed to delete form:', error);
+      showToast(error?.message || 'خطا در حذف فرم', 'error');
     }
   };
 
@@ -319,8 +358,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         internal_notes: note
       });
       setSubmissions(prev => prev.map(item => (item.id === updated.id ? updated : item)));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update submission:', error);
+      showToast(error?.message || 'خطا در به‌روزرسانی وضعیت پاسخ', 'error');
     }
   };
 
@@ -402,6 +442,28 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             >
               <Save className="w-4 h-4" />
               <span>{isSavingForm ? 'در حال ذخیره...' : 'ذخیره فرم'}</span>
+            </button>
+          )}
+
+          {activeForm && (
+            <button
+              onClick={() => void handleTogglePublish()}
+              disabled={isPublishing}
+              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                activeForm.status === 'published'
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  : 'bg-teal-600 hover:bg-teal-700 text-white'
+              }`}
+              title={activeForm.status === 'published' ? 'لغو انتشار فرم' : 'انتشار فرم'}
+            >
+              <Share2 className="w-4 h-4" />
+              <span>
+                {isPublishing
+                  ? 'در حال به‌روزرسانی...'
+                  : activeForm.status === 'published'
+                    ? 'لغو انتشار'
+                    : 'انتشار فرم'}
+              </span>
             </button>
           )}
 
@@ -787,12 +849,11 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             const savedForm = await createForm(f);
             setForms(prev => [savedForm, ...prev]);
             setActiveFormId(savedForm.id);
-          } catch (error) {
+            setActiveTab('builder');
+          } catch (error: any) {
             console.error('Failed to create form from template:', error);
-            setForms(prev => [f, ...prev]);
-            setActiveFormId(f.id);
+            showToast(error?.message || 'خطا در ایجاد فرم از قالب', 'error');
           }
-          setActiveTab('builder');
         }}
         currentForm={activeForm}
       />
@@ -828,12 +889,11 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             const savedForm = await createForm(generatedForm);
             setForms(prev => [savedForm, ...prev]);
             setActiveFormId(savedForm.id);
-          } catch (error) {
+            setActiveTab('builder');
+          } catch (error: any) {
             console.error('Failed to save AI-generated form:', error);
-            setForms(prev => [generatedForm, ...prev]);
-            setActiveFormId(generatedForm.id);
+            showToast(error?.message || 'خطا در ذخیره فرم تولیدشده توسط هوش مصنوعی', 'error');
           }
-          setActiveTab('builder');
         }}
       />
 
@@ -918,6 +978,8 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         }}
         onCancel={() => setPendingLeaveAction(null)}
       />
+
+      <ToastNotification toast={toast} />
     </div>
   );
 };
