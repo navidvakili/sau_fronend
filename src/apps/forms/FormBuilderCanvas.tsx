@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Type,
   AlignLeft,
@@ -44,6 +44,7 @@ interface FormBuilderCanvasProps {
   form: FormDefinition;
   onChange: (updatedForm: FormDefinition) => void;
   activeBreakpoint?: '1240' | '1024' | '768' | '380';
+  scrollToFieldId?: string | null;
 }
 
 const FIELD_PALETTE: {
@@ -99,7 +100,8 @@ const FIELD_PALETTE: {
 export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
   form,
   onChange,
-  activeBreakpoint = '1240'
+  activeBreakpoint = '1240',
+  scrollToFieldId = null
 }) => {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     form.fields[0]?.id || null
@@ -108,6 +110,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
     form.steps[0]?.id || 's1'
   );
   const [paletteSearch, setPaletteSearch] = useState('');
+  const [newFieldId, setNewFieldId] = useState<string | null>(null);
 
   // Drag-and-Drop state tracking
   const [draggedPaletteType, setDraggedPaletteType] = useState<{ type: FieldType; label: string } | null>(null);
@@ -115,6 +118,18 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   const selectedField = form.fields.find(f => f.id === selectedFieldId) || null;
+
+  useEffect(() => {
+    const fieldId = scrollToFieldId || newFieldId;
+    if (!fieldId) return;
+
+    requestAnimationFrame(() => {
+      document.getElementById(`form-field-${fieldId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    });
+  }, [scrollToFieldId, newFieldId, form.fields.length]);
 
   // Filtered fields in active step
   const currentStepFields = form.fields.filter(
@@ -167,6 +182,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
       onChange({ ...form, fields: updatedFields });
     }
     setSelectedFieldId(newField.id);
+    setNewFieldId(newField.id);
   };
 
   // Reorder existing field to a new step index
@@ -486,6 +502,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                 return (
                   <React.Fragment key={field.id}>
                     <div
+                      id={`form-field-${field.id}`}
                       draggable
                       onDragStart={e => handleFieldDragStart(e, field.id)}
                       onDragEnd={handleDragEnd}

@@ -73,6 +73,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   const [forms, setForms] = useState<FormDefinition[]>(sampleForms);
   const [submissions, setSubmissions] = useState<FormSubmission[]>(sampleSubmissions);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
+  const [scrollToFieldId, setScrollToFieldId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
 
   // Breakpoints / Viewport width
@@ -189,6 +190,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
       ...activeForm,
       fields: [...activeForm.fields, newField]
     });
+    setScrollToFieldId(newField.id);
     setActiveTab('builder');
   };
 
@@ -427,6 +429,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
               form={activeForm}
               onChange={handleUpdateActiveForm}
               activeBreakpoint={activeBreakpoint}
+              scrollToFieldId={scrollToFieldId}
             />
           )}
 
