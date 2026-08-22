@@ -19,8 +19,6 @@ import {
   ExternalLink,
   RefreshCw,
   Sliders,
-  Code,
-  Users,
   AlertTriangle,
   Key,
   Layers,
@@ -61,7 +59,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   onChange,
   onOpenPublicPreview
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'reports' | 'embed_qr' | 'audit_logs'>('user_access');
+  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'reports' | 'embed_qr' | 'audit_logs'>('public_link');
 
   // Local state for user access rule form
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -101,7 +99,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
 
   const [publicConfig, setPublicConfig] = useState<PublicResultConfig>(defaultConfig);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [embedCopySuccess, setEmbedCopySuccess] = useState(false);
+  const [qrSaveSuccess, setQrSaveSuccess] = useState(false);
 
   // Handle updating public config in parent
   const handleSavePublicConfig = (updated: PublicResultConfig) => {
@@ -168,12 +166,25 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
     setTimeout(() => setCopySuccess(false), 2500);
   };
 
-  // Embed Code
-  const embedCode = `<iframe src="${publicUrl}?embed=true" width="100%" height="600" frameborder="0" allowfullscreen></iframe>`;
-  const handleCopyEmbed = () => {
-    navigator.clipboard.writeText(embedCode);
-    setEmbedCopySuccess(true);
-    setTimeout(() => setEmbedCopySuccess(false), 2500);
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(publicUrl)}`;
+  const handleSaveQrCode = async () => {
+    try {
+      const response = await fetch(qrCodeUrl);
+      if (!response.ok) throw new Error('QR request failed');
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${publicConfig.customSlug || form.id}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+      setQrSaveSuccess(true);
+      setTimeout(() => setQrSaveSuccess(false), 2500);
+    } catch {
+      window.open(qrCodeUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
@@ -234,10 +245,8 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 text-xs font-bold">
         {[
-          { id: 'user_access', label: 'دسترسی کاربران و نقش‌ها', icon: Users, badge: (form.userAccessRules || []).length },
           { id: 'public_link', label: 'تنظیمات لینک عمومی و دامنه', icon: Globe },
           { id: 'reports', label: 'مدیریت Views و گزارش‌ها', icon: Sliders, badge: (form.reportViews || []).length },
-          { id: 'embed_qr', label: 'کد Embed و QR Code', icon: Code },
           { id: 'audit_logs', label: 'لاگ مشاهده و خروجی‌ها', icon: Clock, badge: (form.reportAuditLogs || []).length }
         ].map(tab => (
           <button
@@ -545,6 +554,25 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
             </div>
           </div>
 
+          <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <QrCode className="w-4 h-4 text-teal-600" /> کد QR صفحه نتایج
+            </h3>
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
+            />
+            <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به صفحه عمومی نتایج</p>
+            <button
+              onClick={handleSaveQrCode}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
+            </button>
+          </div>
+
           {/* Configuration Options Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Branding & Privacy Controls */}
@@ -740,52 +768,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                 </button>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sub-Tab 4: Embed & QR Code */}
-      {activeSubTab === 'embed_qr' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Embed Widget */}
-            <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Code className="w-4 h-4 text-teal-600" /> کد Embed جاگذاری در سایر صفحات وبسایت
-              </h3>
-              <p className="text-xs text-slate-500">
-                این کد iframe را در هر صفحه از سایت دانشگاه قرار دهید تا نمودارها به صورت زنده نمایش داده شوند:
-              </p>
-              <textarea
-                readOnly
-                rows={4}
-                value={embedCode}
-                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-900 text-emerald-400 font-mono text-[11px] dir-ltr text-left"
-              />
-              <button
-                onClick={handleCopyEmbed}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
-              >
-                <Copy className="w-3.5 h-3.5" /> {embedCopySuccess ? 'کپی شد! ✓' : 'کپی کد HTML'}
-              </button>
-            </div>
-
-            {/* QR Code */}
-            <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 text-center">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-center gap-2">
-                <QrCode className="w-4 h-4 text-teal-600" /> تولید QR Code صفحه نتایج
-              </h3>
-              <div className="w-32 h-32 mx-auto bg-white p-3 rounded-2xl border border-slate-200 shadow-md flex items-center justify-center">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(publicUrl)}`}
-                  alt="QR Code"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <p className="text-[11px] text-slate-500">
-                اسکن جهت دسترسی سریع موبایلی به صفحه عمومی نتایج
-              </p>
-            </div>
           </div>
         </div>
       )}
