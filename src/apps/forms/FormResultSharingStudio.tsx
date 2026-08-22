@@ -31,6 +31,7 @@ import {
   FormAccessPermission,
   FormReportView
 } from './types';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 
 interface FormResultSharingStudioProps {
   form: FormDefinition;
@@ -158,7 +159,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   };
 
   // Copy Public Link
-  const publicUrl = `https://website.ir/survey-results/${publicConfig.customSlug}`;
+  const publicUrl = `${PUBLIC_SITE_URL}/survey-results/${publicConfig.customSlug}`;
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicUrl);
     setCopySuccess(true);

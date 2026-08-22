@@ -36,6 +36,7 @@ import {
   Line
 } from 'recharts';
 import { FormDefinition, FormSubmission, PublicResultConfig } from './types';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 
 interface PublicFormResultDashboardProps {
   form: FormDefinition;
@@ -216,7 +217,7 @@ export const PublicFormResultDashboard: React.FC<PublicFormResultDashboardProps>
                   {config.universityBrand}
                 </span>
                 <div className="text-[10px] text-slate-400 dir-ltr text-right">
-                  website.ir/survey-results/{config.customSlug}
+                  {PUBLIC_SITE_URL.replace(/^https?:\/\//, '')}/survey-results/{config.customSlug}
                 </div>
               </div>
             </div>

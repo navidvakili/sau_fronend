@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { FormDefinition } from './types';
+import { PUBLIC_SITE_URL, BACKEND_API_URL } from '@/src/shared-constants';
 
 interface FormCodeExportModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export default function FormCodeExportModal({
 
   if (!isOpen) return null;
 
-  const directUrl = `https://cms.university.ac.ir/forms/${form.id}`;
+  const directUrl = `${PUBLIC_SITE_URL}/forms/${form.slug}`;
   const shortcode = `[nima_smart_form id="${form.id}" version="${form.version}"]`;
   const iframeCode = `<iframe 
   src="${directUrl}" 
@@ -66,7 +67,7 @@ export default function RegistrationPage() {
   );
 }`;
 
-  const restApiCode = `curl -X POST https://cms.university.ac.ir/api/v1/forms/${form.id}/submit \\
+  const restApiCode = `curl -X POST ${BACKEND_API_URL}/api/v1/forms/${form.id}/submit \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer YOUR_API_TOKEN" \\
   -d '{
