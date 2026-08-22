@@ -182,6 +182,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       setPageSchema(merged);
       setUndoStack([]);
       setRedoStack([]);
+      setIsPageDirty(false);
       setSelectedSectionId(merged.sections[0]?.id ?? null);
       setSelectedColumnId(merged.sections[0]?.columns[0]?.id ?? null);
       setSelectedWidgetId(merged.sections[0]?.columns[0]?.widgets[0]?.id ?? null);
@@ -221,6 +222,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setPageSchema(fresh);
     setUndoStack([]);
     setRedoStack([]);
+    setIsPageDirty(false);
     setSelectedSectionId(null);
     setSelectedColumnId(null);
     setSelectedWidgetId(null);
@@ -413,6 +415,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
   // Status notification state
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showLeaveListConfirm, setShowLeaveListConfirm] = useState(false);
+  const [isPageDirty, setIsPageDirty] = useState(false);
 
   // Push state to undo stack before mutation
   const pushState = (newSchema: SmartPageSchema) => {
@@ -420,6 +424,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setRedoStack([]);
     setPageSchema(newSchema);
     onDirtyChange?.(true);
+    setIsPageDirty(true);
+  };
+
+  const handleBackToPageList = () => {
+    if (isPageDirty) {
+      setShowLeaveListConfirm(true);
+      return;
+    }
+    setViewMode('list');
   };
 
   const handleUndo = () => {
@@ -1038,7 +1051,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       })
     }));
 
-    setPageSchema({
+    pushState({
       ...pageSchema,
       sections: updatedSections
     });
@@ -1197,6 +1210,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       setPages(list.data);
       setSaveSuccess(true);
       onDirtyChange?.(false);
+      setIsPageDirty(false);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch {
       // API layer shows the error toast; keep editing
@@ -1474,7 +1488,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
           {/* Back to the pages card list */}
           <button
-            onClick={() => setViewMode('list')}
+            onClick={handleBackToPageList}
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             title="بازگشت به فهرست صفحات"
           >
@@ -1489,7 +1503,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
               <input
                 type="text"
                 value={pageSchema.title}
-                onChange={(e) => setPageSchema({ ...pageSchema, title: e.target.value })}
+                onChange={(e) => pushState({ ...pageSchema, title: e.target.value })}
                 className="text-sm font-black bg-transparent text-slate-900 dark:text-white border-b border-transparent hover:border-gray-300 dark:hover:border-slate-700 focus:border-teal-500 focus:outline-none px-1"
               />
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
@@ -1848,7 +1862,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         <GlobalStyleModal
           globalStyles={pageSchema.globalStyles}
           onSave={(updatedStyles) => {
-            setPageSchema({ ...pageSchema, globalStyles: updatedStyles });
+            pushState({ ...pageSchema, globalStyles: updatedStyles });
           }}
           onClose={() => setShowGlobalStylesModal(false)}
         />
@@ -1936,6 +1950,20 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         busy={isDeletingPage}
         onConfirm={handleConfirmDeletePage}
         onCancel={() => setPageToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={showLeaveListConfirm}
+        title="تغییرات ذخیره نشده"
+        message="تغییرات صفحه هنوز ذخیره نشده‌اند. آیا می‌خواهید به فهرست صفحات برگردید؟"
+        confirmLabel="بازگشت بدون ذخیره"
+        cancelLabel="ادامه ویرایش"
+        danger={false}
+        onConfirm={() => {
+          setShowLeaveListConfirm(false);
+          setViewMode('list');
+        }}
+        onCancel={() => setShowLeaveListConfirm(false)}
       />
     </>
   );

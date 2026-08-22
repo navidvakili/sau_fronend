@@ -15,6 +15,7 @@ import {
 import type { AnnouncementItem, AnnouncementCategory, User, AnnouncementAttachment } from '@/src/shared-types';
 import { decodeHtmlEntities } from '@/src/shared-utils';
 import ToastNotification from '@/src/shared-components/ToastNotification';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
 import MediaManager from '@/src/shared-components/MediaManager';
 import {
@@ -90,6 +91,8 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+  const [showLeaveListConfirm, setShowLeaveListConfirm] = useState(false);
   const formInitialized = useRef(false);
 
   useEffect(() => {
@@ -97,8 +100,19 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
       formInitialized.current = true;
       return;
     }
-    onDirtyChange?.(activeTab === 'editor');
-  }, [activeTab, formTitle, formGroup, formCategoryId, formType, formSummary, formContent, formStatus, formIsPinned, formImageUrl, formFiles, onDirtyChange]);
+    if (activeTab === 'editor') {
+      setFormDirty(true);
+      onDirtyChange?.(true);
+    }
+  }, [formTitle, formGroup, formCategoryId, formType, formSummary, formContent, formStatus, formIsPinned, formImageUrl, formFiles, onDirtyChange]);
+
+  const requestListView = () => {
+    if (activeTab === 'editor' && formDirty) {
+      setShowLeaveListConfirm(true);
+      return;
+    }
+    setActiveTab('list');
+  };
 
   // ===== Toast state =====
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -536,7 +550,7 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-900 p-2 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs">
         <div className="flex items-center gap-1 overflow-x-auto p-1">
           <button
-            onClick={() => setActiveTab('list')}
+            onClick={requestListView}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'list' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
@@ -1194,7 +1208,7 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
                     {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     <span>{editingId ? 'ذخیره تغییرات' : 'ثبت اطلاعیه'}</span>
                   </button>
-                  <button type="button" onClick={() => setActiveTab('list')} className="w-full py-2.5 px-4 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-300 cursor-pointer">
+                  <button type="button" onClick={requestListView} className="w-full py-2.5 px-4 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-300 cursor-pointer">
                     انصراف
                   </button>
                 </div>
@@ -1610,6 +1624,7 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
           </div>
         )}
       </AnimatePresence>
+      <ConfirmDialog open={showLeaveListConfirm} title="تغییرات ذخیره نشده" message="تغییرات اطلاعیه ذخیره نشده است. آیا به فهرست اطلاعیه‌ها برمی‌گردید؟" confirmLabel="بازگشت بدون ذخیره" cancelLabel="ادامه ویرایش" danger={false} onConfirm={() => { setShowLeaveListConfirm(false); setFormDirty(false); onDirtyChange?.(false); setActiveTab('list'); }} onCancel={() => setShowLeaveListConfirm(false)} />
     </div>
   );
 }
