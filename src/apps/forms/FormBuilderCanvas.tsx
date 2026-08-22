@@ -346,6 +346,23 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
     }
   };
 
+  const activeStep = form.steps.find(step => step.id === activeStepId);
+  const updateActiveStepPresentation = (mode: 'all' | 'pagination', fieldsPerPage?: number) => {
+    if (!activeStep) return;
+    const updatedSteps = form.steps.map(step =>
+      step.id === activeStep.id
+        ? {
+            ...step,
+            presentation: {
+              mode,
+              ...(mode === 'pagination' ? { fieldsPerPage: Math.max(1, fieldsPerPage || 1) } : {})
+            }
+          }
+        : step
+    );
+    onChange({ ...form, steps: updatedSteps });
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden relative select-none rtl text-right h-full">
       {/* LEFT SIDEBAR: PALETTE LIST ONLY (NO STRUCTURE TAB AS REQUESTED) */}
@@ -466,6 +483,32 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
               <Plus className="w-3.5 h-3.5" />
               <span>افزودن گام</span>
             </button>
+
+            {activeStep && (
+              <div className="flex items-center gap-1.5 mr-2 shrink-0 text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="font-bold">نمایش:</span>
+                <select
+                  value={activeStep.presentation?.mode || 'all'}
+                  onChange={event => updateActiveStepPresentation(event.target.value as 'all' | 'pagination', activeStep.presentation?.fieldsPerPage)}
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300"
+                  title="نحوه نمایش سؤالات این گام"
+                >
+                  <option value="all">همه سؤالات</option>
+                  <option value="pagination">صفحه‌بندی</option>
+                </select>
+                {activeStep.presentation?.mode === 'pagination' && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={activeStep.presentation.fieldsPerPage || 1}
+                    onChange={event => updateActiveStepPresentation('pagination', Number(event.target.value))}
+                    className="w-12 px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-mono text-center text-slate-700 dark:text-slate-300"
+                    title="تعداد سؤال در هر صفحه"
+                  />
+                )}
+              </div>
+            )}
           </div>
 
         </div>

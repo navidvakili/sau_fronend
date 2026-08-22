@@ -29,6 +29,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   isEmbedPreview = false
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -74,9 +75,26 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     });
   };
 
-  const currentStepFields = getVisibleFields(
+  const allCurrentStepFields = getVisibleFields(
     form.fields.filter(f => f.stepId === currentStep.id || (!f.stepId && currentStepIndex === 0))
   );
+  const fieldsPerPage = currentStep.presentation?.mode === 'pagination'
+    ? Math.max(1, currentStep.presentation.fieldsPerPage || 1)
+    : allCurrentStepFields.length || 1;
+  const currentStepPages: FormField[][] = [];
+  for (let index = 0; index < allCurrentStepFields.length; index += fieldsPerPage) {
+    currentStepPages.push(allCurrentStepFields.slice(index, index + fieldsPerPage));
+  }
+  const totalPages = Math.max(1, currentStepPages.length);
+  const currentPageFields = currentStepPages[currentPageIndex] || [];
+
+  useEffect(() => {
+    setCurrentPageIndex(0);
+  }, [currentStepIndex]);
+
+  useEffect(() => {
+    if (currentPageIndex >= totalPages) setCurrentPageIndex(totalPages - 1);
+  }, [currentPageIndex, totalPages]);
 
   const handleInputChange = (fieldId: string, value: any) => {
     setAnswers(prev => ({ ...prev, [fieldId]: value }));
@@ -92,7 +110,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
 
-    currentStepFields.forEach(field => {
+    currentPageFields.forEach(field => {
       const val = answers[field.id];
       const rules = field.validation;
 
@@ -113,8 +131,12 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
   const handleNext = () => {
     if (validateStep()) {
-      if (currentStepIndex < steps.length - 1) {
+      if (currentPageIndex < totalPages - 1) {
+        setCurrentPageIndex(prev => prev + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (currentStepIndex < steps.length - 1) {
         setCurrentStepIndex(prev => prev + 1);
+        setCurrentPageIndex(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         handleSubmit();
@@ -123,8 +145,11 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   };
 
   const handlePrev = () => {
-    if (currentStepIndex > 0) {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(prev => prev - 1);
+    } else if (currentStepIndex > 0) {
       setCurrentStepIndex(prev => prev - 1);
+      setCurrentPageIndex(0);
     }
   };
 
@@ -259,6 +284,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
               setIsSubmitted(false);
               setAnswers({});
               setCurrentStepIndex(0);
+              setCurrentPageIndex(0);
             }}
             className="px-5 py-2.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors"
           >
@@ -301,15 +327,15 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
         <div className="bg-slate-50 dark:bg-slate-800/60 p-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
             <span>
-              گام {currentStepIndex + 1} از {steps.length}: {currentStep.title}
+              گام {currentStepIndex + 1} از {steps.length}، صفحه {currentPageIndex + 1} از {totalPages}: {currentStep.title}
             </span>
-            <span>{Math.round(((currentStepIndex + 1) / steps.length) * 100)}% تکمیلی</span>
+                <span>{Math.round(((currentStepIndex * totalPages + currentPageIndex + 1) / (steps.length * totalPages)) * 100)}% تکمیلی</span>
           </div>
           <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
             <div
               className="h-full transition-all duration-300"
               style={{
-                width: `${((currentStepIndex + 1) / steps.length) * 100}%`,
+                width: `${((currentStepIndex * totalPages + currentPageIndex + 1) / (steps.length * totalPages)) * 100}%`,
                 backgroundColor: form.theme.primaryColor || '#0d9488'
               }}
             />
@@ -320,7 +346,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
       {/* Form Step Body */}
       <div className="p-6 md:p-8 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {currentStepFields.map(field => {
+          {currentPageFields.map(field => {
             const colSpan =
               field.columnWidth === '50%'
                 ? 'md:col-span-6'
@@ -577,23 +603,23 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
       <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <button
           onClick={handlePrev}
-          disabled={currentStepIndex === 0}
+          disabled={currentStepIndex === 0 && currentPageIndex === 0}
           className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
         >
-          <ArrowRight className="w-4 h-4" /> گام قبلی
+          <ArrowRight className="w-4 h-4" /> صفحه قبلی
         </button>
 
         <button
           onClick={handleNext}
           className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-lg hover:shadow-teal-500/20 flex items-center gap-2 transition-all"
         >
-          {currentStepIndex === steps.length - 1 ? (
+          {currentStepIndex === steps.length - 1 && currentPageIndex === totalPages - 1 ? (
             <>
               ثبت نهایی و دریافت کد پیگیری <Send className="w-4 h-4" />
             </>
           ) : (
             <>
-              گام بعدی <ArrowLeft className="w-4 h-4" />
+              صفحه بعدی <ArrowLeft className="w-4 h-4" />
             </>
           )}
         </button>

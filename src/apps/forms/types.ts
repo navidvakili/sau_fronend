@@ -234,6 +234,10 @@ export interface FormStep {
   title: string;
   description?: string;
   order: number;
+  presentation?: {
+    mode: 'all' | 'pagination';
+    fieldsPerPage?: number;
+  };
 }
 
 export type LogicOperator = 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'is_empty' | 'is_not_empty';
