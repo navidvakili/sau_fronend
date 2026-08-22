@@ -264,11 +264,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         {/* Center Breakpoint & Design Mode Badge */}
         {activeForm && (
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 text-[11px] font-extrabold flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span>Design Mode</span>
-            </div>
-
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs">
               {(['1240', '1024', '768', '380'] as const).map(bp => (
                 <button
