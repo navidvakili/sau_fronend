@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText,
@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   Clock,
   ShieldCheck,
+  Save,
   Tag,
   HelpCircle,
   MessageSquare,
@@ -65,6 +66,7 @@ import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import FormCodeExportModal from './FormCodeExportModal';
 import { FormRespondentView } from './FormRespondentView';
 import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, cloneForm as cloneFormApi, updateSubmissionStatus } from './api';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface SmartFormBuilderStudioProps {
   onOpenTab?: (tabId: string, title?: string) => void;
@@ -93,7 +95,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | FormType>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | FormStatus>('all');
-  const saveTimers = useRef<Record<string, number>>({});
+  const [unsavedFormIds, setUnsavedFormIds] = useState<Record<string, boolean>>({});
+  const [isSavingForm, setIsSavingForm] = useState(false);
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +115,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
     return () => {
       cancelled = true;
-      Object.values(saveTimers.current).forEach(window.clearTimeout);
     };
   }, []);
 
@@ -141,15 +144,37 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   // Handle Form Update
   const handleUpdateActiveForm = (updatedForm: FormDefinition) => {
     setForms(prev => prev.map(f => (f.id === updatedForm.id ? updatedForm : f)));
-    if (saveTimers.current[updatedForm.id]) window.clearTimeout(saveTimers.current[updatedForm.id]);
-    saveTimers.current[updatedForm.id] = window.setTimeout(() => {
-      updateForm(updatedForm.id, updatedForm)
-        .then(savedForm => {
-          setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
-        })
-        .catch(error => console.error('Failed to save form:', error));
-      delete saveTimers.current[updatedForm.id];
-    }, 600);
+    setUnsavedFormIds(prev => ({ ...prev, [updatedForm.id]: true }));
+  };
+
+  const handleSaveActiveForm = async () => {
+    if (!activeForm || !unsavedFormIds[activeForm.id]) return;
+    setIsSavingForm(true);
+    try {
+      const savedForm = await updateForm(activeForm.id, activeForm);
+      setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
+      setUnsavedFormIds(prev => ({ ...prev, [savedForm.id]: false }));
+    } catch (error) {
+      console.error('Failed to save form:', error);
+    } finally {
+      setIsSavingForm(false);
+    }
+  };
+
+  const requestLeaveFormEditor = (action: () => void) => {
+    if (!activeFormId || !unsavedFormIds[activeFormId]) {
+      action();
+      return;
+    }
+    setPendingLeaveAction(() => action);
+  };
+
+  const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing') => {
+    if (activeTab === 'builder' && tab !== 'builder') {
+      requestLeaveFormEditor(() => setActiveTab(tab));
+      return;
+    }
+    setActiveTab(tab);
   };
 
   // Create new blank form
@@ -315,7 +340,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         <div className="flex items-center gap-3">
           {activeForm && (
             <button
-              onClick={() => setActiveFormId(null)}
+              onClick={() => {
+                requestLeaveFormEditor(() => setActiveFormId(null));
+              }}
               className="p-2 rounded-xl bg-teal-50 dark:bg-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 transition-colors cursor-pointer"
               title="بازگشت به فهرست فرم‌ها"
             >
@@ -361,6 +388,18 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
+          {activeForm && (
+            <button
+              onClick={() => void handleSaveActiveForm()}
+              disabled={!unsavedFormIds[activeForm.id] || isSavingForm}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              title="ذخیره تغییرات فرم"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSavingForm ? 'در حال ذخیره...' : 'ذخیره فرم'}</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsTemplateModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -468,7 +507,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => handleWorkspaceTabChange(tab.id as any)}
                 className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1 text-[11px] shrink-0 ${
                   activeTab === tab.id
                     ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
@@ -860,6 +899,20 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingLeaveAction}
+        title="تغییرات ذخیره نشده"
+        message="تغییراتی در فرم انجام شده است که هنوز ذخیره نشده‌اند. آیا می‌خواهید بدون ذخیره از محیط طراحی خارج شوید؟"
+        confirmLabel="خروج بدون ذخیره"
+        cancelLabel="ادامه ویرایش"
+        danger={false}
+        onConfirm={() => {
+          pendingLeaveAction?.();
+          setPendingLeaveAction(null);
+        }}
+        onCancel={() => setPendingLeaveAction(null)}
+      />
     </div>
   );
 };
