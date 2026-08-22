@@ -27,6 +27,7 @@ import {
   MoveUp,
   MoveDown,
   Sparkles,
+  X,
   Lock,
   DollarSign,
   Percent,
@@ -111,6 +112,8 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
   );
   const [paletteSearch, setPaletteSearch] = useState('');
   const [newFieldId, setNewFieldId] = useState<string | null>(null);
+  const [isAddStepDialogOpen, setIsAddStepDialogOpen] = useState(false);
+  const [newStepTitle, setNewStepTitle] = useState('');
 
   // Drag-and-Drop state tracking
   const [draggedPaletteType, setDraggedPaletteType] = useState<{ type: FieldType; label: string } | null>(null);
@@ -301,13 +304,36 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
 
   // Add step
   const handleAddStep = () => {
+    setNewStepTitle(`گام ${form.steps.length + 1}`);
+    setIsAddStepDialogOpen(true);
+  };
+
+  const handleConfirmAddStep = () => {
+    const title = newStepTitle.trim();
+    if (!title) return;
+
     const newStep: FormStep = {
       id: `s_${Date.now()}`,
-      title: `گام ${form.steps.length + 1}`,
+      title,
       order: form.steps.length + 1
     };
     onChange({ ...form, steps: [...form.steps, newStep] });
     setActiveStepId(newStep.id);
+    setIsAddStepDialogOpen(false);
+  };
+
+  const handleDeleteStep = (stepId: string) => {
+    if (form.steps.length <= 1) return;
+
+    const remainingSteps = form.steps.filter(step => step.id !== stepId);
+    const fallbackStepId = remainingSteps[0].id;
+    const updatedFields = form.fields.map(field =>
+      field.stepId === stepId ? { ...field, stepId: fallbackStepId } : field
+    );
+    const updatedSteps = remainingSteps.map((step, index) => ({ ...step, order: index + 1 }));
+
+    onChange({ ...form, steps: updatedSteps, fields: updatedFields });
+    if (activeStepId === stepId) setActiveStepId(fallbackStepId);
   };
 
   // Canvas Max Width based on breakpoint
@@ -400,7 +426,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
       <div className="flex-1 flex flex-col bg-slate-100 dark:bg-slate-950/80 overflow-hidden relative">
         {/* Step Tabs Sub-bar */}
         <div className="h-11 border-b border-gray-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-4 flex items-center justify-between text-xs z-10 shrink-0">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
             <span className="text-slate-500 font-bold text-[11px] ml-2 shrink-0">گام‌های فرم:</span>
             {form.steps.map(step => (
               <button
@@ -416,6 +442,19 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                 <span className="px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/20 text-[10px] font-mono">
                   {form.fields.filter(f => f.stepId === step.id).length}
                 </span>
+                {form.steps.length > 1 && (
+                  <span
+                    role="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      handleDeleteStep(step.id);
+                    }}
+                    className="p-0.5 rounded-md hover:bg-rose-500/20 hover:text-rose-600 dark:hover:text-rose-300"
+                    title="حذف گام"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </span>
+                )}
               </button>
             ))}
 
@@ -429,9 +468,6 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] font-mono">
-            <span>Breakpoint: {activeBreakpoint}px</span>
-          </div>
         </div>
 
         {/* Canvas Body with Dot-Grid Background */}
@@ -747,6 +783,51 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
         onDeleteField={handleDeleteField}
         onDuplicateField={handleDuplicateField}
       />
+
+      {isAddStepDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-5 text-right">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">افزودن گام جدید</h3>
+              <button
+                onClick={() => setIsAddStepDialogOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                title="بستن"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              عنوان گام
+            </label>
+            <input
+              autoFocus
+              value={newStepTitle}
+              onChange={event => setNewStepTitle(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') handleConfirmAddStep();
+              }}
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+              placeholder="مثال: اطلاعات شخصی"
+            />
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                onClick={() => setIsAddStepDialogOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                لغو
+              </button>
+              <button
+                onClick={handleConfirmAddStep}
+                disabled={!newStepTitle.trim()}
+                className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold"
+              >
+                افزودن گام
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
