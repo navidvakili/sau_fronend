@@ -19,7 +19,7 @@ import { USER_STRING, TOKEN_STRING, MAX_TABS } from '@/src/shared-constants';
 import { ModuleRenderer } from '@/src/apps';
 import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import { dashboardApi } from '@/src/dashboard';
-import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
+import { ConfirmDialog, LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
 import { PermissionsProvider } from '@/src/shared-utils/PermissionsContext';
 import { LanguageProvider } from '@/src/shared-utils/LanguageContext';
 
@@ -39,6 +39,8 @@ export default function App() {
   const [confirmClearActive, setConfirmClearActive] = useState(false);
   const [tabRefreshKeys, setTabRefreshKeys] = useState<Record<string, number>>({});
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [unsavedFormTabs, setUnsavedFormTabs] = useState<Record<string, boolean>>({});
+  const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
 
   const { isStandby, setIsStandby, handleUnlock } = useStandby(viewState);
 
@@ -349,15 +351,32 @@ export default function App() {
     setActiveTabId(uniqueId);
   }, [tabs]);
 
-  const handleCloseTab = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const closeTab = (id: string) => {
     const updated = tabs.filter(t => t.id !== id);
     setTabs(updated);
+    setUnsavedFormTabs(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     if (activeTabId === id && updated.length > 0) {
       setActiveTabId(updated[updated.length - 1].id);
     } else if (updated.length === 0) {
       setActiveTabId(null);
     }
+  };
+
+  const handleCloseTab = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (unsavedFormTabs[id]) {
+      setPendingCloseTabId(id);
+      return;
+    }
+    closeTab(id);
+  };
+
+  const handleFormDirtyChange = (tabId: string, dirty: boolean) => {
+    setUnsavedFormTabs(prev => ({ ...prev, [tabId]: dirty }));
   };
 
   const handleClearAllTabs = () => {
@@ -475,6 +494,7 @@ export default function App() {
                     setUser(updated);
                     localStorage.setItem(USER_STRING, JSON.stringify(updated));
                   }}
+                  onFormDirtyChange={handleFormDirtyChange}
                 />
               )}
 
@@ -502,6 +522,7 @@ export default function App() {
                       setUser(updated);
                       localStorage.setItem(USER_STRING, JSON.stringify(updated));
                     }}
+                    onFormDirtyChange={handleFormDirtyChange}
                   />
                 </div>
               ))}
@@ -551,6 +572,20 @@ export default function App() {
         handleClearAllTabs={handleClearAllTabs}
         confirmClearActive={confirmClearActive}
         setConfirmClearActive={setConfirmClearActive}
+      />
+
+      <ConfirmDialog
+        open={!!pendingCloseTabId}
+        title="تغییرات ذخیره نشده"
+        message="تغییرات این فرم هنوز ذخیره نشده‌اند. آیا می‌خواهید تب را ببندید و تغییرات را از دست بدهید؟"
+        confirmLabel="بستن تب"
+        cancelLabel="ادامه ویرایش"
+        danger={false}
+        onConfirm={() => {
+          if (pendingCloseTabId) closeTab(pendingCloseTabId);
+          setPendingCloseTabId(null);
+        }}
+        onCancel={() => setPendingCloseTabId(null)}
       />
 
       {/* Standby (auto-lock) overlay */}

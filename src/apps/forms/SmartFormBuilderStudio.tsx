@@ -70,9 +70,10 @@ import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 
 interface SmartFormBuilderStudioProps {
   onOpenTab?: (tabId: string, title?: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () => {
+export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ onDirtyChange }) => {
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [isLoadingForms, setIsLoadingForms] = useState(true);
@@ -140,6 +141,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
   }, [activeFormId]);
 
   const activeForm = forms.find(f => f.id === activeFormId) || null;
+
+  useEffect(() => {
+    onDirtyChange?.(activeFormId ? !!unsavedFormIds[activeFormId] : false);
+  }, [activeFormId, onDirtyChange, unsavedFormIds]);
 
   // Handle Form Update
   const handleUpdateActiveForm = (updatedForm: FormDefinition) => {

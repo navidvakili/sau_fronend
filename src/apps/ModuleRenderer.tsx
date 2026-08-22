@@ -35,6 +35,7 @@ interface ModuleRendererProps {
   onOpenTab: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
   openTabsCount: number;
   onUpdateUser: (user: UserType) => void;
+  onFormDirtyChange: (tabId: string, dirty: boolean) => void;
 }
 
 export default function ModuleRenderer({
@@ -48,6 +49,7 @@ export default function ModuleRenderer({
   onOpenTab,
   openTabsCount,
   onUpdateUser,
+  onFormDirtyChange,
 }: ModuleRendererProps) {
   const { can } = useAppPermissions();
 
@@ -104,6 +106,7 @@ export default function ModuleRenderer({
       onOpenTab,
       userRoles,
       onUpdateUser,
+      onDirtyChange: (dirty: boolean) => onFormDirtyChange(tabId, dirty),
       // داده‌های اولیهٔ اختصاصی تب (مثلاً initialPageId برای بازکردن Page Builder
       // با یک صفحهٔ مشخص) — هر ماژول هرچه را لازم ندارد نادیده می‌گیرد
       ...tab?.initialProps,
