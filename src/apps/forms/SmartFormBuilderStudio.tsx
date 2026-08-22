@@ -260,28 +260,30 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = () 
         </div>
 
         {/* Center Breakpoint & Design Mode Badge */}
-        <div className="flex items-center gap-2">
-          <div className="px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 text-[11px] font-extrabold flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-            <span>Design Mode</span>
-          </div>
+        {activeForm && (
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 text-[11px] font-extrabold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span>Design Mode</span>
+            </div>
 
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs">
-            {(['1240', '1024', '768', '380'] as const).map(bp => (
-              <button
-                key={bp}
-                onClick={() => setActiveBreakpoint(bp)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer ${
-                  activeBreakpoint === bp
-                    ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {bp}px
-              </button>
-            ))}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs">
+              {(['1240', '1024', '768', '380'] as const).map(bp => (
+                <button
+                  key={bp}
+                  onClick={() => setActiveBreakpoint(bp)}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    activeBreakpoint === bp
+                      ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {bp}px
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
