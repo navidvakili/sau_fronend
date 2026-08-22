@@ -4,7 +4,6 @@ import {
   Type,
   CheckSquare,
   Layout,
-  Sliders,
   Sparkles,
   Eye,
   Lock,
@@ -55,7 +54,7 @@ interface FormInspectorPanelProps {
   onDuplicateField: (field: FormField) => void;
 }
 
-type TabType = 'general' | 'specific' | 'validation' | 'layout' | 'advanced' | 'options';
+type TabType = 'general' | 'validation' | 'layout' | 'advanced' | 'options';
 
 export default function FormInspectorPanel({
   selectedField,
@@ -253,7 +252,6 @@ export default function FormInspectorPanel({
       <div className="flex border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs overflow-x-auto scrollbar-none">
         {[
           { id: 'general', label: 'عمومی', icon: Type },
-          { id: 'specific', label: 'اختصاصی', icon: Sliders },
           ...(isChoiceField || isMatrixField ? [{ id: 'options', label: 'گزینه‌ها', icon: Layers }] : []),
           { id: 'validation', label: 'اعتبار', icon: CheckSquare },
           { id: 'layout', label: 'ظاهر', icon: Layout },
@@ -447,7 +445,7 @@ export default function FormInspectorPanel({
         {/* ======================================================== */}
         {/* 2. TYPE-SPECIFIC SETTINGS TAB */}
         {/* ======================================================== */}
-        {activeTab === 'specific' && (
+        {activeTab === 'general' && (
           <div className="space-y-4">
             {/* Short text & Textarea */}
             {['text', 'textarea'].includes(selectedField.type) && (

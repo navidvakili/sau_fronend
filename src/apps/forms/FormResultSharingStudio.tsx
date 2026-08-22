@@ -58,7 +58,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   onChange,
   onOpenPublicPreview
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'reports' | 'embed_qr' | 'audit_logs'>('public_link');
+  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'audit_logs'>('public_link');
 
   // Local state for user access rule form
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -221,8 +221,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 text-xs font-bold">
         {[
-          { id: 'public_link', label: 'تنظیمات لینک عمومی و دامنه', icon: Globe },
-          { id: 'reports', label: 'مدیریت Views و گزارش‌ها', icon: Sliders, badge: (form.reportViews || []).length },
+          { id: 'public_link', label: 'عمومی و گزارش‌های اختصاصی', icon: Globe, badge: (form.reportViews || []).length },
           { id: 'audit_logs', label: 'لاگ مشاهده و خروجی‌ها', icon: Clock, badge: (form.reportAuditLogs || []).length }
         ].map(tab => (
           <button
@@ -706,7 +705,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       )}
 
       {/* Sub-Tab 3: Custom Report Views */}
-      {activeSubTab === 'reports' && (
+      {activeSubTab === 'public_link' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
