@@ -40,8 +40,8 @@ export const AiFormAssistantModal: React.FC<AiFormAssistantModalProps> = ({
       let generatedTitle = 'فرم ساخته شده توسط هوش مصنوعی';
       let generatedDesc = 'این فرم بر اساس دستورالعمل و هوش مصنوعی استخراج شده است.';
 
-      // Attempt AI generation if VITE_GEMINI_API_KEY exists
-      const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      // Attempt AI generation if GEMINI_API_KEY exists
+      const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey) {
         const ai = new GoogleGenAI({ apiKey });
         const systemPrompt = `تو یک دستیار هوشمند فرم‌ساز و پرسشنامه‌ساز هستید.

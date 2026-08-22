@@ -31,6 +31,9 @@ export type FieldType =
   | 'yesno'
   | 'color'
   | 'location'
+  | 'address'
+  | 'currency'
+  | 'percentage'
   | 'cascading'
   | 'signature'
   | 'captcha'
@@ -63,15 +66,74 @@ export interface FieldValidation {
   min?: number;
   max?: number;
   regexPattern?: string;
-  allowedExtensions?: string[]; // e.g. ['.pdf', '.jpg']
+  allowedExtensions?: string[]; // e.g. ['.pdf', '.jpg', '.docx']
   maxFileSizeMb?: number;
+  maxFilesCount?: number;
+  allowedImageFormats?: string[]; // e.g. ['jpg', 'png', 'webp']
+  maxDimensions?: { maxWidth: number; maxHeight: number };
   customErrorMessage?: string;
+  allowedDomains?: string[]; // e.g. ['ut.ac.ir', 'university.ac.ir']
+  blockFreeEmailProviders?: boolean;
+  phoneFormat?: 'iran_mobile' | 'iran_landline' | 'international' | 'custom';
+  passwordRules?: {
+    minLength: number;
+    requireUppercase?: boolean;
+    requireLowercase?: boolean;
+    requireNumbers?: boolean;
+    requireSpecialChars?: boolean;
+    requireConfirmPassword?: boolean;
+  };
+  disallowPastDates?: boolean;
+  disallowFutureDates?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  minTime?: string;
+  maxTime?: string;
+  minSelected?: number;
+  maxSelected?: number;
+  minAmount?: number;
+  maxAmount?: number;
+  minPercentage?: number;
+  maxPercentage?: number;
+}
+
+export interface FieldStyling {
+  textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  fontSize?: 'sm' | 'base' | 'lg' | 'xl';
+  customClass?: string;
+  columnWidth?: '100%' | '50%' | '33%' | '25%';
+}
+
+export interface FieldDatabaseConfig {
+  dbColumnName?: string;
+  dbDataType?: 'VARCHAR' | 'INTEGER' | 'DECIMAL' | 'TEXT' | 'JSON' | 'BOOLEAN' | 'TIMESTAMP';
+  isIndexed?: boolean;
+  isEncrypted?: boolean;
+  maskInUi?: boolean;
+}
+
+export interface FieldApiConfig {
+  enabled?: boolean;
+  endpointUrl?: string;
+  method?: 'GET' | 'POST';
+  labelKey?: string;
+  valueKey?: string;
+  headers?: Record<string, string>;
+}
+
+export interface FieldVisibilityConfig {
+  showOnDesktop?: boolean;
+  showOnMobile?: boolean;
+  showOnPrint?: boolean;
 }
 
 export interface FormField {
   id: string;
   type: FieldType;
   label: string;
+  systemKey?: string; // e.g. 'student_national_code', 'user_mobile'
   placeholder?: string;
   helpText?: string;
   defaultValue?: any;
@@ -81,11 +143,90 @@ export interface FormField {
   validation?: FieldValidation;
   columnWidth?: '100%' | '50%' | '33%' | '25%'; // Responsive width
   stepId?: string; // Step page assignment
+  sectionTitle?: string;
+  order?: number;
+
+  // General State Flags
+  disabled?: boolean;
+  readOnly?: boolean;
+  hidden?: boolean;
+  accessRoles?: string[]; // e.g. ['admin', 'manager', 'student', 'all']
+
+  // Specific Type Configurations
+  // Text & Textarea
+  textMode?: 'single' | 'multiline';
+  charTypeAllowed?: 'any' | 'persian_letters' | 'english_letters' | 'numeric' | 'alphanumeric';
+  rowsCount?: number;
+  allowTextareaResize?: boolean;
+
+  // Number, Currency & Percentage
+  numberUnit?: string; // e.g. 'کیلوگرم', 'نفر', 'ساعت'
+  decimalPlaces?: number;
+  useThousandSeparator?: boolean;
+  currencyUnit?: 'تومان' | 'ریال' | 'دلار' | 'یورو';
+  showPercentageIcon?: boolean;
+
+  // Date & Time
+  calendarType?: 'jalali' | 'gregorian';
+  dateFormat?: 'YYYY/MM/DD' | 'YYYY-MM-DD' | 'DD/MM/YYYY';
+  timeFormat?: '24h' | '12h';
+  timezone?: string;
+  defaultDateOption?: 'none' | 'today' | 'custom';
+
+  // Choice, Dropdown & Radio
+  allowSearchOptions?: boolean; // Combobox search
+  isMultiSelect?: boolean;
+  allowCreateCustomOption?: boolean;
+  choiceLayout?: 'vertical' | 'horizontal' | 'grid_2_col';
+  defaultSelectedOptionId?: string;
+
+  // File & Image & Signature
+  allowMultipleUploads?: boolean;
+  showImagePreview?: boolean;
+  signaturePadType?: 'draw' | 'type' | 'upload';
+  signatureCanvasHeight?: number;
+
+  // Location & Address
+  includeProvince?: boolean;
+  includeCity?: boolean;
+  includePostalCode?: boolean;
+  includeGeoCoordinates?: boolean;
+  defaultLocation?: { lat: number; lng: number };
+  mapZoomLevel?: number;
+
+  // Scale & Rating
+  minRating?: number;
+  maxRating?: number;
+  ratingStep?: number;
+  startRatingLabel?: string;
+  endRatingLabel?: string;
+  ratingIconType?: 'star' | 'heart' | 'emoji' | 'number';
+
+  // Color & URL
+  colorFormat?: 'HEX' | 'RGB' | 'HSL';
+  allowedUrlProtocols?: ('https' | 'http')[];
+
+  // Advanced & Calculation
   points?: number; // Base points for correct answer in quiz
   correctAnswer?: string | string[]; // For quizzes
   formula?: string; // For calculated fields, e.g. "field_1 * 0.15 + field_2"
+  autoCalculationEnabled?: boolean;
+  prefillSource?: 'none' | 'user_fullname' | 'user_email' | 'user_phone' | 'user_national_id' | 'user_role' | 'query_param';
+  prefillQueryParam?: string;
+
+  // External API & Dynamic Data
+  apiConfig?: FieldApiConfig;
+
+  // Database & Security
+  databaseConfig?: FieldDatabaseConfig;
+  styling?: FieldStyling;
+  visibility?: FieldVisibilityConfig;
+  auditTrailEnabled?: boolean;
+
+  // Dependencies & Cascading
   cascadingParentId?: string;
   cascadingData?: Record<string, string[]>; // e.g. {"تهران": ["تهران", "ری"], "اصفهان": ["اصفهان", "کاشان"]}
+  className?: string;
 }
 
 export interface FormStep {
@@ -247,8 +388,6 @@ export interface AuditLogItem {
 
 export interface FormDefinition {
   id: string;
-  /** نامک — برای نشانی عمومی /forms/{slug} روی سایت public. اختیاری چون فرم‌های تولیدشده محلی (پیش از ذخیره) هنوز نامک ندارند */
-  slug?: string;
   title: string;
   description: string;
   type: FormType;
