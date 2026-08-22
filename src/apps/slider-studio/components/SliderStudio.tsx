@@ -216,6 +216,7 @@ interface SliderStudioProps {
   initialProject?: SliderProject | null;
   onSave?: (project: SliderProject) => void;
   onBack?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
@@ -233,7 +234,7 @@ function ensureSlides(project: SliderProject): SliderProject {
   return project;
 }
 
-export default function SliderStudio({ initialProject, onSave, onBack }: SliderStudioProps) {
+export default function SliderStudio({ initialProject, onSave, onBack, onDirtyChange }: SliderStudioProps) {
   // Project State
   const [project, setProject] = useState<SliderProject>(
     () => ensureSlides(initialProject || INITIAL_SLIDER_PROJECTS[0])
@@ -291,6 +292,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     lastHistoryTimeRef.current = now;
     futureRef.current = [];
     setProject(newProject);
+    onDirtyChange?.(true);
     setUndoRedoVersion(v => v + 1);
   }, [project]);
 

@@ -4,7 +4,7 @@
 // اطلاعیه‌ها در صفحه اصلی سایت عمومی (sau public) نمایش داده می‌شوند
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Megaphone, Plus, Search, Filter, Pin, Edit3, Trash2, Calendar,
@@ -31,11 +31,12 @@ interface AnnouncementManagementProps {
   activeTabId?: string;
   moduleId?: string;
   onOpenTab?: (id: string, title: string, iconName: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 type SubTab = 'list' | 'editor' | 'categories';
 
-export default function AnnouncementManagement({ user, moduleId }: AnnouncementManagementProps) {
+export default function AnnouncementManagement({ user, moduleId, onDirtyChange }: AnnouncementManagementProps) {
   const { can } = useAppPermissions();
   const { currentLang, getLanguage } = useLanguage();
   const activeLanguage = getLanguage(currentLang);
@@ -89,6 +90,15 @@ export default function AnnouncementManagement({ user, moduleId }: AnnouncementM
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const formInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!formInitialized.current) {
+      formInitialized.current = true;
+      return;
+    }
+    onDirtyChange?.(activeTab === 'editor');
+  }, [activeTab, formTitle, formGroup, formCategoryId, formType, formSummary, formContent, formStatus, formIsPinned, formImageUrl, formFiles, onDirtyChange]);
 
   // ===== Toast state =====
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);

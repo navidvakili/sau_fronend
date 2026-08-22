@@ -3,7 +3,7 @@
 // شامل: آرشیو، ویرایشگر، دسته‌بندی‌ها، آمار و تحلیل
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Newspaper, Plus, Search, Filter, Eye, Heart, Pin, Edit3,
@@ -33,11 +33,12 @@ interface NewsManagementProps {
   activeTabId?: string;
   moduleId?: string;
   onOpenTab?: (id: string, title: string, iconName: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 type SubTab = 'list' | 'editor' | 'categories' | 'comments' | 'analytics';
 
-export default function NewsManagement({ user, activeTabId, moduleId }: NewsManagementProps) {
+export default function NewsManagement({ user, activeTabId, moduleId, onDirtyChange }: NewsManagementProps) {
   const { can } = useAppPermissions();
   const { currentLang, getLanguage } = useLanguage();
   const activeLanguage = getLanguage(currentLang);
@@ -96,6 +97,15 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [photoImageIndex, setPhotoImageIndex] = useState<number | null>(null);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const formInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!formInitialized.current) {
+      formInitialized.current = true;
+      return;
+    }
+    onDirtyChange?.(activeTab === 'editor');
+  }, [activeTab, formTitle, formSummary, formContent, formCategoryId, formStatus, formIsPinned, formImageUrl, formTags, formIsPhotoReport, formPhotoReportImages, onDirtyChange]);
 
   // ===== New Category State =====
   const [newCatName, setNewCatName] = useState('');
@@ -325,6 +335,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       }
 
       setTimeout(() => {
+        onDirtyChange?.(false);
         setActiveTab('list');
         handleResetForm();
         loadNews();

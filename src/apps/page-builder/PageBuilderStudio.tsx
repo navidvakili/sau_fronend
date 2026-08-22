@@ -69,11 +69,12 @@ import {
 
 interface PageBuilderStudioProps {
   onBackToPortal?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   /** اگر تنظیم شود، استودیو مستقیماً همان صفحه را باز می‌کند (نه فهرست) — مثلاً هنگام ورود از «ویرایش لایوت» یک صفحهٔ اختصاصی */
   initialPageId?: string | number;
 }
 
-export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId }) => {
+export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId, onDirtyChange }) => {
   // Main Page Schema state
   const [pageSchema, setPageSchema] = useState<SmartPageSchema>(INITIAL_SMART_PAGE);
 
@@ -418,6 +419,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     setUndoStack(prev => [...prev.slice(-15), pageSchema]);
     setRedoStack([]);
     setPageSchema(newSchema);
+    onDirtyChange?.(true);
   };
 
   const handleUndo = () => {
@@ -1194,6 +1196,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       const list = await fetchSmartPages({ per_page: 100 });
       setPages(list.data);
       setSaveSuccess(true);
+      onDirtyChange?.(false);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch {
       // API layer shows the error toast; keep editing

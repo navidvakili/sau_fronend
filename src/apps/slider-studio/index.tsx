@@ -11,7 +11,11 @@ import SliderStudioEditor from './components/SliderStudio';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
-export default function SliderStudioApp() {
+interface SliderStudioAppProps {
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+export default function SliderStudioApp({ onDirtyChange }: SliderStudioAppProps) {
   const { currentLang } = useLanguage();
 
   // ===== Editor state =====
@@ -85,6 +89,7 @@ export default function SliderStudioApp() {
         lang: currentLang,
       };
       await updateProject(projectId, payload);
+      onDirtyChange?.(false);
       showToast('اسلایدر با موفقیت ذخیره شد.', 'success');
     } catch (err: any) {
       showToast(err.message || 'خطا در ذخیره اسلایدر', 'error');
@@ -127,6 +132,7 @@ export default function SliderStudioApp() {
           <SliderStudioEditor
             initialProject={projectData}
             onSave={handleSaveProject}
+            onDirtyChange={onDirtyChange}
           />
         )}
       </div>
