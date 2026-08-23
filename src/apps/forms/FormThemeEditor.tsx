@@ -1,6 +1,7 @@
-import React from 'react';
-import { Palette, Image as ImageIcon, Layout, Type, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Palette, Image as ImageIcon, Layout, Type, Check, Trash2 } from 'lucide-react';
 import { FormDefinition, FormTheme } from './types';
+import MediaManager from '@/src/shared-components/MediaManager';
 
 interface FormThemeEditorProps {
   form: FormDefinition;
@@ -18,6 +19,7 @@ const COLOR_PRESETS = [
 
 export const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ form, onChange }) => {
   const theme = form.theme;
+  const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
 
   const handleUpdateTheme = (key: keyof FormTheme, value: any) => {
     onChange({
@@ -107,13 +109,36 @@ export const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ form, onChange
             </label>
 
             {theme.showLogo && (
-              <input
-                type="text"
-                placeholder="آدرس تصویر لوگو (URL)..."
-                value={theme.logoUrl || ''}
-                onChange={e => handleUpdateTheme('logoUrl', e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-xs dir-ltr text-right"
-              />
+              <div className="flex items-start gap-3">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
+                  {theme.logoUrl ? (
+                    <img src={theme.logoUrl} alt="پیش‌نمایش لوگو" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-slate-600">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsMediaManagerOpen(true)}
+                    className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    انتخاب از رسانه
+                  </button>
+                  {theme.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateTheme('logoUrl', '')}
+                      className="p-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
+                      title="حذف تصویر"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
@@ -144,6 +169,17 @@ export const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ form, onChange
           </div>
         </div>
       </div>
+
+      <MediaManager
+        open={isMediaManagerOpen}
+        filter="image"
+        title="انتخاب تصویر لوگو"
+        onClose={() => setIsMediaManagerOpen(false)}
+        onSelect={url => {
+          handleUpdateTheme('logoUrl', url);
+          setIsMediaManagerOpen(false);
+        }}
+      />
     </div>
   );
 };
