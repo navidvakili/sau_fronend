@@ -152,6 +152,7 @@ export const AiFormAssistantModal: React.FC<AiFormAssistantModalProps> = ({
           enableCaptcha: true,
           enableAutoSave: true,
           showProgressBar: true,
+          showWelcomeScreen: false,
           customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
           generateTrackingCode: true,
           trackingCodePrefix: 'AI-2026',

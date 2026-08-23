@@ -5,7 +5,8 @@ import { defineConfig } from 'vite';
 
 function makeCsp(mode: string, backendUrl: string): string {
   // 'wasm-unsafe-eval' برای موتور pdf.js لازم است (در کروم جدا از 'unsafe-eval' است)
-  const base = `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${backendUrl}; font-src 'self' data:; media-src 'self' blob: data: ${backendUrl}; object-src 'self' ${backendUrl}; frame-src 'self' ${backendUrl} blob: data:; connect-src 'self' ${backendUrl}; worker-src 'self' blob:`;
+  // api.qrserver.com — سرویس تولید تصویر QR Code برای لینک اشتراک‌گذاری فرم‌ساز (هم <img> هم دانلود با fetch)
+  const base = `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${backendUrl} https://api.qrserver.com; font-src 'self' data:; media-src 'self' blob: data: ${backendUrl}; object-src 'self' ${backendUrl}; frame-src 'self' ${backendUrl} blob: data:; connect-src 'self' ${backendUrl} https://api.qrserver.com; worker-src 'self' blob:`;
   if (mode === 'development') {
     // allow dev-time websocket HMR server (ports used by vite/other tools)
     // allow any websocket scheme during development (HMR may use dynamic port)

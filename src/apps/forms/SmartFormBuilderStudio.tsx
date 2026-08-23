@@ -14,7 +14,6 @@ import {
   Wand2,
   Filter,
   Layers,
-  Award,
   Settings2,
   GitBranch,
   Palette,
@@ -53,7 +52,7 @@ import { FormDefinition, FormField, FormSubmission, FormStatus, FormType, FieldT
 import { sampleForms, formTemplates, defaultTheme } from './mockData';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
-import { FormQuizScoring } from './FormQuizScoring';
+import { FormMessagesEditor } from './FormMessagesEditor';
 import { FormThemeEditor } from './FormThemeEditor';
 import { SubmissionsManager } from './SubmissionsManager';
 import { FormAnalyticsDashboard } from './FormAnalyticsDashboard';
@@ -79,7 +78,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [isLoadingForms, setIsLoadingForms] = useState(true);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [scrollToFieldId, setScrollToFieldId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'messages' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
 
   // Breakpoints / Viewport width
   const [activeBreakpoint, setActiveBreakpoint] = useState<'1240' | '1024' | '768' | '380'>('1240');
@@ -224,7 +223,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setPendingLeaveAction({ action, exitsForm });
   };
 
-  const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing') => {
+  const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'messages' | 'theme' | 'submissions' | 'analytics' | 'sharing') => {
     if (activeTab === 'builder' && tab !== 'builder') {
       requestLeaveFormEditor(() => setActiveTab(tab));
       return;
@@ -267,6 +266,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         enableCaptcha: true,
         enableAutoSave: true,
         showProgressBar: true,
+        showWelcomeScreen: false,
         customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
         generateTrackingCode: true,
         trackingCodePrefix: 'FRM-2026',
@@ -537,7 +537,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             {[
               { id: 'builder', label: 'طراح دیداری', icon: FileText },
               { id: 'logic', label: 'منطق شرطی', icon: GitBranch },
-              { id: 'quiz', label: 'آزمون و نمره', icon: Award },
+              { id: 'messages', label: 'پیام خوش‌آمد و پایان', icon: MessageSquare },
               { id: 'theme', label: 'پوسته', icon: Palette },
               { id: 'submissions', label: `پاسخ‌ها (${submissions.filter(s => s.formId === activeForm.id).length})`, icon: Inbox },
               { id: 'analytics', label: 'آمار', icon: BarChart2 },
@@ -588,9 +588,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </div>
           )}
 
-          {activeTab === 'quiz' && (
+          {activeTab === 'messages' && (
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/40">
-              <FormQuizScoring form={activeForm} onChange={handleUpdateActiveForm} />
+              <FormMessagesEditor form={activeForm} onChange={handleUpdateActiveForm} />
             </div>
           )}
 

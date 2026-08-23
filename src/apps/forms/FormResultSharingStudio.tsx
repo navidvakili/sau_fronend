@@ -5,7 +5,6 @@ import {
   UserCheck,
   Globe,
   Lock,
-  Eye,
   Download,
   QrCode,
   Copy,
@@ -13,19 +12,38 @@ import {
   Trash2,
   Clock,
   ExternalLink,
-  Sliders,
   Check
 } from 'lucide-react';
 import {
   FormDefinition,
   UserAccessRule,
   FormAccessPermission,
-  FormReportView,
   FormShareLinkConfig,
   FormStatus
 } from './types';
 import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 import { fetchFormShareLink, updateFormShareLink } from './api';
+import { JalaliDatepicker } from '@/src/shared-components';
+import { toPersianDigits, toEnglishDigits } from '@/src/shared-utils';
+import { DateObject } from 'react-multi-date-picker';
+import persian from 'react-date-object/calendars/persian';
+import persian_fa from 'react-date-object/locales/persian_fa';
+import gregorian from 'react-date-object/calendars/gregorian';
+import gregorian_en from 'react-date-object/locales/gregorian_en';
+
+/** تبدیل رشته‌ی تاریخ میلادی (YYYY-MM-DD، برای بک‌اند) به رشته‌ی شمسی نمایشی (برای JalaliDatepicker) */
+const toJalaliDisplayDate = (isoDate: string): string => {
+  if (!isoDate) return '';
+  const g = new DateObject({ calendar: gregorian, date: isoDate, format: 'YYYY-MM-DD' });
+  return toPersianDigits(g.convert(persian, persian_fa).format('YYYY/MM/DD'));
+};
+
+/** تبدیل رشته‌ی تاریخ شمسی (از JalaliDatepicker) به رشته‌ی تاریخ میلادی YYYY-MM-DD (برای بک‌اند) */
+const toIsoDate = (jalaliDate: string): string => {
+  if (!jalaliDate) return '';
+  const j = new DateObject({ calendar: persian, date: toEnglishDigits(jalaliDate), format: 'YYYY/MM/DD' });
+  return j.convert(gregorian, gregorian_en).format('YYYY-MM-DD');
+};
 
 interface FormResultSharingStudioProps {
   form: FormDefinition;
@@ -307,7 +325,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 text-xs font-bold">
         {[
-          { id: 'public_link', label: 'عمومی و گزارش‌های اختصاصی', icon: Globe, badge: (form.reportViews || []).length },
+          { id: 'public_link', label: 'لینک عمومی فرم', icon: Globe },
           { id: 'audit_logs', label: 'لاگ مشاهده و خروجی‌ها', icon: Clock, badge: (form.reportAuditLogs || []).length }
         ].map(tab => (
           <button
@@ -676,11 +694,9 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
 
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-1">تاریخ انقضای لینک (اختیاری)</label>
-                    <input
-                      type="date"
-                      value={expiresAtInput}
-                      onChange={e => setExpiresAtInput(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    <JalaliDatepicker
+                      value={toJalaliDisplayDate(expiresAtInput)}
+                      onChange={jalaliDate => setExpiresAtInput(toIsoDate(jalaliDate))}
                     />
                   </div>
                 </div>
@@ -712,49 +728,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </div>
             </>
           )}
-        </div>
-      )}
-
-      {/* Sub-Tab 3: Custom Report Views */}
-      {activeSubTab === 'public_link' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-teal-600" />
-                ایجاد چند View یا گزارش تخصصی (Multiple Report Views)
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                تعریف گزارش‌های مجزا مانند «گزارش هیئت رئیسه» یا «گزارش تفکیکی دانشکده‌ها» با لینک‌های اختصاصی
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(form.reportViews || []).map(rv => (
-              <div
-                key={rv.id}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">{rv.title}</h4>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-teal-100 text-teal-800 font-bold">
-                    View اختصاصی
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  لینک گزارش: <code className="text-teal-600 dir-ltr inline-block">/reports/{rv.slug}</code>
-                </p>
-                <div className="text-[11px] text-slate-400">تاریخ ایجاد: {rv.createdAt}</div>
-                <button
-                  onClick={onOpenPublicPreview}
-                  className="w-full py-2 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" /> مشاهده نمای این گزارش
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

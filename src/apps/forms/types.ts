@@ -291,7 +291,14 @@ export interface FormSettings {
   enableCaptcha: boolean;
   enableAutoSave: boolean;
   showProgressBar: boolean;
+  /** نمایش صفحه‌ی خوش‌آمدگویی قبل از سؤال اول */
+  showWelcomeScreen: boolean;
+  welcomeTitle?: string;
+  welcomeDescription?: string;
+  welcomeButtonText?: string;
   customSuccessMessage: string;
+  /** توضیحات تکمیلی زیر پیام پایان (جایگزین متن پیش‌فرض هاردکد) */
+  completionDescription?: string;
   redirectUrl?: string;
   generateTrackingCode: boolean;
   trackingCodePrefix: string;

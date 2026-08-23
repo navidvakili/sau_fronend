@@ -100,6 +100,7 @@ const toFormDefinition = (row: FormRowDto): FormDefinition => ({
     enableCaptcha: false,
     enableAutoSave: true,
     showProgressBar: true,
+    showWelcomeScreen: false,
     customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
     generateTrackingCode: true,
     trackingCodePrefix: 'FRM',
