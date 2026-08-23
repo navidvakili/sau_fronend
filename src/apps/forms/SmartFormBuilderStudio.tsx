@@ -63,7 +63,7 @@ import { FormPublishModal } from './FormPublishModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import FormCodeExportModal from './FormCodeExportModal';
 import { FormRespondentView } from './FormRespondentView';
-import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, updateSubmissionStatus, slugifyFormTitle } from './api';
+import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 
@@ -339,23 +339,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     }
   };
 
-  const handleUpdateSubmissionStatus = async (
-    submissionId: string,
-    status: FormSubmission['status'],
-    note?: string
-  ) => {
-    if (!activeFormId) return;
-    try {
-      const updated = await updateSubmissionStatus(activeFormId, submissionId, {
-        status,
-        internal_notes: note
-      });
-      setSubmissions(prev => prev.map(item => (item.id === updated.id ? updated : item)));
-    } catch (error: any) {
-      console.error('Failed to update submission:', error);
-      showToast(error?.message || 'خطا در به‌روزرسانی وضعیت پاسخ', 'error');
-    }
-  };
 
   // Filtered forms list
   const filteredForms = forms.filter(f => {
@@ -605,7 +588,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
               <SubmissionsManager
                 form={activeForm}
                 submissions={submissions.filter(s => s.formId === activeForm.id)}
-                onUpdateSubmissionStatus={handleUpdateSubmissionStatus}
               />
             </div>
           )}

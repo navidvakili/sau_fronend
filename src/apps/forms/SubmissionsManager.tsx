@@ -3,8 +3,6 @@ import {
   Inbox,
   Search,
   Filter,
-  CheckCircle,
-  XCircle,
   Clock,
   Download,
   Eye,
@@ -20,18 +18,14 @@ import { FormDefinition, FormSubmission } from './types';
 interface SubmissionsManagerProps {
   form: FormDefinition;
   submissions: FormSubmission[];
-  onUpdateSubmissionStatus?: (subId: string, status: FormSubmission['status'], note?: string) => void;
 }
 
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
   form,
-  submissions,
-  onUpdateSubmissionStatus
+  submissions
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'under_review' | 'approved' | 'rejected'>('all');
   const [selectedSubmission, setSelectedSubmission] = useState<FormSubmission | null>(null);
-  const [expertNote, setExpertNote] = useState('');
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch =
@@ -39,19 +33,16 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
       (sub.respondentName && sub.respondentName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (sub.respondentEmail && sub.respondentEmail.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = statusFilter === 'all' || sub.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const handleExportCsv = () => {
-    const headers = ['کد پیگیری', 'نام پاسخ‌دهنده', 'نقش', 'تاریخ ثبت', 'وضعیت', 'نمره آزمون'];
+    const headers = ['کد پیگیری', 'نام پاسخ‌دهنده', 'نقش', 'تاریخ ثبت', 'نمره آزمون'];
     const rows = filteredSubmissions.map(s => [
       s.trackingCode,
       s.respondentName || 'ناشناس',
       s.respondentRole || 'کاربر',
       s.submittedAt,
-      s.status,
       s.scoreTotal ?? '-'
     ]);
 
@@ -78,7 +69,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
               مدیریت و ارزیابی پاسخ‌های دریافتی ({submissions.length})
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مشاهده، اعتبارسنجی، افزودن یادداشت کارشناسی و خروجی اکسل/PDF
+              مشاهده پاسخ‌های دریافتی و خروجی اکسل/PDF
             </p>
           </div>
         </div>
@@ -91,42 +82,16 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 absolute right-3.5 top-3 text-slate-400" />
-          <input
-            type="text"
-            placeholder="جستجو بر اساس کد پیگیری، نام یا ایمیل..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium focus:ring-2 focus:ring-teal-500"
-          />
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
-          {[
-            { id: 'all', label: 'همه' },
-            { id: 'new', label: 'جدید' },
-            { id: 'under_review', label: 'در حال بررسی' },
-            { id: 'approved', label: 'تأیید شده' },
-            { id: 'rejected', label: 'رد شده' }
-          ].map(st => (
-            <button
-              key={st.id}
-              onClick={() => setStatusFilter(st.id as any)}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                statusFilter === st.id
-                  ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-300 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {st.label}
-            </button>
-          ))}
-        </div>
+      {/* Search Bar */}
+      <div className="relative flex-1 min-w-[240px]">
+        <Search className="w-4 h-4 absolute right-3.5 top-3 text-slate-400" />
+        <input
+          type="text"
+          placeholder="جستجو بر اساس کد پیگیری، نام یا ایمیل..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium focus:ring-2 focus:ring-teal-500"
+        />
       </div>
 
       {/* Submissions Table */}
@@ -138,7 +103,6 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
               <th className="p-4">پاسخ‌دهنده</th>
               <th className="p-4">تاریخ و زمان ثبت</th>
               <th className="p-4">مدت زمان پاسخ</th>
-              <th className="p-4">وضعیت بررسی</th>
               {form.quizConfig.isQuiz && <th className="p-4">نمره آزمون</th>}
               <th className="p-4 text-center">عملیات</th>
             </tr>
@@ -146,7 +110,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredSubmissions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-slate-400">
+                <td colSpan={6} className="p-8 text-center text-slate-400">
                   هیچ پاسخی با مشخصات جستجو شده یافت نشد.
                 </td>
               </tr>
@@ -169,27 +133,6 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                   </td>
                   <td className="p-4 text-slate-500">{sub.submittedAt}</td>
                   <td className="p-4 text-slate-500">{sub.completionTimeSeconds} ثانیه</td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
-                        sub.status === 'approved'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                          : sub.status === 'rejected'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300'
-                          : sub.status === 'under_review'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
-                      }`}
-                    >
-                      {sub.status === 'approved'
-                        ? 'تأیید شده'
-                        : sub.status === 'rejected'
-                        ? 'رد شده'
-                        : sub.status === 'under_review'
-                        ? 'در حال بررسی'
-                        : 'جدید'}
-                    </span>
-                  </td>
                   {form.quizConfig.isQuiz && (
                     <td className="p-4 font-extrabold text-indigo-600 dark:text-indigo-400">
                       {sub.scoreTotal !== undefined ? `${sub.scoreTotal} از ۱۰۰` : '-'}
@@ -255,47 +198,6 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Expert notes & status change */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <label className="font-bold text-slate-700 dark:text-slate-300 block">
-                  افزودن یادداشت کارشناسی internal:
-                </label>
-                <textarea
-                  rows={2}
-                  value={expertNote || selectedSubmission.internalNotes || ''}
-                  onChange={e => setExpertNote(e.target.value)}
-                  placeholder="ملاحظات و ارزیابی کارشناس مربوطه..."
-                  className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
-                />
-
-                <div className="flex items-center gap-2 pt-2">
-                  <span className="font-bold text-slate-600">تغییر وضعیت:</span>
-                  <button
-                    onClick={() => {
-                      if (onUpdateSubmissionStatus) {
-                        onUpdateSubmissionStatus(selectedSubmission.id, 'approved', expertNote);
-                      }
-                      setSelectedSubmission(null);
-                    }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5"
-                  >
-                    <CheckCircle className="w-4 h-4" /> تأیید نهایی
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (onUpdateSubmissionStatus) {
-                        onUpdateSubmissionStatus(selectedSubmission.id, 'rejected', expertNote);
-                      }
-                      setSelectedSubmission(null);
-                    }}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5"
-                  >
-                    <XCircle className="w-4 h-4" /> رد پاسخ
-                  </button>
-                </div>
               </div>
             </div>
           </div>

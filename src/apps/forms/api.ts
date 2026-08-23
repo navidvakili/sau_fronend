@@ -252,15 +252,6 @@ export const submitForm = async (
   return res.data;
 };
 
-export const updateSubmissionStatus = async (
-  formId: string | number,
-  submissionId: string | number,
-  data: { status?: FormSubmission['status']; internal_notes?: string; expert_assigned?: string }
-): Promise<FormSubmission> => {
-  const res = await API<{ message: string; data: SubmissionRowDto }>(`forms/${formId}/submissions/${submissionId}`, data, 'PATCH');
-  return toFormSubmission(res.data);
-};
-
 // ===== Share Link (dedicated public link for the form itself, with optional password/expiry) =====
 
 interface ShareLinkRowDto {
