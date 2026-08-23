@@ -767,6 +767,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'form') {
+      title = 'فرم پیوست‌شده از فرم‌ساز';
+      bindingDataSource = 'form';
     } else if (widgetType === 'dp-news') {
       title = 'خبرهای صفحهٔ اختصاصی';
       bindingDataSource = 'dedicated-page';
@@ -964,6 +967,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'form') {
+      title = 'فرم پیوست‌شده از فرم‌ساز';
+      bindingDataSource = 'form';
     } else if (widgetType === 'dp-news') {
       title = 'خبرهای صفحهٔ اختصاصی';
       bindingDataSource = 'dedicated-page';

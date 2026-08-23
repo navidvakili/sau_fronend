@@ -31,6 +31,7 @@ interface FormResultSharingStudioProps {
 const STATUS_OPTIONS: { value: FormStatus; label: string; className: string }[] = [
   { value: 'draft', label: 'پیش‌نویس', className: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
   { value: 'published', label: 'منتشرشده', className: 'bg-teal-600 text-white' },
+  { value: 'page_builder_only', label: 'انتشار فقط در صفحه‌ساز', className: 'bg-indigo-600 text-white' },
   { value: 'paused', label: 'غیرفعال (متوقف)', className: 'bg-amber-500 text-white' },
   { value: 'archived', label: 'بایگانی‌شده', className: 'bg-rose-600 text-white' }
 ];
@@ -460,6 +461,13 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
           {formIsUnpersisted ? (
             <div className="py-10 text-center text-xs font-bold text-slate-500">
               برای دریافت لینک و کد جاسازی، ابتدا فرم را از دکمه‌ی «ذخیره فرم» ذخیره کنید.
+            </div>
+          ) : form.status === 'page_builder_only' ? (
+            <div className="py-10 text-center text-xs font-bold text-slate-500 space-y-1.5">
+              <p>این فرم با وضعیت «انتشار فقط در صفحه‌ساز» تنظیم شده و لینک عمومی مستقلی ندارد.</p>
+              <p className="text-slate-400 font-normal">
+                برای استفاده از آن، از بخش «صفحه‌ساز هوشمند» این فرم را به‌عنوان یک ویجت به صفحه‌ی دلخواه اضافه کنید.
+              </p>
             </div>
           ) : (
             <>

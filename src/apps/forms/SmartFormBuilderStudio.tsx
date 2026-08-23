@@ -198,6 +198,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
       const messages: Record<FormStatus, string> = {
         published: 'فرم با موفقیت منتشر شد.',
+        page_builder_only: 'فرم فقط برای جاسازی در صفحه‌ساز هوشمند منتشر شد.',
         draft: 'فرم به پیش‌نویس تبدیل شد.',
         paused: 'فرم غیرفعال شد.',
         archived: 'فرم بایگانی شد.'

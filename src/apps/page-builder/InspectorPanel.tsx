@@ -25,6 +25,7 @@ import IconPicker, { ICON_CHOICES } from './components/IconPicker';
 import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
 import type { NewsCategory } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
+import { fetchForms } from '../forms/api';
 import {
   Sliders,
   Paintbrush,
@@ -245,6 +246,31 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
   const activeDataSource = selectedWidget?.settings.binding.dataSource;
   const isDedicatedPageWidget = !!selectedWidget && selectedWidget.type.startsWith('dp-');
+  const isFormWidget = !!selectedWidget && selectedWidget.type === 'form';
+
+  // ── فهرست فرم‌های منتشرشده — فقط وقتی widget انتخاب‌شده از نوع 'form' است واکشی می‌شود ──
+  const [availableForms, setAvailableForms] = useState<{ id: string; slug: string; title: string }[]>([]);
+  const [isLoadingForms, setIsLoadingForms] = useState(false);
+
+  useEffect(() => {
+    if (!isFormWidget) return;
+    let cancelled = false;
+    setIsLoadingForms(true);
+    fetchForms({ per_page: 200, status: 'published,page_builder_only' })
+      .then(result => {
+        if (!cancelled) setAvailableForms(result.data.map(f => ({ id: f.id, slug: f.slug, title: f.title })));
+      })
+      .catch(err => {
+        console.error('Failed to load forms for the picker:', err);
+        if (!cancelled) setAvailableForms([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingForms(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFormWidget]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2244,8 +2270,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
-              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS — بلوک‌های dp-* از بخش جداگانهٔ زیر استفاده می‌کنند */}
-              {!isDedicatedPageWidget && (
+              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS — بلوک‌های dp-* و form از بخش‌های جداگانهٔ زیر استفاده می‌کنند */}
+              {!isDedicatedPageWidget && !isFormWidget && (
               <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
                   <Database className="w-3.5 h-3.5" />
@@ -2652,6 +2678,54 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* بلوک «جاسازی فرم» — یک فرم منتشرشده از فرم‌ساز را انتخاب و مستقیماً در این صفحه نمایش می‌دهد */}
+              {isFormWidget && (
+                <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-teal-600 dark:text-teal-400">
+                    <Database className="w-3.5 h-3.5" />
+                    <span>اتصال به فرم‌ساز</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">فرم منتشرشده</label>
+                    <select
+                      value={selectedWidget.settings.binding.formId || ''}
+                      onChange={(e) => {
+                        const chosen = availableForms.find((f) => f.id === e.target.value);
+                        const newBinding: WidgetDataBinding = {
+                          ...selectedWidget.settings.binding,
+                          formId: chosen?.id || '',
+                          formSlug: chosen?.slug || ''
+                        };
+                        onUpdateWidget({
+                          ...selectedWidget,
+                          settings: { ...selectedWidget.settings, binding: newBinding }
+                        });
+                      }}
+                      disabled={isLoadingForms}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <option value="">{isLoadingForms ? 'در حال دریافت فهرست فرم‌ها...' : 'انتخاب کنید'}</option>
+                      {availableForms.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.title}
+                        </option>
+                      ))}
+                    </select>
+                    {!isLoadingForms && availableForms.length === 0 && (
+                      <p className="text-[10px] text-slate-400">
+                        هیچ فرم منتشرشده‌ای در فرم‌ساز یافت نشد. ابتدا یک فرم بسازید و آن را منتشر کنید.
+                      </p>
+                    )}
+                    {!selectedWidget.settings.binding.formId && availableForms.length > 0 && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                        تا وقتی فرمی انتخاب نشود، این بلوک در صفحهٔ عمومی چیزی نمایش نمی‌دهد.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

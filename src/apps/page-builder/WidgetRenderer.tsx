@@ -21,6 +21,9 @@ import {
 import type { SmartPageTreeNode, DedicatedPageContentItem, DedicatedPageMemberItem } from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
+import { fetchForm } from '../forms/api';
+import type { FormDefinition } from '../forms/types';
+import { FormRespondentView } from '../forms/FormRespondentView';
 import {
   FileText,
   Download,
@@ -2750,6 +2753,64 @@ const FileManagerWidget: React.FC<{
   );
 };
 
+/**
+ * ویجت «جاسازی فرم» — فرم منتخب از فرم‌ساز را به‌صورت واقعی (نه iframe) با همان
+ * کامپوننت پاسخ‌دهی خودِ فرم‌ساز (FormRespondentView) رندر می‌کند.
+ */
+const FormEmbedWidget: React.FC<{
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ binding, containerStyle }) => {
+  const [form, setForm] = useState<FormDefinition | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!binding.formId) {
+      setForm(null);
+      return;
+    }
+    let cancelled = false;
+    setForm(undefined);
+    fetchForm(binding.formId)
+      .then((f) => {
+        if (!cancelled) setForm(f);
+      })
+      .catch(() => {
+        if (!cancelled) setForm(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [binding.formId]);
+
+  if (!binding.formId) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 text-center">
+        هنوز فرمی برای این بلوک انتخاب نشده — از پنل تنظیمات یک فرم منتشرشده انتخاب کنید.
+      </div>
+    );
+  }
+  if (form === undefined) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 text-center">
+        در حال دریافت فرم...
+      </div>
+    );
+  }
+  if (form === null) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-xl bg-red-50 dark:bg-red-950/30 text-xs text-red-600 text-center">
+        این فرم یافت نشد.
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle}>
+      <FormRespondentView form={form} isEmbedPreview />
+    </div>
+  );
+};
+
 // ==============================================================
 // NEW STATIC BLOCKS — بلوک‌های جدید سازنده صفحه
 // ==============================================================
@@ -4543,6 +4604,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'file-manager':
       return isEditorPreview ? null : <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+
+    case 'form':
+      return isEditorPreview ? null : <FormEmbedWidget binding={binding} containerStyle={containerStyle} />;
 
     // بلوک‌های صفحات اختصاصی — اتصال به یک DedicatedPage مشخص (binding.dedicatedPageId)
     case 'dp-news':

@@ -41,7 +41,8 @@ import {
   UsersRound,
   BookOpen,
   FileSpreadsheet,
-  Navigation
+  Navigation,
+  ClipboardList
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -106,6 +107,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'achievements-timeline', category: 'smart', name: 'تایم‌لاین افتخارات', desc: 'نمایش مدال‌ها، جوایز و دستاوردهای ملی', icon: Award, badge: 'ماژول افتخارات' },
     { type: 'image-gallery', category: 'smart', name: 'آلبوم و گالری تصاویری', desc: 'گالری شبکه‌ای رسانه‌ها و رویدادها', icon: ImageIcon, badge: 'گالری' },
     { type: 'file-manager', category: 'smart', name: 'مخزن اسناد و فرم‌ها', desc: 'لیست دانلود فایل‌ها و آیین‌نامه‌ها', icon: FileText, badge: 'مدیریت فایل' },
+    { type: 'form', category: 'smart', name: 'جاسازی فرم (فرم‌ساز)', desc: 'نمایش و پرکردن یک فرم منتشرشده از فرم‌ساز، مستقیماً داخل این صفحه', icon: ClipboardList, badge: 'ماژول فرم‌ساز' },
 
     // Dedicated Pages blocks — این بلوک‌ها همیشه دادهٔ همان صفحهٔ اختصاصی‌ای را نمایش می‌دهند
     // که این لایوت به آن متصل است (انجمن علمی/کانون/تشکل/نشریه) — بدون نیاز به انتخاب دستی صفحه

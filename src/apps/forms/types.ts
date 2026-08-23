@@ -1,6 +1,6 @@
 export type FormType = 'form' | 'survey' | 'quiz' | 'registration';
 
-export type FormStatus = 'draft' | 'published' | 'paused' | 'archived';
+export type FormStatus = 'draft' | 'published' | 'paused' | 'archived' | 'page_builder_only';
 
 export type FieldCategory = 'basic' | 'advanced' | 'survey' | 'special';
 

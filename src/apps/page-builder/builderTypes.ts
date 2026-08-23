@@ -55,7 +55,8 @@ export type SmartWidgetType =
   | 'image-gallery'
   | 'achievements-timeline'
   | 'staff-directory'
-  | 'file-manager';
+  | 'file-manager'
+  | 'form';
 
 /** بلوک‌های متصل به یک صفحهٔ اختصاصی مشخص (انجمن علمی/کانون/تشکل/نشریه) — انتخاب صفحه در binding.dedicatedPageId */
 export type DedicatedPageWidgetType =
@@ -109,6 +110,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'achievements-timeline': 'تایم‌لاین افتخارات',
   'staff-directory': 'کادر علمی و اساتید',
   'file-manager': 'مخزن اسناد',
+  form: 'جاسازی فرم (فرم‌ساز)',
   // بلوک‌های صفحات اختصاصی
   'dp-news': 'خبرهای صفحهٔ اختصاصی',
   'dp-announcements': 'اطلاعیه‌های صفحهٔ اختصاصی',
@@ -175,7 +177,10 @@ export interface WidgetStyle {
 }
 
 export interface WidgetDataBinding {
-  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'dedicated-page' | 'none';
+  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'dedicated-page' | 'form' | 'none';
+  /** شناسه و اسلاگ فرمِ منتخب از فرم‌ساز — فقط برای widget نوع 'form' */
+  formId?: string;
+  formSlug?: string;
   categoryFilter?: string;
   priorityFilter?: 'all' | 'urgent' | 'standard';
   departmentFilter?: string;
