@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Share2,
   ShieldCheck,
@@ -7,31 +7,24 @@ import {
   Lock,
   Eye,
   Download,
-  FileSpreadsheet,
-  FileText,
-  Printer,
   QrCode,
   Copy,
   Plus,
   Trash2,
-  CheckCircle2,
   Clock,
   ExternalLink,
-  RefreshCw,
   Sliders,
-  AlertTriangle,
-  Key,
-  Sparkles,
-  Info
+  Check
 } from 'lucide-react';
 import {
   FormDefinition,
   UserAccessRule,
-  PublicResultConfig,
   FormAccessPermission,
-  FormReportView
+  FormReportView,
+  FormShareLinkConfig
 } from './types';
 import { PUBLIC_SITE_URL } from '@/src/shared-constants';
+import { fetchFormShareLink, updateFormShareLink } from './api';
 
 interface FormResultSharingStudioProps {
   form: FormDefinition;
@@ -75,39 +68,113 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
     'create_report'
   ]);
 
-  // Local state for public config
-  const defaultConfig: PublicResultConfig = form.publicResultConfig || {
-    enabled: true,
-    customSlug: `survey-results-${form.id}`,
-    title: form.title,
-    description: form.description,
-    universityBrand: 'دانشگاه جامع - سامانه گزارش‌دهی',
-    showLogo: true,
-    passwordProtected: false,
-    anonymizeRespondents: true,
-    allowedQuestionIds: form.fields.map(f => f.id),
-    allowedExportTypes: ['pdf', 'excel', 'csv'],
-    chartTypes: ['bar', 'pie', 'summary'],
-    autoRefresh: true,
-    refreshIntervalSeconds: 30,
-    readOnly: true,
-    allowEmbed: true,
-    viewsCount: form.viewsCount || 0,
-    ipRestrictionsEnabled: false,
-    allowedIps: []
-  };
-
-  const [publicConfig, setPublicConfig] = useState<PublicResultConfig>(defaultConfig);
+  // Local state for the form's own dedicated share link (slug + optional password/expiry)
+  const [shareLink, setShareLink] = useState<FormShareLinkConfig | null>(null);
+  const [isLoadingShareLink, setIsLoadingShareLink] = useState(true);
+  const [isSavingShareLink, setIsSavingShareLink] = useState(false);
+  const [shareSaveMessage, setShareSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [slugInput, setSlugInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [expiresAtInput, setExpiresAtInput] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [qrSaveSuccess, setQrSaveSuccess] = useState(false);
 
-  // Handle updating public config in parent
-  const handleSavePublicConfig = (updated: PublicResultConfig) => {
-    setPublicConfig(updated);
-    onChange({
-      ...form,
-      publicResultConfig: updated
-    });
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingShareLink(true);
+    fetchFormShareLink(form.id)
+      .then(link => {
+        if (cancelled) return;
+        setShareLink(link);
+        setSlugInput(link.slug);
+        setExpiresAtInput(link.expiresAt ? link.expiresAt.slice(0, 10) : '');
+        setPasswordInput('');
+        setPasswordTouched(false);
+      })
+      .catch(error => {
+        console.error('Failed to load form share link:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingShareLink(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.id]);
+
+  const handleSaveShareLink = async () => {
+    setIsSavingShareLink(true);
+    setShareSaveMessage(null);
+    try {
+      const payload: { slug?: string; password?: string | null; expires_at?: string | null; is_active?: boolean } = {
+        slug: slugInput,
+        expires_at: expiresAtInput || null,
+        is_active: shareLink?.isActive ?? false
+      };
+      if (passwordTouched) {
+        payload.password = passwordInput || null;
+      }
+      const updated = await updateFormShareLink(form.id, payload);
+      setShareLink(updated);
+      setSlugInput(updated.slug);
+      setPasswordInput('');
+      setPasswordTouched(false);
+      setShareSaveMessage({ text: 'تنظیمات لینک با موفقیت ذخیره شد.', isError: false });
+    } catch (error: any) {
+      setShareSaveMessage({ text: error?.message || 'خطا در ذخیره تنظیمات لینک', isError: true });
+    } finally {
+      setIsSavingShareLink(false);
+      setTimeout(() => setShareSaveMessage(null), 4000);
+    }
+  };
+
+  const handleToggleShareLinkActive = async (isActive: boolean) => {
+    setShareLink(prev => (prev ? { ...prev, isActive } : prev));
+    setIsSavingShareLink(true);
+    try {
+      const updated = await updateFormShareLink(form.id, { is_active: isActive });
+      setShareLink(updated);
+    } catch (error: any) {
+      setShareSaveMessage({ text: error?.message || 'خطا در تغییر وضعیت لینک', isError: true });
+      setTimeout(() => setShareSaveMessage(null), 4000);
+    } finally {
+      setIsSavingShareLink(false);
+    }
+  };
+
+  const handleRemovePassword = () => {
+    setPasswordInput('');
+    setPasswordTouched(true);
+  };
+
+  // Copy Public Link
+  const publicUrl = `${PUBLIC_SITE_URL}/forms/share/${slugInput || shareLink?.slug || ''}`;
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2500);
+  };
+
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(publicUrl)}`;
+  const handleSaveQrCode = async () => {
+    try {
+      const response = await fetch(qrCodeUrl);
+      if (!response.ok) throw new Error('QR request failed');
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${slugInput || form.id}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+      setQrSaveSuccess(true);
+      setTimeout(() => setQrSaveSuccess(false), 2500);
+    } catch {
+      window.open(qrCodeUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Add User Access Rule
@@ -155,35 +222,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       setSelectedPerms(selectedPerms.filter(p => p !== perm));
     } else {
       setSelectedPerms([...selectedPerms, perm]);
-    }
-  };
-
-  // Copy Public Link
-  const publicUrl = `${PUBLIC_SITE_URL}/survey-results/${publicConfig.customSlug}`;
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(publicUrl);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2500);
-  };
-
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(publicUrl)}`;
-  const handleSaveQrCode = async () => {
-    try {
-      const response = await fetch(qrCodeUrl);
-      if (!response.ok) throw new Error('QR request failed');
-      const blob = await response.blob();
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${publicConfig.customSlug || form.id}-qr.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(downloadUrl);
-      setQrSaveSuccess(true);
-      setTimeout(() => setQrSaveSuccess(false), 2500);
-    } catch {
-      window.open(qrCodeUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -466,242 +504,163 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
         </div>
       )}
 
-      {/* Sub-Tab 2: Public Sharing Link & Security Settings */}
+      {/* Sub-Tab 2: Public Sharing Link for the Form itself (optional password/expiry) */}
       {activeSubTab === 'public_link' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Globe className="w-5 h-5 text-teal-600" />
-                تنظیمات لینک عمومی و انتشار وبسایت
+                لینک عمومی اختصاصی فرم
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                ایجاد صفحه اختصاصی نتایج روی وبسایت دانشگاه، تعیین سؤالات قابل مشاهده و رمزگذاری روی لینک
+                یک لینک مستقل برای پر کردن همین فرم بساز — با slug دلخواه، رمز عبور اختیاری و تاریخ انقضای اختیاری
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={publicConfig.enabled}
-                  onChange={e =>
-                    handleSavePublicConfig({ ...publicConfig, enabled: e.target.checked })
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-                <span className="mr-3 text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {publicConfig.enabled ? 'لینک عمومی فعال است' : 'لینک عمومی غیرفعال است'}
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Public URL Box */}
-          <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
-                آدرس اختصاصی (URL) عمومی نتایج:
-              </span>
-              <button
-                onClick={handleCopyLink}
-                className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                {copySuccess ? 'کپی شد! ✓' : 'کپی لینک'}
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left">
-              <span>{publicUrl}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-400">نام Slug اختصاصی:</span>
-              <input
-                type="text"
-                value={publicConfig.customSlug}
-                onChange={e =>
-                  handleSavePublicConfig({ ...publicConfig, customSlug: e.target.value })
-                }
-                className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <QrCode className="w-4 h-4 text-teal-600" /> کد QR صفحه نتایج
-            </h3>
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
-            />
-            <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به صفحه عمومی نتایج</p>
-            <button
-              onClick={handleSaveQrCode}
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" />
-              {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
-            </button>
-          </div>
-
-          {/* Configuration Options Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Branding & Privacy Controls */}
-            <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b pb-3">
-                <ShieldCheck className="w-4 h-4 text-teal-600" /> هویت بصری و محرمانگی داده‌ها
-              </h4>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold mb-1">عنوان صفحه عمومی نتایج</label>
-                  <input
-                    type="text"
-                    value={publicConfig.title}
-                    onChange={e =>
-                      handleSavePublicConfig({ ...publicConfig, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold mb-1">عنوان برند / دانشگاه</label>
-                  <input
-                    type="text"
-                    value={publicConfig.universityBrand}
-                    onChange={e =>
-                      handleSavePublicConfig({ ...publicConfig, universityBrand: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
-                  />
-                </div>
-
-                <label className="flex items-center gap-2 p-3 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer">
+            {shareLink && (
+              <div className="flex items-center gap-2">
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={publicConfig.anonymizeRespondents}
-                    onChange={e =>
-                      handleSavePublicConfig({
-                        ...publicConfig,
-                        anonymizeRespondents: e.target.checked
-                      })
-                    }
-                    className="rounded text-amber-600"
+                    checked={shareLink.isActive}
+                    onChange={e => void handleToggleShareLinkActive(e.target.checked)}
+                    className="sr-only peer"
                   />
-                  <span>مخفی‌سازی کامل اطلاعات هویتی (Anonymize Names & IDs)</span>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                  <span className="mr-3 text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {shareLink.isActive ? 'لینک عمومی فعال است' : 'لینک عمومی غیرفعال است'}
+                  </span>
                 </label>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Link Protection & Access Controls */}
-            <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b pb-3">
-                <Lock className="w-4 h-4 text-teal-600" /> محافظت رمز عبور و تاریخ انقضا
-              </h4>
+          {isLoadingShareLink ? (
+            <div className="py-10 text-center text-xs font-bold text-slate-500">در حال دریافت تنظیمات لینک...</div>
+          ) : (
+            <>
+              {/* Public URL Box */}
+              <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
+                    آدرس اختصاصی (URL) عمومی فرم:
+                  </span>
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {copySuccess ? 'کپی شد! ✓' : 'کپی لینک'}
+                  </button>
+                </div>
 
-              <div className="space-y-3 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left">
+                  <span>{publicUrl}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">نام Slug اختصاصی:</span>
                   <input
-                    type="checkbox"
-                    checked={publicConfig.passwordProtected}
-                    onChange={e =>
-                      handleSavePublicConfig({
-                        ...publicConfig,
-                        passwordProtected: e.target.checked
-                      })
-                    }
-                    className="rounded text-teal-600"
+                    type="text"
+                    value={slugInput}
+                    onChange={e => setSlugInput(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
                   />
-                  <span className="font-bold">رمزگذاری روی لینک عمومی نتایج</span>
-                </label>
+                </div>
+              </div>
 
-                {publicConfig.passwordProtected && (
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
+                </h3>
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
+                />
+                <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم</p>
+                <button
+                  onClick={handleSaveQrCode}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
+                </button>
+              </div>
+
+              {/* Password & Expiry */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b pb-3">
+                  <Lock className="w-4 h-4 text-teal-600" /> محافظت رمز عبور و تاریخ انقضا
+                </h4>
+
+                <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">کلمه عبور ورود</label>
+                    <label className="block text-[11px] text-slate-500 mb-1">
+                      کلمه عبور ورود (اختیاری — برای تغییر وارد کنید، برای بدون‌تغییر خالی بگذارید)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        placeholder={shareLink?.hasPassword ? 'رمز فعلی تنظیم شده — برای تغییر وارد کنید' : 'بدون رمز عبور'}
+                        value={passwordInput}
+                        onChange={e => {
+                          setPasswordInput(e.target.value);
+                          setPasswordTouched(true);
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                      />
+                      {shareLink?.hasPassword && (
+                        <button
+                          type="button"
+                          onClick={handleRemovePassword}
+                          className="px-3 py-2 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-xl text-[11px] font-bold border border-red-200 dark:border-red-800 whitespace-nowrap"
+                        >
+                          حذف رمز عبور
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">تاریخ انقضای لینک (اختیاری)</label>
                     <input
-                      type="password"
-                      placeholder="رمز عبور..."
-                      value={publicConfig.password || ''}
-                      onChange={e =>
-                        handleSavePublicConfig({ ...publicConfig, password: e.target.value })
-                      }
+                      type="date"
+                      value={expiresAtInput}
+                      onChange={e => setExpiresAtInput(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
                     />
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">تاریخ انقضای لینک</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: ۱۴۰۵/۱۲/۲۹"
-                    value={publicConfig.expirationDate || ''}
-                    onChange={e =>
-                      handleSavePublicConfig({ ...publicConfig, expirationDate: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                  />
                 </div>
-
-                <label className="flex items-center gap-2 cursor-pointer pt-2">
-                  <input
-                    type="checkbox"
-                    checked={publicConfig.autoRefresh}
-                    onChange={e =>
-                      handleSavePublicConfig({ ...publicConfig, autoRefresh: e.target.checked })
-                    }
-                    className="rounded text-teal-600"
-                  />
-                  <span className="font-bold">بروزرسانی خودکار آمار با ثبت پاسخ‌های جدید (Real-time)</span>
-                </label>
               </div>
-            </div>
-          </div>
 
-          {/* Question Selector for Public View */}
-          <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
-              <span>انتخاب سؤالاتی که در صفحه عمومی نمایش داده می‌شوند:</span>
-              <span className="text-[11px] text-teal-600 font-normal">
-                ({publicConfig.allowedQuestionIds.length} از {form.fields.length} سؤال انتخاب شده)
-              </span>
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {form.fields.map(field => {
-                const isSelected = publicConfig.allowedQuestionIds.includes(field.id);
-                return (
-                  <label
-                    key={field.id}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer ${
-                      isSelected
-                        ? 'bg-teal-50/80 dark:bg-teal-950/60 border-teal-300 text-teal-900 dark:text-teal-200 font-bold'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => void handleSaveShareLink()}
+                  disabled={isSavingShareLink}
+                  className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  {isSavingShareLink ? (
+                    'در حال ذخیره...'
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> ذخیره تنظیمات لینک
+                    </>
+                  )}
+                </button>
+                {shareSaveMessage && (
+                  <span
+                    className={`text-xs font-bold ${
+                      shareSaveMessage.isError ? 'text-red-600' : 'text-emerald-600'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={e => {
-                        const newIds = e.target.checked
-                          ? [...publicConfig.allowedQuestionIds, field.id]
-                          : publicConfig.allowedQuestionIds.filter(id => id !== field.id);
-                        handleSavePublicConfig({ ...publicConfig, allowedQuestionIds: newIds });
-                      }}
-                      className="rounded text-teal-600"
-                    />
-                    <span className="truncate">{field.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+                    {shareSaveMessage.text}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -47,6 +47,7 @@ import {
   DEDICATED_PAGE_TYPES
 } from './types';
 import { fetchProfessors, getOwnerAccount, setOwnerAccount } from './api';
+import { fetchForms } from '../forms/api';
 import { getDedicatedPagePublicUrl } from './utils';
 import PageStorageUsageChart from './PageStorageUsageChart';
 
@@ -76,6 +77,7 @@ export default function PageWizardModal({
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
   const [universityProfessors, setUniversityProfessors] = useState<ProfessorProfileData[]>([]);
+  const [availableForms, setAvailableForms] = useState<{ id: string; title: string; status: string }[]>([]);
 
   // Load data from API on mount
   useEffect(() => {
@@ -85,6 +87,12 @@ export default function PageWizardModal({
         setUniversityProfessors(professors);
       } catch (e) {
         console.error('Error loading wizard data:', e);
+      }
+      try {
+        const forms = await fetchForms({ per_page: 500 });
+        setAvailableForms(forms.data.map(f => ({ id: f.id, title: f.title, status: f.status })));
+      } catch (e) {
+        console.error('Error loading forms list:', e);
       }
     };
     if (isOpen) {
@@ -133,6 +141,7 @@ export default function PageWizardModal({
   const [showInNavigation, setShowInNavigation] = useState(true);
   const [showInDirectory, setShowInDirectory] = useState(true);
   const [highlightOnHome, setHighlightOnHome] = useState(false);
+  const [formId, setFormId] = useState<string>('');
 
   // Preserve other internal configs for compatibility
   const [customFields, setCustomFields] = useState<any>({});
@@ -218,6 +227,7 @@ export default function PageWizardModal({
       setShowInNavigation(initialPage.displaySettings?.showInNavigation ?? true);
       setShowInDirectory(initialPage.displaySettings?.showInDirectory ?? true);
       setHighlightOnHome(initialPage.displaySettings?.highlightOnHome ?? false);
+      setFormId(initialPage.formId || '');
 
       setLayoutType(initialPage.layoutConfig?.layoutType || 'two_column_sidebar_left');
       setHeaderStyle(initialPage.layoutConfig?.headerStyle || 'banner_hero');
@@ -268,6 +278,7 @@ export default function PageWizardModal({
       setShowInNavigation(true);
       setShowInDirectory(true);
       setHighlightOnHome(false);
+      setFormId('');
 
       setLayoutType('two_column_sidebar_left');
       setHeaderStyle('banner_hero');
@@ -444,7 +455,8 @@ export default function PageWizardModal({
       taxonomies,
       professorData: profObj,
       customFields,
-      storageQuotaMb
+      storageQuotaMb,
+      formId: formId || null
     };
 
     const savedPage = await onSavePage(newDedicatedPage);
@@ -1290,6 +1302,28 @@ export default function PageWizardModal({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Attached Form */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                  فرم متصل به این صفحه (اختیاری)
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  اگر فرمی انتخاب و منتشر شده باشد، آدرس این صفحه به‌جای محتوای معمولی، همان فرم را نشان می‌دهد.
+                </p>
+                <select
+                  value={formId}
+                  onChange={e => setFormId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                >
+                  <option value="">بدون فرم — محتوای معمولی صفحه نمایش داده شود</option>
+                  {availableForms.map(f => (
+                    <option key={f.id} value={f.id}>
+                      {f.title} {f.status === 'published' ? '(منتشرشده)' : '(پیش‌نویس)'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Visibility Options */}

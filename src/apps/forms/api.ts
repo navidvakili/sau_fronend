@@ -5,7 +5,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils/functions';
-import type { FormDefinition, FormSubmission, FormStatus, FormType } from './types';
+import type { FormDefinition, FormSubmission, FormStatus, FormType, FormShareLinkConfig } from './types';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -258,4 +258,33 @@ export const updateSubmissionStatus = async (
 ): Promise<FormSubmission> => {
   const res = await API<{ message: string; data: SubmissionRowDto }>(`forms/${formId}/submissions/${submissionId}`, data, 'PATCH');
   return toFormSubmission(res.data);
+};
+
+// ===== Share Link (dedicated public link for the form itself, with optional password/expiry) =====
+
+interface ShareLinkRowDto {
+  slug: string;
+  has_password: boolean;
+  expires_at: string | null;
+  is_active: boolean;
+}
+
+const toShareLinkConfig = (row: ShareLinkRowDto): FormShareLinkConfig => ({
+  slug: row.slug,
+  hasPassword: row.has_password,
+  expiresAt: row.expires_at,
+  isActive: row.is_active,
+});
+
+export const fetchFormShareLink = async (formId: string | number): Promise<FormShareLinkConfig> => {
+  const res = await API<{ data: ShareLinkRowDto }>(`forms/${formId}/share-link`);
+  return toShareLinkConfig(res.data);
+};
+
+export const updateFormShareLink = async (
+  formId: string | number,
+  payload: { slug?: string; password?: string | null; expires_at?: string | null; is_active?: boolean }
+): Promise<FormShareLinkConfig> => {
+  const res = await API<{ data: ShareLinkRowDto }>(`forms/${formId}/share-link`, payload, 'PUT');
+  return toShareLinkConfig(res.data);
 };

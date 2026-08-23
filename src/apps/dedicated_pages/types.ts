@@ -4,7 +4,7 @@ export type PageType =
   | 'student_union'          // تشکل دانشجویی
   | 'student_journal'        // نشریه دانشجویی
   | 'faculty_member'         // صفحه اختصاصی استاد
-  | 'interactive_survey'     // پرسشنامه تعاملی — فعلاً غیرفعال
+  | 'interactive_survey'     // پرسشنامه تعاملی
   | 'special_event';         // همایش و رویداد اختصاصی — فعلاً غیرفعال
 
 export interface PageTypeDefinition {
@@ -92,13 +92,12 @@ export const DEDICATED_PAGE_TYPES: PageTypeDefinition[] = [
     id: 'interactive_survey',
     title: 'پرسشنامه و نظرسنجی تعاملی',
     category: 'service',
-    description: 'ابزار ساخت نظرسنجی‌های پیشرفته و دریافت بازخورد هوشمند از دانشجویان.',
+    description: 'صفحه‌ای که یک فرم یا نظرسنجی ساخته‌شده در فرم‌ساز را مستقیماً روی آدرس عمومی خودش نمایش می‌دهد.',
     iconName: 'MessageSquare',
-    badge: 'بزودی',
+    badge: 'نظرسنجی',
     color: '#475569',
     bgGradient: 'from-slate-600 to-slate-700',
-    isDisabled: true,
-    disabledReason: 'این ماژول در نسخه آینده فعال خواهد شد.',
+    isDisabled: false,
     defaultEnabledModules: [],
     defaultTaxonomies: []
   },
@@ -280,6 +279,8 @@ export interface DedicatedPage {
   authorizations_count?: number;
   /** سقف مجاز فضای ذخیره‌سازی رسانه/فایل‌های این صفحه، به مگابایت */
   storageQuotaMb?: number;
+  /** فرم اختصاصی متصل به این صفحه (اختیاری) — وقتی متصل و منتشرشده باشد، آدرس عمومی این صفحه همان فرم را نشان می‌دهد */
+  formId?: string | null;
 }
 
 export interface DedicatedPagesPagination {

@@ -420,6 +420,13 @@ export interface FormDefinition {
   avgCompletionTimeSeconds: number;
 }
 
+export interface FormShareLinkConfig {
+  slug: string;
+  hasPassword: boolean;
+  expiresAt: string | null;
+  isActive: boolean;
+}
+
 export interface FormSubmission {
   id: string;
   formId: string;
