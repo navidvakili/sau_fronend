@@ -34,6 +34,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "docx": "^9.7.1",
     "docx-preview": "^0.4.0",
+    "exceljs": "^4.4.0",
     "jszip": "^3.10.1",
     "lamejs": "^1.2.1",
     "lucide-react": "^0.546.0",

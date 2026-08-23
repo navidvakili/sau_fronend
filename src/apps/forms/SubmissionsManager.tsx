@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ExcelJS from 'exceljs';
 import {
   Inbox,
   Search,
@@ -36,24 +37,89 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
     return matchesSearch;
   });
 
-  const handleExportCsv = () => {
-    const headers = ['کد پیگیری', 'نام پاسخ‌دهنده', 'نقش', 'تاریخ ثبت', 'نمره آزمون'];
-    const rows = filteredSubmissions.map(s => [
-      s.trackingCode,
-      s.respondentName || 'ناشناس',
-      s.respondentRole || 'کاربر',
-      s.submittedAt,
-      s.scoreTotal ?? '-'
-    ]);
+  const handleExportExcel = async () => {
+    const includeScore = form.quizConfig.isQuiz;
+    const columns: { header: string; key: string; width: number }[] = [
+      { header: 'کد پیگیری', key: 'trackingCode', width: 24 },
+      { header: 'نام پاسخ‌دهنده', key: 'respondentName', width: 24 },
+      { header: 'نقش', key: 'respondentRole', width: 18 },
+      { header: 'تاریخ ثبت', key: 'submittedAt', width: 22 },
+      ...(includeScore ? [{ header: 'نمره آزمون', key: 'scoreTotal', width: 14 }] : [])
+    ];
+    const colCount = columns.length;
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers, ...rows].map(e => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'سامانه نیما';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('پاسخ‌ها', {
+      views: [{ rightToLeft: true, state: 'frozen', ySplit: 3 }]
+    });
+    sheet.columns = columns.map(c => ({ key: c.key, width: c.width }));
+
+    const thinBorder: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: 'FFD1D5DB' } };
+
+    // ردیف عنوان
+    sheet.mergeCells(1, 1, 1, colCount);
+    const titleCell = sheet.getCell(1, 1);
+    titleCell.value = `پاسخ‌های ثبت‌شده — ${form.title}`;
+    titleCell.font = { name: 'Tahoma', size: 14, bold: true, color: { argb: 'FF0F766E' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 'rtl' };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFBF1' } };
+    sheet.getRow(1).height = 30;
+
+    // ردیف زیرعنوان
+    sheet.mergeCells(2, 1, 2, colCount);
+    const subtitleCell = sheet.getCell(2, 1);
+    subtitleCell.value = `تعداد کل: ${filteredSubmissions.length} پاسخ   •   تاریخ خروجی: ${new Date().toLocaleDateString('fa-IR')}`;
+    subtitleCell.font = { name: 'Tahoma', size: 10, color: { argb: 'FF475569' } };
+    subtitleCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 'rtl' };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDFA' } };
+    sheet.getRow(2).height = 22;
+
+    // ردیف سرستون‌ها
+    const headerRow = sheet.getRow(3);
+    columns.forEach((col, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = col.header;
+      cell.font = { name: 'Tahoma', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 'rtl' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+      cell.border = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
+    });
+    headerRow.height = 24;
+
+    // ردیف‌های داده
+    filteredSubmissions.forEach((s, idx) => {
+      const row = sheet.addRow({
+        trackingCode: s.trackingCode,
+        respondentName: s.respondentName || 'ناشناس',
+        respondentRole: s.respondentRole || 'کاربر',
+        submittedAt: s.submittedAt,
+        scoreTotal: includeScore ? s.scoreTotal ?? '-' : undefined
+      });
+      const isEven = idx % 2 === 1;
+      row.eachCell({ includeEmpty: true }, cell => {
+        cell.font = { name: 'Tahoma', size: 10.5, color: { argb: 'FF334155' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 'rtl' };
+        cell.border = { top: thinBorder, left: thinBorder, bottom: thinBorder, right: thinBorder };
+        if (isEven) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        }
+      });
+      row.height = 20;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Submissions_${form.id}_2026.csv`);
+    link.href = downloadUrl;
+    link.download = `Submissions_${form.id}_${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
+    URL.revokeObjectURL(downloadUrl);
   };
 
   return (
@@ -69,16 +135,16 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
               مدیریت و ارزیابی پاسخ‌های دریافتی ({submissions.length})
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مشاهده پاسخ‌های دریافتی و خروجی اکسل/PDF
+              مشاهده پاسخ‌های دریافتی و خروجی اکسل
             </p>
           </div>
         </div>
 
         <button
-          onClick={handleExportCsv}
+          onClick={() => void handleExportExcel()}
           className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow hover:shadow-emerald-500/20 transition-all"
         >
-          <FileSpreadsheet className="w-4 h-4" /> دریافت خروجی Excel / CSV
+          <FileSpreadsheet className="w-4 h-4" /> دریافت خروجی Excel
         </button>
       </div>
 
