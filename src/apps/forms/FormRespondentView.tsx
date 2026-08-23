@@ -254,7 +254,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
         {/* Tracking Code Banner */}
         <div className="bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-teal-500/40 rounded-2xl p-6 mb-6 flex flex-col items-center justify-center gap-2">
           <span className="text-xs text-slate-500 font-medium">کد پیگیری یکتا (Tracking Code)</span>
-          <span className="text-3xl font-black tracking-widest text-teal-700 dark:text-teal-400 font-mono">
+          <span className="text-3xl font-black tracking-widest text-teal-700 dark:text-teal-400">
             {trackingCode}
           </span>
           <span className="text-xs text-slate-400">جهت پیگیری‌های بعدی، این کد را نزد خود نگه‌دارید.</span>

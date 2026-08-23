@@ -120,7 +120,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                   key={sub.id}
                   className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                 >
-                  <td className="p-4 font-mono font-bold text-teal-700 dark:text-teal-400">
+                  <td className="p-4 font-bold text-teal-700 dark:text-teal-400">
                     {sub.trackingCode}
                   </td>
                   <td className="p-4 font-bold text-slate-800 dark:text-slate-200">

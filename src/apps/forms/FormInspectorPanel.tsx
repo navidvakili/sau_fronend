@@ -218,12 +218,12 @@ export default function FormInspectorPanel({
       {/* Header Info */}
       <div className="p-3.5 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-between">
         <div className="min-w-0 pr-1">
-          <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono tracking-wider uppercase font-bold flex items-center gap-1.5">
+          <div className="text-[10px] text-teal-600 dark:text-teal-400 tracking-wider uppercase font-bold flex items-center gap-1.5">
             <span className="bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded text-[9px]">
               {typeNameFa[selectedField.type] || selectedField.type}
             </span>
             <span className="text-slate-400">•</span>
-            <span className="text-slate-400 font-mono text-[9px] dir-ltr truncate">#{selectedField.id}</span>
+            <span className="text-slate-400 text-[9px] dir-ltr truncate">#{selectedField.id}</span>
           </div>
           <div className="text-xs font-black text-slate-900 dark:text-white truncate mt-0.5 max-w-[190px]">
             {selectedField.label || 'فیلد بدون عنوان'}
@@ -303,7 +303,7 @@ export default function FormInspectorPanel({
                 value={selectedField.systemKey || selectedField.id}
                 onChange={e => updateProp('systemKey', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 placeholder="مثال: student_national_code"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
             </div>
 
@@ -569,7 +569,7 @@ export default function FormInspectorPanel({
                     value={(selectedField.validation?.allowedDomains || []).join(', ')}
                     onChange={e => updateValidation('allowedDomains', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                     placeholder="مثال: ut.ac.ir, university.ir"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-xl text-xs dir-ltr text-left"
                   />
                   <span className="text-[10px] text-slate-500 block">دامنه‌ها را با کاما انگلیسی (,) جدا کنید</span>
                 </div>
@@ -789,7 +789,7 @@ export default function FormInspectorPanel({
                     value={(selectedField.validation?.allowedExtensions || []).join(', ')}
                     onChange={e => updateValidation('allowedExtensions', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                     placeholder={selectedField.type === 'image' ? '.jpg, .png, .webp' : '.pdf, .docx, .zip, .xlsx'}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                   />
                 </div>
 
@@ -978,7 +978,7 @@ export default function FormInspectorPanel({
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {(selectedField.options || []).map((opt, idx) => (
                     <div key={opt.id || idx} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-xl border border-gray-200 dark:border-slate-800">
-                      <span className="text-[10px] text-slate-400 font-mono w-4 text-center">{idx + 1}</span>
+                      <span className="text-[10px] text-slate-400 w-4 text-center">{idx + 1}</span>
                       <input
                         type="text"
                         value={opt.label}
@@ -1173,14 +1173,14 @@ export default function FormInspectorPanel({
             <div>
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span>الگوی اعتبارسنجی (Regex Pattern):</span>
-                <span className="text-[9px] text-slate-400 font-mono">Regular Expression</span>
+                <span className="text-[9px] text-slate-400">Regular Expression</span>
               </label>
               <input
                 type="text"
                 value={selectedField.validation?.regexPattern || ''}
                 onChange={e => updateValidation('regexPattern', e.target.value)}
                 placeholder="مثال: ^[0-9]{10}$"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
               />
             </div>
 
@@ -1285,7 +1285,7 @@ export default function FormInspectorPanel({
                 value={selectedField.className || ''}
                 onChange={e => updateProp('className', e.target.value)}
                 placeholder="مثال: border-teal-500 bg-teal-50/20 font-bold"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
               />
             </div>
           </div>
@@ -1321,7 +1321,7 @@ export default function FormInspectorPanel({
                     value={selectedField.formula || ''}
                     onChange={e => updateProp('formula', e.target.value)}
                     placeholder="مثال: (field_1 * 0.20) + (field_2 * 0.80)"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                   />
                 </div>
               )}
@@ -1353,7 +1353,7 @@ export default function FormInspectorPanel({
                   value={selectedField.prefillQueryParam || ''}
                   onChange={e => updateProp('prefillQueryParam', e.target.value)}
                   placeholder="نام پارامتر URL، مثال: ref_code"
-                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                 />
               )}
             </div>
@@ -1380,7 +1380,7 @@ export default function FormInspectorPanel({
                     value={selectedField.apiConfig?.endpointUrl || ''}
                     onChange={e => updateApiConfig('endpointUrl', e.target.value)}
                     placeholder="https://api.domain.com/v1/options"
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -1388,14 +1388,14 @@ export default function FormInspectorPanel({
                       value={selectedField.apiConfig?.labelKey || 'title'}
                       onChange={e => updateApiConfig('labelKey', e.target.value)}
                       placeholder="کلید عنوان: title"
-                      className="px-2 py-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] font-mono dir-ltr"
+                      className="px-2 py-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] dir-ltr"
                     />
                     <input
                       type="text"
                       value={selectedField.apiConfig?.valueKey || 'id'}
                       onChange={e => updateApiConfig('valueKey', e.target.value)}
                       placeholder="کلید مقدار: id"
-                      className="px-2 py-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] font-mono dir-ltr"
+                      className="px-2 py-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] dir-ltr"
                     />
                   </div>
                 </div>
@@ -1417,7 +1417,7 @@ export default function FormInspectorPanel({
                   type="text"
                   value={selectedField.databaseConfig?.dbColumnName || selectedField.systemKey || selectedField.id}
                   onChange={e => updateDbConfig('dbColumnName', e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs font-mono dir-ltr text-left"
+                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                 />
               </div>
 
@@ -1429,7 +1429,7 @@ export default function FormInspectorPanel({
                   <select
                     value={selectedField.databaseConfig?.dbDataType || 'VARCHAR'}
                     onChange={e => updateDbConfig('dbDataType', e.target.value as any)}
-                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] font-mono dir-ltr"
+                    className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg text-[11px] dir-ltr"
                   >
                     <option value="VARCHAR">VARCHAR</option>
                     <option value="INTEGER">INTEGER</option>

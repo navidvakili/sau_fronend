@@ -490,7 +490,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                   </div>
 
                   <div
-                    className={`flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left transition-opacity ${
+                    className={`flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-teal-800 dark:text-teal-300 dir-ltr text-left transition-opacity ${
                       !isPublished ? 'opacity-50' : ''
                     }`}
                   >
@@ -505,7 +505,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                       type="text"
                       value={form.slug}
                       onChange={e => handleSlugChange(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs dir-ltr text-left"
                     />
                   </div>
                 </div>
@@ -561,7 +561,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                     {copiedField === 'iframe' ? 'کپی شد! ✓' : 'کپی کد'}
                   </button>
                 </div>
-                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-600 dark:text-slate-300 dir-ltr text-left break-all">
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 dir-ltr text-left break-all">
                   {iframeCode}
                 </div>
               </div>

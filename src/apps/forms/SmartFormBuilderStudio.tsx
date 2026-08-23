@@ -59,6 +59,7 @@ import { FormRespondentView } from './FormRespondentView';
 import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import ToastNotification from '@/src/shared-components/ToastNotification';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface SmartFormBuilderStudioProps {
   onOpenTab?: (tabId: string, title?: string) => void;
@@ -66,6 +67,7 @@ interface SmartFormBuilderStudioProps {
 }
 
 export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ onDirtyChange }) => {
+  const { currentLang } = useLanguage();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [isLoadingForms, setIsLoadingForms] = useState(true);
@@ -100,7 +102,8 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
   useEffect(() => {
     let cancelled = false;
-    fetchForms({ per_page: 500 })
+    setIsLoadingForms(true);
+    fetchForms({ per_page: 500, lang: currentLang })
       .then(result => {
         if (!cancelled) setForms(result.data);
       })
@@ -115,7 +118,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentLang]);
 
   useEffect(() => {
     // فرم‌های تازه‌ساخته‌شده که هنوز ذخیره نشده‌اند شناسه‌ی موقت سمت کلاینت دارند
@@ -167,7 +170,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setIsSavingForm(true);
     try {
       const savedForm = wasUnpersisted
-        ? await createForm(activeForm)
+        ? await createForm(activeForm, currentLang)
         : await updateForm(activeForm.id, activeForm);
       setForms(prev => prev.map(f => (f.id === activeForm.id ? savedForm : f)));
       setUnsavedFormIds(prev => {
@@ -369,7 +372,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           <div>
             <h1 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
               <span>سیستم هوشمند فرم‌ساز و پرسشنامه‌ساز دیداری</span>
-              <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-bold">
                 v2.4 Pro
               </span>
             </h1>
@@ -387,7 +390,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                 <button
                   key={bp}
                   onClick={() => setActiveBreakpoint(bp)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
                     activeBreakpoint === bp
                       ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -594,7 +597,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">کل فرم‌های فعال</span>
-                <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{forms.length}</span>
+                <span className="text-2xl font-black text-slate-900 dark:text-white">{forms.length}</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-teal-50 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
                 <FileText className="w-5 h-5" />
@@ -604,7 +607,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">کل پاسخ‌های ثبت‌شده</span>
-                <span className="text-2xl font-black text-teal-600 dark:text-teal-400 font-mono">
+                <span className="text-2xl font-black text-teal-600 dark:text-teal-400">
                   {forms.reduce((acc, f) => acc + f.submissionsCount, 0)}
                 </span>
               </div>
@@ -616,7 +619,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">کل بازدیدهای یکتا</span>
-                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
                   {forms.reduce((acc, f) => acc + f.viewsCount, 0)}
                 </span>
               </div>
@@ -628,7 +631,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">نرخ تکمیل میانگین</span>
-                <span className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">۸۴.۲٪</span>
+                <span className="text-2xl font-black text-amber-600 dark:text-amber-400">۸۴.۲٪</span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                 <BarChart2 className="w-5 h-5" />
@@ -699,7 +702,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                     >
                       {formItem.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-400">
+                    <span className="text-[10px] text-slate-400">
                       v{formItem.version} • {new Date(formItem.updatedAt).toLocaleDateString('fa-IR')}
                     </span>
                   </div>
@@ -774,7 +777,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         onClose={() => setIsTemplateModalOpen(false)}
         onSelectForm={async f => {
           try {
-            const savedForm = await createForm(f);
+            const savedForm = await createForm(f, currentLang);
             setForms(prev => [savedForm, ...prev]);
             setActiveFormId(savedForm.id);
             setActiveTab('builder');
@@ -805,7 +808,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             avgCompletionTimeSeconds: 0
           };
           try {
-            const savedForm = await createForm(generatedForm);
+            const savedForm = await createForm(generatedForm, currentLang);
             setForms(prev => [savedForm, ...prev]);
             setActiveFormId(savedForm.id);
             setActiveTab('builder');

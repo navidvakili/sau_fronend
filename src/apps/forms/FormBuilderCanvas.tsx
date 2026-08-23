@@ -378,7 +378,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
               <p className="text-[10px] text-slate-400">کلیک یا کشیدن و رها کردن (DnD)</p>
             </div>
           </div>
-          <span className="text-[10px] bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-mono font-bold">
+          <span className="text-[10px] bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-bold">
             {FIELD_PALETTE.reduce((acc, cat) => acc + cat.items.length, 0)} المان
           </span>
         </div>
@@ -456,7 +456,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                 }`}
               >
                 <span>{step.title}</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/20 text-[10px] font-mono">
+                <span className="px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/20 text-[10px]">
                   {form.fields.filter(f => f.stepId === step.id).length}
                 </span>
                 {form.steps.length > 1 && (
@@ -503,7 +503,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                     max={100}
                     value={activeStep.presentation.fieldsPerPage || 1}
                     onChange={event => updateActiveStepPresentation('pagination', Number(event.target.value))}
-                    className="w-12 px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-mono text-center text-slate-700 dark:text-slate-300"
+                    className="w-12 px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] text-center text-slate-700 dark:text-slate-300"
                     title="تعداد سؤال در هر صفحه"
                   />
                 )}
@@ -603,7 +603,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                           >
                             <GripVertical className="w-4 h-4" />
                           </div>
-                          <span className="text-[11px] font-black text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/20 px-2.5 py-0.5 rounded-lg border border-teal-200 dark:border-teal-500/30 font-mono">
+                          <span className="text-[11px] font-black text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/20 px-2.5 py-0.5 rounded-lg border border-teal-200 dark:border-teal-500/30">
                             Q{idx + 1}
                           </span>
                           <h4 className="text-xs font-black text-slate-900 dark:text-white">
@@ -615,7 +615,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
                             </span>
                           )}
                           {field.points ? (
-                            <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono">
+                            <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md flex items-center gap-1">
                               <Award className="w-3 h-3" /> {field.points} نمره
                             </span>
                           ) : null}

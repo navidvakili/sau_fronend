@@ -85,7 +85,7 @@ export const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ form, onChange
               type="text"
               value={theme.primaryColor}
               onChange={e => handleUpdateTheme('primaryColor', e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 font-mono text-xs text-left dir-ltr"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-xs text-left dir-ltr"
             />
           </div>
         </div>

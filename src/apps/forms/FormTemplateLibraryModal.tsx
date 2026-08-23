@@ -215,7 +215,7 @@ export default function FormTemplateLibraryModal({
             <div>
               <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>کتابخانه الگوها و مدیریت فایل ساختار فرم</span>
-                <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] font-bold">
                   v2.4 Pro
                 </span>
               </h2>
@@ -371,7 +371,7 @@ export default function FormTemplateLibraryModal({
               {currentForm ? (
                 <div className="space-y-3">
                   <div className="relative">
-                    <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs font-mono max-h-72 overflow-y-auto dir-ltr text-left border border-slate-800">
+                    <pre className="p-4 bg-slate-900 text-slate-100 rounded-2xl text-xs max-h-72 overflow-y-auto dir-ltr text-left border border-slate-800">
                       {JSON.stringify(currentForm, null, 2)}
                     </pre>
                   </div>
@@ -427,7 +427,7 @@ export default function FormTemplateLibraryModal({
                   value={importJsonText}
                   onChange={e => setImportJsonText(e.target.value)}
                   placeholder="محتوای JSON فرم را اینجا الصاق کنید..."
-                  className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs font-mono dir-ltr text-left focus:outline-none focus:border-teal-500 text-slate-900 dark:text-white"
+                  className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs dir-ltr text-left focus:outline-none focus:border-teal-500 text-slate-900 dark:text-white"
                 />
               </div>
 

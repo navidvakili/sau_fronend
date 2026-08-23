@@ -18,6 +18,7 @@ interface PaginatedResponse<T> {
 /** شکل خام یک فرم همان‌طور که از سرور برمی‌گردد (snake_case) */
 interface FormRowDto {
   id: number;
+  language: string;
   title: string;
   slug: string;
   description: string | null;
@@ -173,7 +174,7 @@ export const slugifyFormTitle = (title: string): string => {
 
 // ===== Forms CRUD =====
 
-export const fetchForms = async (params: { page?: number; per_page?: number; search?: string; status?: string; type?: string } = {}): Promise<{
+export const fetchForms = async (params: { page?: number; per_page?: number; search?: string; status?: string; type?: string; lang?: string } = {}): Promise<{
   data: FormDefinition[];
   total: number;
 }> => {
@@ -183,6 +184,7 @@ export const fetchForms = async (params: { page?: number; per_page?: number; sea
   if (params.search) qs.set('search', params.search);
   if (params.status) qs.set('status', params.status);
   if (params.type) qs.set('type', params.type);
+  if (params.lang) qs.set('lang', params.lang);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const res = await API<PaginatedResponse<FormRowDto>>(`forms${suffix}`);
   return { data: res.data.map(toFormDefinition), total: res.total };
@@ -193,9 +195,13 @@ export const fetchForm = async (id: string | number): Promise<FormDefinition> =>
   return toFormDefinition(res.data);
 };
 
-export const createForm = async (form: Partial<FormDefinition> & { title: string; slug?: string }): Promise<FormDefinition> => {
+export const createForm = async (
+  form: Partial<FormDefinition> & { title: string; slug?: string },
+  lang?: string
+): Promise<FormDefinition> => {
   const payload = toPayload(form);
   if (!payload.slug) payload.slug = slugifyFormTitle(form.title);
+  if (lang) payload.lang = lang;
   const res = await API<{ message: string; data: FormRowDto }>('forms', payload, 'POST');
   return toFormDefinition(res.data);
 };
