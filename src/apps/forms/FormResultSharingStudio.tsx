@@ -80,7 +80,16 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   const [copySuccess, setCopySuccess] = useState(false);
   const [qrSaveSuccess, setQrSaveSuccess] = useState(false);
 
+  // فرم‌های تازه‌ساخته‌شده که هنوز ذخیره نشده‌اند شناسه‌ی موقت سمت کلاینت دارند
+  // (form_...) و در بک‌اند وجود ندارند — لینک اشتراک‌گذاری برایشان بی‌معناست.
+  const formIsUnpersisted = form.id.startsWith('form_');
+
   useEffect(() => {
+    if (formIsUnpersisted) {
+      setShareLink(null);
+      setIsLoadingShareLink(false);
+      return;
+    }
     let cancelled = false;
     setIsLoadingShareLink(true);
     fetchFormShareLink(form.id)
@@ -536,7 +545,11 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
             )}
           </div>
 
-          {isLoadingShareLink ? (
+          {formIsUnpersisted ? (
+            <div className="py-10 text-center text-xs font-bold text-slate-500">
+              برای تنظیم لینک اشتراک‌گذاری، ابتدا فرم را از دکمه‌ی «ذخیره فرم» ذخیره کنید.
+            </div>
+          ) : isLoadingShareLink ? (
             <div className="py-10 text-center text-xs font-bold text-slate-500">در حال دریافت تنظیمات لینک...</div>
           ) : (
             <>

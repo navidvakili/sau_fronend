@@ -107,7 +107,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setToast({ text, type });
     setTimeout(() => setToast(null), 4000);
   };
-  const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<{ action: () => void; exitsForm: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +129,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   }, []);
 
   useEffect(() => {
-    if (!activeFormId) {
+    // فرم‌های تازه‌ساخته‌شده که هنوز ذخیره نشده‌اند شناسه‌ی موقت سمت کلاینت دارند
+    // (form_...) و در بک‌اند وجود ندارند — درخواست پاسخ‌ها برایشان بی‌معناست.
+    if (!activeFormId || activeFormId.startsWith('form_')) {
       setSubmissions([]);
       return;
     }
@@ -161,14 +163,27 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setUnsavedFormIds(prev => ({ ...prev, [updatedForm.id]: true }));
   };
 
+  // فرم‌های تازه‌ساخته‌شده که هنوز هرگز ذخیره نشده‌اند، شناسه‌ی موقت سمت کلاینت دارند
+  // (همان الگوی `form_${Date.now()}` که در handleCreateNewForm ساخته می‌شود)
+  const isUnpersistedForm = (form: FormDefinition) => form.id.startsWith('form_');
+
   const handleSaveActiveForm = async () => {
     if (!activeForm || !unsavedFormIds[activeForm.id]) return;
+    const wasUnpersisted = isUnpersistedForm(activeForm);
     setIsSavingForm(true);
     try {
-      const savedForm = await updateForm(activeForm.id, activeForm);
-      setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
-      setUnsavedFormIds(prev => ({ ...prev, [savedForm.id]: false }));
-      showToast('فرم با موفقیت ذخیره شد.', 'success');
+      const savedForm = wasUnpersisted
+        ? await createForm(activeForm)
+        : await updateForm(activeForm.id, activeForm);
+      setForms(prev => prev.map(f => (f.id === activeForm.id ? savedForm : f)));
+      setUnsavedFormIds(prev => {
+        const next = { ...prev };
+        delete next[activeForm.id];
+        next[savedForm.id] = false;
+        return next;
+      });
+      if (wasUnpersisted) setActiveFormId(savedForm.id);
+      showToast(wasUnpersisted ? 'فرم با موفقیت ایجاد شد.' : 'فرم با موفقیت ذخیره شد.', 'success');
     } catch (error: any) {
       console.error('Failed to save form:', error);
       showToast(error?.message || 'خطا در ذخیره فرم', 'error');
@@ -200,12 +215,12 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     }
   };
 
-  const requestLeaveFormEditor = (action: () => void) => {
+  const requestLeaveFormEditor = (action: () => void, exitsForm: boolean = false) => {
     if (!activeFormId || !unsavedFormIds[activeFormId]) {
       action();
       return;
     }
-    setPendingLeaveAction(() => action);
+    setPendingLeaveAction({ action, exitsForm });
   };
 
   const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'quiz' | 'theme' | 'submissions' | 'analytics' | 'sharing') => {
@@ -216,8 +231,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setActiveTab(tab);
   };
 
-  // Create new blank form
-  const handleCreateNewForm = async (type: FormType = 'form') => {
+  // Create new blank form — فقط در state محلی؛ تا وقتی کاربر «ذخیره فرم» را نزند
+  // هیچ درخواستی به وب‌سرویس ارسال نمی‌شود و چیزی در بک‌اند ساخته نمی‌شود
+  const handleCreateNewForm = (type: FormType = 'form') => {
     const title = type === 'quiz' ? 'آزمون آنلاین جدید' : type === 'survey' ? 'پرسشنامه جدید' : 'فرم داده‌آمای جدید';
     const newForm: FormDefinition = {
       id: `form_${Date.now()}`,
@@ -233,26 +249,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       createdAt: '۱۴۰۵/۰۵/۱۰',
       updatedAt: '۱۴۰۵/۰۵/۱۰',
       steps: [{ id: 's1', title: 'گام نخست', order: 1 }],
-      fields: [
-        {
-          id: `f_${Date.now()}_1`,
-          type: 'text',
-          label: 'نام و نام خانوادگی',
-          placeholder: 'مثال: علیرضا محمدی',
-          stepId: 's1',
-          columnWidth: '50%',
-          validation: { required: true }
-        },
-        {
-          id: `f_${Date.now()}_2`,
-          type: 'email',
-          label: 'پست الکترونیک',
-          placeholder: 'name@domain.com',
-          stepId: 's1',
-          columnWidth: '50%',
-          validation: { required: true }
-        }
-      ],
+      fields: [],
       logicRules: [],
       quizConfig: {
         isQuiz: type === 'quiz',
@@ -281,15 +278,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       avgCompletionTimeSeconds: 0
     };
 
-    try {
-      const savedForm = await createForm(newForm);
-      setForms(prev => [savedForm, ...prev]);
-      setActiveFormId(savedForm.id);
-      setActiveTab('builder');
-    } catch (error: any) {
-      console.error('Failed to create form:', error);
-      showToast(error?.message || 'خطا در ایجاد فرم جدید', 'error');
-    }
+    setForms(prev => [newForm, ...prev]);
+    setActiveFormId(newForm.id);
+    setUnsavedFormIds(prev => ({ ...prev, [newForm.id]: true }));
+    setActiveTab('builder');
   };
 
   // Quick Insert Field from Subtoolbar
@@ -386,7 +378,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           {activeForm && (
             <button
               onClick={() => {
-                requestLeaveFormEditor(() => setActiveFormId(null));
+                requestLeaveFormEditor(() => setActiveFormId(null), true);
               }}
               className="p-2 rounded-xl bg-teal-50 dark:bg-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 transition-colors cursor-pointer"
               title="بازگشت به فهرست فرم‌ها"
@@ -973,7 +965,20 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         cancelLabel="ادامه ویرایش"
         danger={false}
         onConfirm={() => {
-          pendingLeaveAction?.();
+          // فقط وقتی این «خروج بدون ذخیره» واقعاً از محیط فرم خارج می‌شود (نه صرفاً
+          // جابه‌جایی بین تب‌های همین فرم) و فرم فعال هرگز ذخیره نشده (شناسه‌ی موقت
+          // سمت کلاینت دارد)، باید کاملاً از state هم حذف شود — وگرنه یک فرم شبح‌وار
+          // (که هیچ‌وقت در بک‌اند ساخته نشده) در فهرست باقی می‌ماند.
+          if (pendingLeaveAction?.exitsForm && activeForm && isUnpersistedForm(activeForm)) {
+            const discardedId = activeForm.id;
+            setForms(prev => prev.filter(f => f.id !== discardedId));
+            setUnsavedFormIds(prev => {
+              const next = { ...prev };
+              delete next[discardedId];
+              return next;
+            });
+          }
+          pendingLeaveAction?.action();
           setPendingLeaveAction(null);
         }}
         onCancel={() => setPendingLeaveAction(null)}
