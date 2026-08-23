@@ -12,7 +12,8 @@ import {
   Trash2,
   Clock,
   ExternalLink,
-  Check
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import {
   FormDefinition,
@@ -51,6 +52,7 @@ interface FormResultSharingStudioProps {
   onOpenPublicPreview: () => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
+  onOpenPublishModal: () => void;
 }
 
 const STATUS_OPTIONS: { value: FormStatus; label: string; className: string }[] = [
@@ -80,7 +82,8 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   onChange,
   onOpenPublicPreview,
   onChangeStatus,
-  isChangingStatus
+  isChangingStatus,
+  onOpenPublishModal
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'audit_logs'>('public_link');
 
@@ -311,6 +314,16 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </select>
             </div>
           </div>
+
+          {form.status === 'published' && (
+            <button
+              onClick={onOpenPublishModal}
+              className="px-4 py-3 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all"
+              title="لینک مستقیم، شورتکد و کد iframe فرم را دوباره نشان بده"
+            >
+              <Share2 className="w-4 h-4" /> لینک و کد جاسازی فرم
+            </button>
+          )}
 
           {/* Global Public Page Launch Button */}
           <button
@@ -609,15 +622,29 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
             <div className="py-10 text-center text-xs font-bold text-slate-500">در حال دریافت تنظیمات لینک...</div>
           ) : (
             <>
+              {shareLink && !shareLink.isActive && (
+                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                    این لینک هنوز فعال نشده است و در صورت مراجعه، خطای «۴۰۴ یافت نشد» نمایش داده می‌شود. برای فعال‌سازی، کلید «لینک عمومی» را در بالای این بخش روشن کنید.
+                  </p>
+                </div>
+              )}
+
               {/* Public URL Box */}
-              <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
+              <div
+                className={`p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3 transition-opacity ${
+                  shareLink && !shareLink.isActive ? 'opacity-50' : ''
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
                     آدرس اختصاصی (URL) عمومی فرم:
                   </span>
                   <button
                     onClick={handleCopyLink}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm"
+                    disabled={!shareLink?.isActive}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm disabled:cursor-not-allowed"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     {copySuccess ? 'کپی شد! ✓' : 'کپی لینک'}
@@ -639,7 +666,11 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
+              <div
+                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center transition-opacity ${
+                  shareLink && !shareLink.isActive ? 'opacity-50' : ''
+                }`}
+              >
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
                 </h3>
@@ -651,7 +682,8 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                 <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم</p>
                 <button
                   onClick={handleSaveQrCode}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  disabled={!shareLink?.isActive}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" />
                   {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}

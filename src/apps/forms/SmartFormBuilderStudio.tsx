@@ -627,6 +627,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                 onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
                 onChangeStatus={handleChangeStatus}
                 isChangingStatus={isPublishing}
+                onOpenPublishModal={() => setIsPublishModalOpen(true)}
               />
             </div>
           )}
