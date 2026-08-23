@@ -825,6 +825,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           onChange={handleUpdateActiveForm}
           onChangeStatus={handleChangeStatus}
           isChangingStatus={isPublishing}
+          onSave={handleSaveActiveForm}
+          isSaving={isSavingForm}
+          hasUnsavedChanges={!!unsavedFormIds[activeForm.id]}
         />
       )}
 

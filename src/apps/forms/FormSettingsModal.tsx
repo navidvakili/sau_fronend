@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, FileText, Palette, ShieldCheck } from 'lucide-react';
+import { Settings, FileText, Palette, ShieldCheck, Save } from 'lucide-react';
 import { FormDefinition, FormStatus } from './types';
 import { FormThemeEditor } from './FormThemeEditor';
 import { FormResultSharingStudio } from './FormResultSharingStudio';
@@ -11,6 +11,9 @@ interface FormSettingsModalProps {
   onChange: (updatedForm: FormDefinition) => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
+  onSave: () => void | Promise<void>;
+  isSaving: boolean;
+  hasUnsavedChanges: boolean;
 }
 
 type SettingsTab = 'general' | 'theme' | 'sharing';
@@ -27,7 +30,10 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
   onClose,
   onChange,
   onChangeStatus,
-  isChangingStatus
+  isChangingStatus,
+  onSave,
+  isSaving,
+  hasUnsavedChanges
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -116,6 +122,24 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
               isChangingStatus={isChangingStatus}
             />
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold"
+          >
+            بستن
+          </button>
+          <button
+            onClick={() => void onSave()}
+            disabled={!hasUnsavedChanges || isSaving}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
+          >
+            <Save className="w-4 h-4" />
+            {isSaving ? 'در حال ذخیره...' : 'ذخیره فرم'}
+          </button>
         </div>
       </div>
     </div>

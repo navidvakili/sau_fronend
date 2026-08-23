@@ -72,7 +72,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
     'create_report'
   ]);
 
-  const [copiedField, setCopiedField] = useState<'link' | 'shortcode' | 'iframe' | null>(null);
+  const [copiedField, setCopiedField] = useState<'link' | 'iframe' | null>(null);
   const [qrSaveSuccess, setQrSaveSuccess] = useState(false);
 
   // فرم‌های تازه‌ساخته‌شده که هنوز ذخیره نشده‌اند شناسه‌ی موقت سمت کلاینت دارند
@@ -87,10 +87,9 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   };
 
   const directUrl = `${PUBLIC_SITE_URL}/forms/${form.slug}`;
-  const shortcode = `[nima_form id="${form.id}"]`;
   const iframeCode = `<iframe src="${directUrl}" width="100%" height="600" frameborder="0" style="border:0; border-radius: 16px;"></iframe>`;
 
-  const handleCopy = (text: string, field: 'link' | 'shortcode' | 'iframe') => {
+  const handleCopy = (text: string, field: 'link' | 'iframe') => {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2500);
@@ -192,25 +191,34 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
           {/* Form Status */}
           <div className="space-y-1">
             <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">وضعیت فرم:</label>
-            <div
-              className={`relative flex items-center rounded-xl font-bold text-xs ${
-                isChangingStatus ? 'opacity-60' : ''
-              } ${STATUS_OPTIONS.find(s => s.value === form.status)?.className}`}
-            >
-              <select
-                value={form.status}
-                onChange={e => void onChangeStatus(e.target.value as FormStatus)}
-                disabled={isChangingStatus}
-                title="وضعیت فرم"
-                className="appearance-none bg-transparent pl-3.5 pr-3.5 py-2 cursor-pointer disabled:cursor-not-allowed border-0 outline-none"
+            {formIsUnpersisted ? (
+              <div
+                className="relative flex items-center rounded-xl font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 px-3.5 py-2 cursor-not-allowed"
+                title="ابتدا فرم را از دکمه‌ی «ذخیره فرم» ذخیره کنید تا بتوانید وضعیت آن را تغییر دهید."
               >
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {STATUS_OPTIONS.find(s => s.value === form.status)?.label}
+              </div>
+            ) : (
+              <div
+                className={`relative flex items-center rounded-xl font-bold text-xs ${
+                  isChangingStatus ? 'opacity-60' : ''
+                } ${STATUS_OPTIONS.find(s => s.value === form.status)?.className}`}
+              >
+                <select
+                  value={form.status}
+                  onChange={e => void onChangeStatus(e.target.value as FormStatus)}
+                  disabled={isChangingStatus}
+                  title="وضعیت فرم"
+                  className="appearance-none bg-transparent pl-3.5 pr-3.5 py-2 cursor-pointer disabled:cursor-not-allowed border-0 outline-none"
+                >
+                  {STATUS_OPTIONS.map(s => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -445,7 +453,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               لینک مستقیم و کد جاسازی فرم
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              آدرس مستقیم، شورت‌کد و کد iframe برای انتشار همین فرم در وب‌سایت
+              آدرس مستقیم و کد iframe برای انتشار همین فرم در وب‌سایت
             </p>
           </div>
 
@@ -464,64 +472,73 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                 </div>
               )}
 
-              {/* Direct Link + Slug */}
-              <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
-                <div className={`flex items-center justify-between transition-opacity ${!isPublished ? 'opacity-50' : ''}`}>
-                  <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
-                    لینک مستقیم اشتراک‌گذاری (Direct Link):
-                  </span>
-                  <button
-                    onClick={() => handleCopy(directUrl, 'link')}
-                    disabled={!isPublished}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm disabled:cursor-not-allowed"
+              {/* Direct Link + Slug (right column) and QR Code (left column) */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
+                  <div className={`flex items-center justify-between transition-opacity ${!isPublished ? 'opacity-50' : ''}`}>
+                    <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
+                      لینک مستقیم اشتراک‌گذاری (Direct Link):
+                    </span>
+                    <button
+                      onClick={() => handleCopy(directUrl, 'link')}
+                      disabled={!isPublished}
+                      className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm disabled:cursor-not-allowed"
+                    >
+                      {copiedField === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedField === 'link' ? 'کپی شد! ✓' : 'کپی لینک'}
+                    </button>
+                  </div>
+
+                  <div
+                    className={`flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left transition-opacity ${
+                      !isPublished ? 'opacity-50' : ''
+                    }`}
                   >
-                    {copiedField === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedField === 'link' ? 'کپی شد! ✓' : 'کپی لینک'}
-                  </button>
+                    <span>{directUrl}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">
+                      بخش انتهایی آدرس (Slug):
+                    </span>
+                    <input
+                      type="text"
+                      value={form.slug}
+                      onChange={e => handleSlugChange(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
+                    />
+                  </div>
                 </div>
 
+                {/* QR Code */}
                 <div
-                  className={`flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left transition-opacity ${
+                  className={`lg:col-span-1 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center transition-opacity ${
                     !isPublished ? 'opacity-50' : ''
                   }`}
                 >
-                  <span>{directUrl}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">
-                    بخش انتهایی آدرس (Slug):
-                  </span>
-                  <input
-                    type="text"
-                    value={form.slug}
-                    onChange={e => handleSlugChange(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
-                  />
-                </div>
-              </div>
-
-              {/* Shortcode */}
-              <div
-                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 transition-opacity ${
-                  !isPublished ? 'opacity-50' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                    <Code2 className="w-4 h-4 text-indigo-600" /> کد کوتاه ویژه ویرایشگر متنی CMS (Shortcode):
-                  </span>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
+                  </h3>
+                  {isPublished ? (
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="w-32 h-32 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 font-bold text-center p-3">
+                      پس از انتشار فرم نمایش داده می‌شود
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم</p>
                   <button
-                    onClick={() => handleCopy(shortcode, 'shortcode')}
+                    onClick={handleSaveQrCode}
                     disabled={!isPublished}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shadow-sm disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
                   >
-                    {copiedField === 'shortcode' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedField === 'shortcode' ? 'کپی شد! ✓' : 'کپی شورتکد'}
+                    <Download className="w-3.5 h-3.5" />
+                    {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
                   </button>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-indigo-600 dir-ltr text-left">
-                  {shortcode}
                 </div>
               </div>
 
@@ -547,37 +564,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                 <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-600 dark:text-slate-300 dir-ltr text-left break-all">
                   {iframeCode}
                 </div>
-              </div>
-
-              {/* QR Code */}
-              <div
-                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center transition-opacity ${
-                  !isPublished ? 'opacity-50' : ''
-                }`}
-              >
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
-                </h3>
-                {isPublished ? (
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code"
-                    className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
-                  />
-                ) : (
-                  <div className="w-40 h-40 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 font-bold text-center p-3">
-                    پس از انتشار فرم نمایش داده می‌شود
-                  </div>
-                )}
-                <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم — بر اساس لینک مستقیم بالا</p>
-                <button
-                  onClick={handleSaveQrCode}
-                  disabled={!isPublished}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
-                </button>
               </div>
             </>
           )}
