@@ -149,8 +149,13 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const activeForm = forms.find(f => f.id === activeFormId) || null;
 
   useEffect(() => {
+    // onDirtyChange عمداً در dependency array نیست: ModuleRenderer آن را به‌صورت
+    // یک closure تازه در هر رندر می‌سازد، پس اگر اینجا هم باشد، افکت در هر رندر
+    // دوباره اجرا و state بالادستی را عوض می‌کند و به یک حلقهٔ بی‌نهایت
+    // (Maximum update depth exceeded) می‌انجامد.
     onDirtyChange?.(activeFormId ? !!unsavedFormIds[activeFormId] : false);
-  }, [activeFormId, onDirtyChange, unsavedFormIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFormId, unsavedFormIds]);
 
   // Handle Form Update
   const handleUpdateActiveForm = (updatedForm: FormDefinition) => {

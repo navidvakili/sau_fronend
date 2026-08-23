@@ -10,7 +10,6 @@ import {
   Copy,
   Plus,
   Trash2,
-  Clock,
   ExternalLink,
   Check,
   AlertTriangle
@@ -85,7 +84,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   isChangingStatus,
   onOpenPublishModal
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'audit_logs'>('public_link');
+  const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link'>('public_link');
 
   // Local state for user access rule form
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -333,32 +332,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
             <ExternalLink className="w-4 h-4" /> پیش‌نمایش داشبورد عمومی نتایج
           </button>
         </div>
-      </div>
-
-      {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 text-xs font-bold">
-        {[
-          { id: 'public_link', label: 'لینک عمومی فرم', icon: Globe },
-          { id: 'audit_logs', label: 'لاگ مشاهده و خروجی‌ها', icon: Clock, badge: (form.reportAuditLogs || []).length }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSubTab(tab.id as any)}
-            className={`px-4 py-3 rounded-2xl transition-all flex items-center gap-2 whitespace-nowrap border-b-2 ${
-              activeSubTab === tab.id
-                ? 'border-teal-600 text-teal-700 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/30'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span>{tab.label}</span>
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
       </div>
 
       {/* Sub-Tab 1: User & Role Granular Access Rules */}
@@ -763,43 +736,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
         </div>
       )}
 
-      {/* Sub-Tab 5: Access Audit Logs */}
-      {activeSubTab === 'audit_logs' && (
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-teal-600" /> لاگ جامع ثبت مشاهده و دریافت خروجی گزارش‌ها (Audit Logs)
-          </h3>
-
-          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                <tr>
-                  <th className="p-3">کاربر / آی‌پی</th>
-                  <th className="p-3">نقش</th>
-                  <th className="p-3">عملیات انجام‌شده</th>
-                  <th className="p-3">زمان دقیق</th>
-                  <th className="p-3">توضیحات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {(form.reportAuditLogs || []).map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="p-3 font-bold text-slate-900 dark:text-white">{log.accessorName}</td>
-                    <td className="p-3 text-slate-500">{log.accessorRoleOrIp}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-teal-100 text-teal-800 font-bold">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="p-3 text-slate-400">{log.timestamp}</td>
-                    <td className="p-3 text-slate-500">{log.details || 'ـ'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
