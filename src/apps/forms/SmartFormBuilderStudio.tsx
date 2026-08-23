@@ -631,7 +631,14 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">نرخ تکمیل میانگین</span>
-                <span className="text-2xl font-black text-amber-600 dark:text-amber-400">۸۴.۲٪</span>
+                <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                  {(() => {
+                    const totalViews = forms.reduce((acc, f) => acc + f.viewsCount, 0);
+                    const totalSubmissions = forms.reduce((acc, f) => acc + f.submissionsCount, 0);
+                    const rate = totalViews > 0 ? Math.min(100, Math.round((totalSubmissions / totalViews) * 100)) : 0;
+                    return `${rate.toLocaleString('fa-IR')}٪`;
+                  })()}
+                </span>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                 <BarChart2 className="w-5 h-5" />
