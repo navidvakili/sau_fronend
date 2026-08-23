@@ -4,8 +4,7 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  Eye,
-  History
+  Eye
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -134,50 +133,6 @@ export const FormAnalyticsDashboard: React.FC<FormAnalyticsDashboardProps> = ({
             </ResponsiveContainer>
           </div>
         )}
-      </div>
-
-      {/* Access & Export Audit Logs */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-          <History className="w-4 h-4 text-teal-600" /> لاگ جامع ثبت مشاهده و دریافت خروجی گزارش‌ها (Audit Logs)
-        </h3>
-
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-          <table className="w-full text-right text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-              <tr>
-                <th className="p-3">کاربر / آی‌پی</th>
-                <th className="p-3">نقش</th>
-                <th className="p-3">عملیات انجام‌شده</th>
-                <th className="p-3">زمان دقیق</th>
-                <th className="p-3">توضیحات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {(form.reportAuditLogs || []).length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-slate-400">
-                    هنوز لاگی برای مشاهده یا خروجی این فرم ثبت نشده است.
-                  </td>
-                </tr>
-              ) : (
-                (form.reportAuditLogs || []).map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="p-3 font-bold text-slate-900 dark:text-white">{log.accessorName}</td>
-                    <td className="p-3 text-slate-500">{log.accessorRoleOrIp}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-teal-100 text-teal-800 font-bold">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="p-3 text-slate-400">{log.timestamp}</td>
-                    <td className="p-3 text-slate-500">{log.details || 'ـ'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
