@@ -9,7 +9,6 @@ import {
   Copy,
   Trash2,
   Edit,
-  Share2,
   Inbox,
   BarChart2,
   Wand2,
@@ -192,24 +191,26 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     }
   };
 
-  // Publish / unpublish the active form
-  const handleTogglePublish = async () => {
-    if (!activeForm) return;
-    const nextStatus: FormStatus = activeForm.status === 'published' ? 'draft' : 'published';
+  // Change the active form's status (draft / published / paused / archived)
+  const handleChangeStatus = async (nextStatus: FormStatus) => {
+    if (!activeForm || nextStatus === activeForm.status) return;
     setIsPublishing(true);
     try {
       const savedForm = await updateFormStatus(activeForm.id, nextStatus);
       setForms(prev => prev.map(f => (f.id === savedForm.id ? savedForm : f)));
-      showToast(
-        nextStatus === 'published' ? 'فرم با موفقیت منتشر شد.' : 'انتشار فرم لغو شد.',
-        'success'
-      );
+      const messages: Record<FormStatus, string> = {
+        published: 'فرم با موفقیت منتشر شد.',
+        draft: 'فرم به پیش‌نویس تبدیل شد.',
+        paused: 'فرم غیرفعال شد.',
+        archived: 'فرم بایگانی شد.'
+      };
+      showToast(messages[nextStatus], 'success');
       if (nextStatus === 'published') {
         setIsPublishModalOpen(true);
       }
     } catch (error: any) {
       console.error('Failed to update form status:', error);
-      showToast(error?.message || 'خطا در تغییر وضعیت انتشار فرم', 'error');
+      showToast(error?.message || 'خطا در تغییر وضعیت فرم', 'error');
     } finally {
       setIsPublishing(false);
     }
@@ -437,28 +438,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </button>
           )}
 
-          {activeForm && (
-            <button
-              onClick={() => void handleTogglePublish()}
-              disabled={isPublishing}
-              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
-                activeForm.status === 'published'
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white'
-              }`}
-              title={activeForm.status === 'published' ? 'لغو انتشار فرم' : 'انتشار فرم'}
-            >
-              <Share2 className="w-4 h-4" />
-              <span>
-                {isPublishing
-                  ? 'در حال به‌روزرسانی...'
-                  : activeForm.status === 'published'
-                    ? 'لغو انتشار'
-                    : 'انتشار فرم'}
-              </span>
-            </button>
-          )}
-
           <button
             onClick={() => setIsTemplateModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -646,6 +625,8 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                 form={activeForm}
                 onChange={handleUpdateActiveForm}
                 onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
+                onChangeStatus={handleChangeStatus}
+                isChangingStatus={isPublishing}
               />
             </div>
           )}

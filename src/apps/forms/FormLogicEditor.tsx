@@ -12,10 +12,19 @@ export const FormLogicEditor: React.FC<FormLogicEditorProps> = ({ form, onChange
   const [operator, setOperator] = useState<LogicOperator>('equals');
   const [val, setVal] = useState('yes');
   const [action, setAction] = useState<LogicAction>('show_field');
-  const [targetId, setTargetId] = useState(form.fields[1]?.id || '');
+  const [targetId, setTargetId] = useState(form.fields[1]?.id || form.fields[0]?.id || '');
+  const [validationError, setValidationError] = useState('');
 
   const handleAddRule = () => {
-    if (!sourceFieldId || !targetId) return;
+    if (!sourceFieldId || !targetId) {
+      setValidationError('لطفاً سؤال مبدأ و سؤال مقصد را انتخاب کنید.');
+      return;
+    }
+    if (sourceFieldId === targetId) {
+      setValidationError('سؤال مبدأ و سؤال مقصد نمی‌توانند یکسان باشند.');
+      return;
+    }
+    setValidationError('');
 
     const newRule: LogicRule = {
       id: `lr_${Date.now()}`,
@@ -67,6 +76,13 @@ export const FormLogicEditor: React.FC<FormLogicEditorProps> = ({ form, onChange
       </div>
 
       {/* New Rule Creator Box */}
+      {form.fields.length < 2 ? (
+        <div className="text-center py-10 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-900 text-slate-500 text-xs space-y-1">
+          <AlertCircle className="w-5 h-5 mx-auto text-amber-500" />
+          <p className="font-bold">برای تعریف شرط، فرم باید حداقل ۲ سؤال داشته باشد.</p>
+          <p>ابتدا از تب «طراح دیداری» چند سؤال به فرم اضافه کنید، سپس به این تب برگردید.</p>
+        </div>
+      ) : (
       <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 space-y-4">
         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
           <Zap className="w-4 h-4 text-amber-500" /> تعریف شرط جدید:
@@ -146,13 +162,21 @@ export const FormLogicEditor: React.FC<FormLogicEditorProps> = ({ form, onChange
           </div>
         </div>
 
-        <button
-          onClick={handleAddRule}
-          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow hover:shadow-teal-500/20 transition-all mt-2"
-        >
-          <Plus className="w-4 h-4" /> افزودن قانون به سیستم
-        </button>
+        <div className="flex items-center gap-3 mt-2">
+          <button
+            onClick={handleAddRule}
+            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow hover:shadow-teal-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" /> افزودن قانون به سیستم
+          </button>
+          {validationError && (
+            <span className="text-xs font-bold text-red-600 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" /> {validationError}
+            </span>
+          )}
+        </div>
       </div>
+      )}
 
       {/* Rules List Table */}
       <div className="space-y-3">

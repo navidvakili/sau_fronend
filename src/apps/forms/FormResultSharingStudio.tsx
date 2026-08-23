@@ -21,7 +21,8 @@ import {
   UserAccessRule,
   FormAccessPermission,
   FormReportView,
-  FormShareLinkConfig
+  FormShareLinkConfig,
+  FormStatus
 } from './types';
 import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 import { fetchFormShareLink, updateFormShareLink } from './api';
@@ -30,7 +31,16 @@ interface FormResultSharingStudioProps {
   form: FormDefinition;
   onChange: (updatedForm: FormDefinition) => void;
   onOpenPublicPreview: () => void;
+  onChangeStatus: (status: FormStatus) => void | Promise<void>;
+  isChangingStatus: boolean;
 }
+
+const STATUS_OPTIONS: { value: FormStatus; label: string; className: string }[] = [
+  { value: 'draft', label: 'پیش‌نویس', className: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
+  { value: 'published', label: 'منتشرشده', className: 'bg-teal-600 text-white' },
+  { value: 'paused', label: 'غیرفعال (متوقف)', className: 'bg-amber-500 text-white' },
+  { value: 'archived', label: 'بایگانی‌شده', className: 'bg-rose-600 text-white' }
+];
 
 const ALL_PERMISSIONS: { id: FormAccessPermission; label: string; group: string }[] = [
   { id: 'view_stats', label: 'مشاهده آمار تجمیعی', group: 'آمار و نمودار' },
@@ -50,7 +60,9 @@ const ALL_PERMISSIONS: { id: FormAccessPermission; label: string; group: string 
 export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = ({
   form,
   onChange,
-  onOpenPublicPreview
+  onOpenPublicPreview,
+  onChangeStatus,
+  isChangingStatus
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link' | 'audit_logs'>('public_link');
 
@@ -257,13 +269,39 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
           </div>
         </div>
 
-        {/* Global Public Page Launch Button */}
-        <button
-          onClick={onOpenPublicPreview}
-          className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all"
-        >
-          <ExternalLink className="w-4 h-4" /> پیش‌نمایش داشبورد عمومی نتایج
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Form Status */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400">وضعیت فرم:</label>
+            <div
+              className={`relative flex items-center rounded-xl font-bold text-xs ${
+                isChangingStatus ? 'opacity-60' : ''
+              } ${STATUS_OPTIONS.find(s => s.value === form.status)?.className}`}
+            >
+              <select
+                value={form.status}
+                onChange={e => void onChangeStatus(e.target.value as FormStatus)}
+                disabled={isChangingStatus}
+                title="وضعیت فرم"
+                className="appearance-none bg-transparent pl-3.5 pr-3.5 py-2 cursor-pointer disabled:cursor-not-allowed border-0 outline-none"
+              >
+                {STATUS_OPTIONS.map(s => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Global Public Page Launch Button */}
+          <button
+            onClick={onOpenPublicPreview}
+            className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all"
+          >
+            <ExternalLink className="w-4 h-4" /> پیش‌نمایش داشبورد عمومی نتایج
+          </button>
+        </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
