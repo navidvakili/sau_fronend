@@ -16,11 +16,9 @@ import {
   Layers,
   Settings2,
   GitBranch,
-  Palette,
   Eye,
   ArrowLeft,
   Clock,
-  ShieldCheck,
   Save,
   Tag,
   HelpCircle,
@@ -52,10 +50,9 @@ import { sampleForms, formTemplates, defaultTheme } from './mockData';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
 import { FormMessagesEditor } from './FormMessagesEditor';
-import { FormThemeEditor } from './FormThemeEditor';
 import { SubmissionsManager } from './SubmissionsManager';
 import { FormAnalyticsDashboard } from './FormAnalyticsDashboard';
-import { FormResultSharingStudio } from './FormResultSharingStudio';
+import { FormSettingsModal } from './FormSettingsModal';
 import { PublicFormResultDashboard } from './PublicFormResultDashboard';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
 import { FormPublishModal } from './FormPublishModal';
@@ -76,7 +73,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [isLoadingForms, setIsLoadingForms] = useState(true);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [scrollToFieldId, setScrollToFieldId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'messages' | 'theme' | 'submissions' | 'analytics' | 'sharing'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'messages' | 'submissions' | 'analytics'>('builder');
 
   // Breakpoints / Viewport width
   const [activeBreakpoint, setActiveBreakpoint] = useState<'1240' | '1024' | '768' | '380'>('1240');
@@ -87,6 +84,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPublicPreviewOpen, setIsPublicPreviewOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Filters for forms manager list
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,7 +223,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     setPendingLeaveAction({ action, exitsForm });
   };
 
-  const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'messages' | 'theme' | 'submissions' | 'analytics' | 'sharing') => {
+  const handleWorkspaceTabChange = (tab: 'builder' | 'logic' | 'messages' | 'submissions' | 'analytics') => {
     if (activeTab === 'builder' && tab !== 'builder') {
       requestLeaveFormEditor(() => setActiveTab(tab));
       return;
@@ -441,6 +439,16 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
           {activeForm && (
             <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Settings2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+              <span>تنظیمات</span>
+            </button>
+          )}
+
+          {activeForm && (
+            <button
               onClick={() => setIsPreviewModalOpen(true)}
               className="px-4 py-1.5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black text-xs transition-all shadow-md shadow-teal-500/20 flex items-center gap-1.5 cursor-pointer"
             >
@@ -513,10 +521,8 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
               { id: 'builder', label: 'طراح دیداری', icon: FileText },
               { id: 'logic', label: 'منطق شرطی', icon: GitBranch },
               { id: 'messages', label: 'پیام خوش‌آمد و پایان', icon: MessageSquare },
-              { id: 'theme', label: 'پوسته', icon: Palette },
               { id: 'submissions', label: `پاسخ‌ها (${submissions.filter(s => s.formId === activeForm.id).length})`, icon: Inbox },
-              { id: 'analytics', label: 'آمار', icon: BarChart2 },
-              { id: 'sharing', label: 'اشتراک و انتشار', icon: ShieldCheck }
+              { id: 'analytics', label: 'آمار', icon: BarChart2 }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -569,12 +575,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </div>
           )}
 
-          {activeTab === 'theme' && (
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/40">
-              <FormThemeEditor form={activeForm} onChange={handleUpdateActiveForm} />
-            </div>
-          )}
-
           {activeTab === 'submissions' && (
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/40">
               <SubmissionsManager
@@ -593,18 +593,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </div>
           )}
 
-          {activeTab === 'sharing' && (
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/40">
-              <FormResultSharingStudio
-                form={activeForm}
-                onChange={handleUpdateActiveForm}
-                onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
-                onChangeStatus={handleChangeStatus}
-                isChangingStatus={isPublishing}
-                onOpenPublishModal={() => setIsPublishModalOpen(true)}
-              />
-            </div>
-          )}
         </div>
       ) : (
         /* FORM MANAGER / DASHBOARD LIST VIEW */
@@ -842,6 +830,20 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           form={activeForm}
           isOpen={isPublishModalOpen}
           onClose={() => setIsPublishModalOpen(false)}
+        />
+      )}
+
+      {/* Settings Modal (general info, theme, sharing & publishing) */}
+      {activeForm && (
+        <FormSettingsModal
+          form={activeForm}
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onChange={handleUpdateActiveForm}
+          onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
+          onChangeStatus={handleChangeStatus}
+          isChangingStatus={isPublishing}
+          onOpenPublishModal={() => setIsPublishModalOpen(true)}
         />
       )}
 
