@@ -10,7 +10,6 @@ import {
   Copy,
   Plus,
   Trash2,
-  ExternalLink,
   Check,
   AlertTriangle
 } from 'lucide-react';
@@ -25,7 +24,6 @@ import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 interface FormResultSharingStudioProps {
   form: FormDefinition;
   onChange: (updatedForm: FormDefinition) => void;
-  onOpenPublicPreview: () => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
 }
@@ -55,7 +53,6 @@ const ALL_PERMISSIONS: { id: FormAccessPermission; label: string; group: string 
 export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = ({
   form,
   onChange,
-  onOpenPublicPreview,
   onChangeStatus,
   isChangingStatus
 }) => {
@@ -82,6 +79,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   // (form_...) و در بک‌اند وجود ندارند — لینک و کد جاسازی برایشان بی‌معناست چون
   // به id عددی واقعی فرم (برای شورت‌کد) نیاز دارند.
   const formIsUnpersisted = form.id.startsWith('form_');
+  const isPublished = form.status === 'published';
 
   const handleSlugChange = (value: string) => {
     const sanitized = value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -214,14 +212,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </select>
             </div>
           </div>
-
-          {/* Global Public Page Launch Button */}
-          <button
-            onClick={onOpenPublicPreview}
-            className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all"
-          >
-            <ExternalLink className="w-4 h-4" /> پیش‌نمایش داشبورد عمومی نتایج
-          </button>
         </div>
       </div>
 
@@ -465,31 +455,36 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
             </div>
           ) : (
             <>
-              {form.status !== 'published' && (
+              {!isPublished && (
                 <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                    این فرم هنوز منتشر نشده است؛ لینک زیر تا انتشار فرم برای بازدیدکنندگان کار نمی‌کند.
+                    این فرم هنوز منتشر نشده است؛ لینک، کدها و QR زیر تا انتشار فرم غیرفعال هستند. شناسه‌ی slug را می‌توانید همین حالا تنظیم کنید.
                   </p>
                 </div>
               )}
 
               {/* Direct Link + Slug */}
               <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className={`flex items-center justify-between transition-opacity ${!isPublished ? 'opacity-50' : ''}`}>
                   <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
                     لینک مستقیم اشتراک‌گذاری (Direct Link):
                   </span>
                   <button
                     onClick={() => handleCopy(directUrl, 'link')}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm"
+                    disabled={!isPublished}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm disabled:cursor-not-allowed"
                   >
                     {copiedField === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedField === 'link' ? 'کپی شد! ✓' : 'کپی لینک'}
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left">
+                <div
+                  className={`flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left transition-opacity ${
+                    !isPublished ? 'opacity-50' : ''
+                  }`}
+                >
                   <span>{directUrl}</span>
                 </div>
 
@@ -507,14 +502,19 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </div>
 
               {/* Shortcode */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div
+                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 transition-opacity ${
+                  !isPublished ? 'opacity-50' : ''
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Code2 className="w-4 h-4 text-indigo-600" /> کد کوتاه ویژه ویرایشگر متنی CMS (Shortcode):
                   </span>
                   <button
                     onClick={() => handleCopy(shortcode, 'shortcode')}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shadow-sm"
+                    disabled={!isPublished}
+                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shadow-sm disabled:cursor-not-allowed"
                   >
                     {copiedField === 'shortcode' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedField === 'shortcode' ? 'کپی شد! ✓' : 'کپی شورتکد'}
@@ -526,14 +526,19 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </div>
 
               {/* Iframe */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div
+                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 transition-opacity ${
+                  !isPublished ? 'opacity-50' : ''
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Code2 className="w-4 h-4 text-emerald-600" /> کد جاگذاری HTML (Iframe Embed Code):
                   </span>
                   <button
                     onClick={() => handleCopy(iframeCode, 'iframe')}
-                    className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 shadow-sm"
+                    disabled={!isPublished}
+                    className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 shadow-sm disabled:cursor-not-allowed"
                   >
                     {copiedField === 'iframe' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedField === 'iframe' ? 'کپی شد! ✓' : 'کپی کد'}
@@ -545,19 +550,30 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </div>
 
               {/* QR Code */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
+              <div
+                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center transition-opacity ${
+                  !isPublished ? 'opacity-50' : ''
+                }`}
+              >
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
                 </h3>
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
-                />
+                {isPublished ? (
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
+                  />
+                ) : (
+                  <div className="w-40 h-40 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 font-bold text-center p-3">
+                    پس از انتشار فرم نمایش داده می‌شود
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم — بر اساس لینک مستقیم بالا</p>
                 <button
                   onClick={handleSaveQrCode}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  disabled={!isPublished}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" />
                   {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}

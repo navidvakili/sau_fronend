@@ -9,7 +9,6 @@ interface FormSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onChange: (updatedForm: FormDefinition) => void;
-  onOpenPublicPreview: () => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
 }
@@ -27,7 +26,6 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
   isOpen,
   onClose,
   onChange,
-  onOpenPublicPreview,
   onChangeStatus,
   isChangingStatus
 }) => {
@@ -114,7 +112,6 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
             <FormResultSharingStudio
               form={form}
               onChange={onChange}
-              onOpenPublicPreview={onOpenPublicPreview}
               onChangeStatus={onChangeStatus}
               isChangingStatus={isChangingStatus}
             />

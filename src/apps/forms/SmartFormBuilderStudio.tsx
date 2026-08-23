@@ -53,7 +53,6 @@ import { FormMessagesEditor } from './FormMessagesEditor';
 import { SubmissionsManager } from './SubmissionsManager';
 import { FormAnalyticsDashboard } from './FormAnalyticsDashboard';
 import { FormSettingsModal } from './FormSettingsModal';
-import { PublicFormResultDashboard } from './PublicFormResultDashboard';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import { FormRespondentView } from './FormRespondentView';
@@ -81,7 +80,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [isPublicPreviewOpen, setIsPublicPreviewOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Filters for forms manager list
@@ -417,14 +415,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           )}
 
           <button
-            onClick={() => setIsTemplateModalOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Grid className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span>کتابخانه قالب‌ها</span>
-          </button>
-
-          <button
             onClick={() => setIsAiModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
@@ -535,6 +525,13 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsTemplateModalOpen(true)}
+              className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Grid className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span>کتابخانه قالب‌ها</span>
+            </button>
             <button
               onClick={() => handleCreateNewForm('survey')}
               className="px-3 py-1 rounded-xl bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black text-xs flex items-center gap-1 cursor-pointer shadow-xs"
@@ -703,7 +700,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                       {formItem.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
                     </span>
                     <span className="text-[10px] font-mono text-slate-400">
-                      v{formItem.version} • {formItem.updatedAt}
+                      v{formItem.version} • {new Date(formItem.updatedAt).toLocaleDateString('fa-IR')}
                     </span>
                   </div>
 
@@ -826,28 +823,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           isOpen={isSettingsModalOpen}
           onClose={() => setIsSettingsModalOpen(false)}
           onChange={handleUpdateActiveForm}
-          onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
           onChangeStatus={handleChangeStatus}
           isChangingStatus={isPublishing}
         />
-      )}
-
-      {/* Public Results Modal */}
-      {activeForm && isPublicPreviewOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto p-6 relative">
-            <button
-              onClick={() => setIsPublicPreviewOpen(false)}
-              className="absolute left-6 top-6 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900"
-            >
-              ✕
-            </button>
-            <PublicFormResultDashboard
-              form={activeForm}
-              submissions={submissions.filter(s => s.formId === activeForm.id)}
-            />
-          </div>
-        </div>
       )}
 
       {/* Interactive Live Preview Modal (Matching SliderStudio InteractivePreviewModal) */}
