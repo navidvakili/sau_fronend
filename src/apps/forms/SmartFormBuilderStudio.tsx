@@ -27,7 +27,6 @@ import {
   MessageSquare,
   Play,
   Grid,
-  Code,
   Type,
   AlignLeft,
   CheckSquare,
@@ -61,7 +60,6 @@ import { PublicFormResultDashboard } from './PublicFormResultDashboard';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
 import { FormPublishModal } from './FormPublishModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
-import FormCodeExportModal from './FormCodeExportModal';
 import { FormRespondentView } from './FormRespondentView';
 import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
@@ -87,7 +85,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPublicPreviewOpen, setIsPublicPreviewOpen] = useState(false);
 
@@ -436,16 +433,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             <Wand2 className="w-4 h-4 text-amber-500" />
             <span>دستیار هوش مصنوعی</span>
           </button>
-
-          {activeForm && (
-            <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Code className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>دریافت کد</span>
-            </button>
-          )}
 
           {activeForm && (
             <button
@@ -813,15 +800,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         }}
         currentForm={activeForm}
       />
-
-      {/* Code Export Modal */}
-      {activeForm && (
-        <FormCodeExportModal
-          isOpen={isExportModalOpen}
-          onClose={() => setIsExportModalOpen(false)}
-          form={activeForm}
-        />
-      )}
 
       {/* AI Assistant Modal */}
       <AiFormAssistantModal
