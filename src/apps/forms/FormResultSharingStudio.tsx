@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Share2,
   ShieldCheck,
   UserCheck,
   Globe,
-  Lock,
+  Code2,
   Download,
   QrCode,
   Copy,
@@ -18,32 +18,9 @@ import {
   FormDefinition,
   UserAccessRule,
   FormAccessPermission,
-  FormShareLinkConfig,
   FormStatus
 } from './types';
 import { PUBLIC_SITE_URL } from '@/src/shared-constants';
-import { fetchFormShareLink, updateFormShareLink } from './api';
-import { JalaliDatepicker } from '@/src/shared-components';
-import { toPersianDigits, toEnglishDigits } from '@/src/shared-utils';
-import { DateObject } from 'react-multi-date-picker';
-import persian from 'react-date-object/calendars/persian';
-import persian_fa from 'react-date-object/locales/persian_fa';
-import gregorian from 'react-date-object/calendars/gregorian';
-import gregorian_en from 'react-date-object/locales/gregorian_en';
-
-/** تبدیل رشته‌ی تاریخ میلادی (YYYY-MM-DD، برای بک‌اند) به رشته‌ی شمسی نمایشی (برای JalaliDatepicker) */
-const toJalaliDisplayDate = (isoDate: string): string => {
-  if (!isoDate) return '';
-  const g = new DateObject({ calendar: gregorian, date: isoDate, format: 'YYYY-MM-DD' });
-  return toPersianDigits(g.convert(persian, persian_fa).format('YYYY/MM/DD'));
-};
-
-/** تبدیل رشته‌ی تاریخ شمسی (از JalaliDatepicker) به رشته‌ی تاریخ میلادی YYYY-MM-DD (برای بک‌اند) */
-const toIsoDate = (jalaliDate: string): string => {
-  if (!jalaliDate) return '';
-  const j = new DateObject({ calendar: persian, date: toEnglishDigits(jalaliDate), format: 'YYYY/MM/DD' });
-  return j.convert(gregorian, gregorian_en).format('YYYY-MM-DD');
-};
 
 interface FormResultSharingStudioProps {
   form: FormDefinition;
@@ -51,7 +28,6 @@ interface FormResultSharingStudioProps {
   onOpenPublicPreview: () => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
-  onOpenPublishModal: () => void;
 }
 
 const STATUS_OPTIONS: { value: FormStatus; label: string; className: string }[] = [
@@ -81,8 +57,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
   onChange,
   onOpenPublicPreview,
   onChangeStatus,
-  isChangingStatus,
-  onOpenPublishModal
+  isChangingStatus
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'user_access' | 'public_link'>('public_link');
 
@@ -100,104 +75,30 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
     'create_report'
   ]);
 
-  // Local state for the form's own dedicated share link (slug + optional password/expiry)
-  const [shareLink, setShareLink] = useState<FormShareLinkConfig | null>(null);
-  const [isLoadingShareLink, setIsLoadingShareLink] = useState(true);
-  const [isSavingShareLink, setIsSavingShareLink] = useState(false);
-  const [shareSaveMessage, setShareSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
-  const [slugInput, setSlugInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordTouched, setPasswordTouched] = useState(false);
-  const [expiresAtInput, setExpiresAtInput] = useState('');
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [copiedField, setCopiedField] = useState<'link' | 'shortcode' | 'iframe' | null>(null);
   const [qrSaveSuccess, setQrSaveSuccess] = useState(false);
 
   // فرم‌های تازه‌ساخته‌شده که هنوز ذخیره نشده‌اند شناسه‌ی موقت سمت کلاینت دارند
-  // (form_...) و در بک‌اند وجود ندارند — لینک اشتراک‌گذاری برایشان بی‌معناست.
+  // (form_...) و در بک‌اند وجود ندارند — لینک و کد جاسازی برایشان بی‌معناست چون
+  // به id عددی واقعی فرم (برای شورت‌کد) نیاز دارند.
   const formIsUnpersisted = form.id.startsWith('form_');
 
-  useEffect(() => {
-    if (formIsUnpersisted) {
-      setShareLink(null);
-      setIsLoadingShareLink(false);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingShareLink(true);
-    fetchFormShareLink(form.id)
-      .then(link => {
-        if (cancelled) return;
-        setShareLink(link);
-        setSlugInput(link.slug);
-        setExpiresAtInput(link.expiresAt ? link.expiresAt.slice(0, 10) : '');
-        setPasswordInput('');
-        setPasswordTouched(false);
-      })
-      .catch(error => {
-        console.error('Failed to load form share link:', error);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingShareLink(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.id]);
-
-  const handleSaveShareLink = async () => {
-    setIsSavingShareLink(true);
-    setShareSaveMessage(null);
-    try {
-      const payload: { slug?: string; password?: string | null; expires_at?: string | null; is_active?: boolean } = {
-        slug: slugInput,
-        expires_at: expiresAtInput || null,
-        is_active: shareLink?.isActive ?? false
-      };
-      if (passwordTouched) {
-        payload.password = passwordInput || null;
-      }
-      const updated = await updateFormShareLink(form.id, payload);
-      setShareLink(updated);
-      setSlugInput(updated.slug);
-      setPasswordInput('');
-      setPasswordTouched(false);
-      setShareSaveMessage({ text: 'تنظیمات لینک با موفقیت ذخیره شد.', isError: false });
-    } catch (error: any) {
-      setShareSaveMessage({ text: error?.message || 'خطا در ذخیره تنظیمات لینک', isError: true });
-    } finally {
-      setIsSavingShareLink(false);
-      setTimeout(() => setShareSaveMessage(null), 4000);
-    }
+  const handleSlugChange = (value: string) => {
+    const sanitized = value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    onChange({ ...form, slug: sanitized });
   };
 
-  const handleToggleShareLinkActive = async (isActive: boolean) => {
-    setShareLink(prev => (prev ? { ...prev, isActive } : prev));
-    setIsSavingShareLink(true);
-    try {
-      const updated = await updateFormShareLink(form.id, { is_active: isActive });
-      setShareLink(updated);
-    } catch (error: any) {
-      setShareSaveMessage({ text: error?.message || 'خطا در تغییر وضعیت لینک', isError: true });
-      setTimeout(() => setShareSaveMessage(null), 4000);
-    } finally {
-      setIsSavingShareLink(false);
-    }
+  const directUrl = `${PUBLIC_SITE_URL}/forms/${form.slug}`;
+  const shortcode = `[nima_form id="${form.id}"]`;
+  const iframeCode = `<iframe src="${directUrl}" width="100%" height="600" frameborder="0" style="border:0; border-radius: 16px;"></iframe>`;
+
+  const handleCopy = (text: string, field: 'link' | 'shortcode' | 'iframe') => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleRemovePassword = () => {
-    setPasswordInput('');
-    setPasswordTouched(true);
-  };
-
-  // Copy Public Link
-  const publicUrl = `${PUBLIC_SITE_URL}/forms/share/${slugInput || shareLink?.slug || ''}`;
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(publicUrl);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2500);
-  };
-
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(publicUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(directUrl)}`;
   const handleSaveQrCode = async () => {
     try {
       const response = await fetch(qrCodeUrl);
@@ -206,7 +107,7 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
       const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `${slugInput || form.id}-qr.png`;
+      link.download = `${form.slug}-qr.png`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -313,16 +214,6 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
               </select>
             </div>
           </div>
-
-          {form.status === 'published' && (
-            <button
-              onClick={onOpenPublishModal}
-              className="px-4 py-3 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all"
-              title="لینک مستقیم، شورتکد و کد iframe فرم را دوباره نشان بده"
-            >
-              <Share2 className="w-4 h-4" /> لینک و کد جاسازی فرم
-            </button>
-          )}
 
           {/* Global Public Page Launch Button */}
           <button
@@ -555,95 +446,106 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
         </div>
       )}
 
-      {/* Sub-Tab 2: Public Sharing Link for the Form itself (optional password/expiry) */}
+      {/* Sub-Tab 2: Direct link, embed code & QR for the form itself */}
       {activeSubTab === 'public_link' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Globe className="w-5 h-5 text-teal-600" />
-                لینک عمومی اختصاصی فرم
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                یک لینک مستقل برای پر کردن همین فرم بساز — با slug دلخواه، رمز عبور اختیاری و تاریخ انقضای اختیاری
-              </p>
-            </div>
-
-            {shareLink && (
-              <div className="flex items-center gap-2">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={shareLink.isActive}
-                    onChange={e => void handleToggleShareLinkActive(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-                  <span className="mr-3 text-xs font-bold text-slate-800 dark:text-slate-200">
-                    {shareLink.isActive ? 'لینک عمومی فعال است' : 'لینک عمومی غیرفعال است'}
-                  </span>
-                </label>
-              </div>
-            )}
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Globe className="w-5 h-5 text-teal-600" />
+              لینک مستقیم و کد جاسازی فرم
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              آدرس مستقیم، شورت‌کد و کد iframe برای انتشار همین فرم در وب‌سایت
+            </p>
           </div>
 
           {formIsUnpersisted ? (
             <div className="py-10 text-center text-xs font-bold text-slate-500">
-              برای تنظیم لینک اشتراک‌گذاری، ابتدا فرم را از دکمه‌ی «ذخیره فرم» ذخیره کنید.
+              برای دریافت لینک و کد جاسازی، ابتدا فرم را از دکمه‌ی «ذخیره فرم» ذخیره کنید.
             </div>
-          ) : isLoadingShareLink ? (
-            <div className="py-10 text-center text-xs font-bold text-slate-500">در حال دریافت تنظیمات لینک...</div>
           ) : (
             <>
-              {shareLink && !shareLink.isActive && (
+              {form.status !== 'published' && (
                 <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                    این لینک هنوز فعال نشده است و در صورت مراجعه، خطای «۴۰۴ یافت نشد» نمایش داده می‌شود. برای فعال‌سازی، کلید «لینک عمومی» را در بالای این بخش روشن کنید.
+                    این فرم هنوز منتشر نشده است؛ لینک زیر تا انتشار فرم برای بازدیدکنندگان کار نمی‌کند.
                   </p>
                 </div>
               )}
 
-              {/* Public URL Box */}
-              <div
-                className={`p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3 transition-opacity ${
-                  shareLink && !shareLink.isActive ? 'opacity-50' : ''
-                }`}
-              >
+              {/* Direct Link + Slug */}
+              <div className="p-5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
-                    آدرس اختصاصی (URL) عمومی فرم:
+                    لینک مستقیم اشتراک‌گذاری (Direct Link):
                   </span>
                   <button
-                    onClick={handleCopyLink}
-                    disabled={!shareLink?.isActive}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm disabled:cursor-not-allowed"
+                    onClick={() => handleCopy(directUrl, 'link')}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-teal-300 dark:border-teal-700 shadow-sm"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    {copySuccess ? 'کپی شد! ✓' : 'کپی لینک'}
+                    {copiedField === 'link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedField === 'link' ? 'کپی شد! ✓' : 'کپی لینک'}
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-teal-800 dark:text-teal-300 dir-ltr text-left">
-                  <span>{publicUrl}</span>
+                  <span>{directUrl}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">نام Slug اختصاصی:</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">
+                    بخش انتهایی آدرس (Slug):
+                  </span>
                   <input
                     type="text"
-                    value={slugInput}
-                    onChange={e => setSlugInput(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
+                    value={form.slug}
+                    onChange={e => handleSlugChange(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono dir-ltr text-left"
                   />
                 </div>
               </div>
 
-              <div
-                className={`p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center transition-opacity ${
-                  shareLink && !shareLink.isActive ? 'opacity-50' : ''
-                }`}
-              >
+              {/* Shortcode */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Code2 className="w-4 h-4 text-indigo-600" /> کد کوتاه ویژه ویرایشگر متنی CMS (Shortcode):
+                  </span>
+                  <button
+                    onClick={() => handleCopy(shortcode, 'shortcode')}
+                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 shadow-sm"
+                  >
+                    {copiedField === 'shortcode' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedField === 'shortcode' ? 'کپی شد! ✓' : 'کپی شورتکد'}
+                  </button>
+                </div>
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-indigo-600 dir-ltr text-left">
+                  {shortcode}
+                </div>
+              </div>
+
+              {/* Iframe */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Code2 className="w-4 h-4 text-emerald-600" /> کد جاگذاری HTML (Iframe Embed Code):
+                  </span>
+                  <button
+                    onClick={() => handleCopy(iframeCode, 'iframe')}
+                    className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 shadow-sm"
+                  >
+                    {copiedField === 'iframe' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedField === 'iframe' ? 'کپی شد! ✓' : 'کپی کد'}
+                  </button>
+                </div>
+                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-600 dark:text-slate-300 dir-ltr text-left break-all">
+                  {iframeCode}
+                </div>
+              </div>
+
+              {/* QR Code */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-3 text-center">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <QrCode className="w-4 h-4 text-teal-600" /> کد QR لینک فرم
                 </h3>
@@ -652,84 +554,14 @@ export const FormResultSharingStudio: React.FC<FormResultSharingStudioProps> = (
                   alt="QR Code"
                   className="w-40 h-40 object-contain p-2 bg-white rounded-2xl border border-slate-200 shadow-md"
                 />
-                <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم</p>
+                <p className="text-[11px] text-slate-500">اسکن برای دسترسی سریع موبایلی به فرم — بر اساس لینک مستقیم بالا</p>
                 <button
                   onClick={handleSaveQrCode}
-                  disabled={!shareLink?.isActive}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />
                   {qrSaveSuccess ? 'ذخیره شد!' : 'ذخیره تصویر QR'}
                 </button>
-              </div>
-
-              {/* Password & Expiry */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b pb-3">
-                  <Lock className="w-4 h-4 text-teal-600" /> محافظت رمز عبور و تاریخ انقضا
-                </h4>
-
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">
-                      کلمه عبور ورود (اختیاری — برای تغییر وارد کنید، برای بدون‌تغییر خالی بگذارید)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="password"
-                        placeholder={shareLink?.hasPassword ? 'رمز فعلی تنظیم شده — برای تغییر وارد کنید' : 'بدون رمز عبور'}
-                        value={passwordInput}
-                        onChange={e => {
-                          setPasswordInput(e.target.value);
-                          setPasswordTouched(true);
-                        }}
-                        className="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                      />
-                      {shareLink?.hasPassword && (
-                        <button
-                          type="button"
-                          onClick={handleRemovePassword}
-                          className="px-3 py-2 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-xl text-[11px] font-bold border border-red-200 dark:border-red-800 whitespace-nowrap"
-                        >
-                          حذف رمز عبور
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">تاریخ انقضای لینک (اختیاری)</label>
-                    <JalaliDatepicker
-                      value={toJalaliDisplayDate(expiresAtInput)}
-                      onChange={jalaliDate => setExpiresAtInput(toIsoDate(jalaliDate))}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => void handleSaveShareLink()}
-                  disabled={isSavingShareLink}
-                  className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
-                >
-                  {isSavingShareLink ? (
-                    'در حال ذخیره...'
-                  ) : (
-                    <>
-                      <Check className="w-3.5 h-3.5" /> ذخیره تنظیمات لینک
-                    </>
-                  )}
-                </button>
-                {shareSaveMessage && (
-                  <span
-                    className={`text-xs font-bold ${
-                      shareSaveMessage.isError ? 'text-red-600' : 'text-emerald-600'
-                    }`}
-                  >
-                    {shareSaveMessage.text}
-                  </span>
-                )}
               </div>
             </>
           )}

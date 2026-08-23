@@ -55,7 +55,6 @@ import { FormAnalyticsDashboard } from './FormAnalyticsDashboard';
 import { FormSettingsModal } from './FormSettingsModal';
 import { PublicFormResultDashboard } from './PublicFormResultDashboard';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
-import { FormPublishModal } from './FormPublishModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import { FormRespondentView } from './FormRespondentView';
 import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, slugifyFormTitle } from './api';
@@ -80,7 +79,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
   // Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPublicPreviewOpen, setIsPublicPreviewOpen] = useState(false);
@@ -204,9 +202,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         archived: 'فرم بایگانی شد.'
       };
       showToast(messages[nextStatus], 'success');
-      if (nextStatus === 'published') {
-        setIsPublishModalOpen(true);
-      }
     } catch (error: any) {
       console.error('Failed to update form status:', error);
       showToast(error?.message || 'خطا در تغییر وضعیت فرم', 'error');
@@ -824,15 +819,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         }}
       />
 
-      {/* Publish & Share Modal */}
-      {activeForm && (
-        <FormPublishModal
-          form={activeForm}
-          isOpen={isPublishModalOpen}
-          onClose={() => setIsPublishModalOpen(false)}
-        />
-      )}
-
       {/* Settings Modal (general info, theme, sharing & publishing) */}
       {activeForm && (
         <FormSettingsModal
@@ -843,7 +829,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           onOpenPublicPreview={() => setIsPublicPreviewOpen(true)}
           onChangeStatus={handleChangeStatus}
           isChangingStatus={isPublishing}
-          onOpenPublishModal={() => setIsPublishModalOpen(true)}
         />
       )}
 

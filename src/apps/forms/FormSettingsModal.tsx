@@ -12,7 +12,6 @@ interface FormSettingsModalProps {
   onOpenPublicPreview: () => void;
   onChangeStatus: (status: FormStatus) => void | Promise<void>;
   isChangingStatus: boolean;
-  onOpenPublishModal: () => void;
 }
 
 type SettingsTab = 'general' | 'theme' | 'sharing';
@@ -30,8 +29,7 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
   onChange,
   onOpenPublicPreview,
   onChangeStatus,
-  isChangingStatus,
-  onOpenPublishModal
+  isChangingStatus
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -119,7 +117,6 @@ export const FormSettingsModal: React.FC<FormSettingsModalProps> = ({
               onOpenPublicPreview={onOpenPublicPreview}
               onChangeStatus={onChangeStatus}
               isChangingStatus={isChangingStatus}
-              onOpenPublishModal={onOpenPublishModal}
             />
           )}
         </div>
