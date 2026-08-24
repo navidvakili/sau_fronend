@@ -145,20 +145,30 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   }, [initialPageId]);
 
   // Recursively ensure every column has a subSections array (heals legacy schemas
-  // created before the key existed, preventing renderer crashes)
+  // created before the key existed, preventing renderer crashes). Nested sections are
+  // read from getColumnBlocks (blocks is the source of truth), not the raw subSections
+  // field — otherwise a sub-block authored only in `blocks` (no mirrored `subSections`)
+  // never gets recursed into, and its own descendants stay un-normalized.
   const normalizeSubSections = (sections: SectionInstance[]): SectionInstance[] =>
     sections.map((sec) => ({
       ...sec,
       columns: (sec.columns ?? []).map((col) => {
-        const normalized: ColumnInstance = {
+        const rawBlocks = getColumnBlocks(col);
+        const normalizedSubs = normalizeSubSections(
+          rawBlocks
+            .filter((b): b is Extract<ColumnBlock, { kind: 'section' }> => b.kind === 'section')
+            .map((b) => b.section)
+        );
+        const subById = new Map(normalizedSubs.map((s) => [s.id, s]));
+        const finalBlocks: ColumnBlock[] = rawBlocks.map((b) =>
+          b.kind === 'section' && subById.has(b.section.id) ? { ...b, section: subById.get(b.section.id)! } : b
+        );
+        const base: ColumnInstance = {
           ...col,
           widgets: Array.isArray(col.widgets) ? col.widgets : [],
-          subSections: Array.isArray(col.subSections)
-            ? normalizeSubSections(col.subSections)
-            : [],
         };
-        // blocks را می‌سازد (اگر نبود) — ترتیب legacy (ویجت‌ها اول، بعد زیربلوک‌ها) حفظ می‌شود
-        return setColumnBlocks(normalized, getColumnBlocks(normalized));
+        // blocks را می‌سازد (اگر نبود) و subSections/widgets را از همان همگام می‌کند
+        return setColumnBlocks(base, finalBlocks);
       }),
     }));
 
@@ -469,12 +479,21 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
   // ============ Helpers بازگشتی — سکشن‌های تودرتو (بلوک و زیربلوک) ============
 
+  /** زیربلوک‌های واقعی یک ستون — منبع اصلی «blocks» است، subSections فقط فالبک قدیمی؛
+   *  هر جای این فایل که باید داخل زیربلوک‌های یک ستون بگردد باید از همین تابع استفاده کند،
+   *  وگرنه سکشن‌هایی که فقط در blocks هستند (و در subSections تکرار نشده‌اند) در جستجوها
+   *  دیده نمی‌شوند — همان چیزی که باعث خالی ماندن پالت تنظیمات برای زیربلوک‌های چندستونه می‌شد */
+  const getColumnSubSections = (col: ColumnInstance): SectionInstance[] =>
+    getColumnBlocks(col)
+      .filter((b): b is Extract<ColumnBlock, { kind: 'section' }> => b.kind === 'section')
+      .map((b) => b.section);
+
   /** جستجوی بازگشتی یک سکشن در کل درخت (سطح اصلی یا زیربلوک‌های داخل ستون‌ها) */
   const findSectionRecursive = (sections: SectionInstance[], id: string): SectionInstance | null => {
     for (const s of sections) {
       if (s.id === id) return s;
       for (const col of s.columns) {
-        const found = findSectionRecursive(col.subSections || [], id);
+        const found = findSectionRecursive(getColumnSubSections(col), id);
         if (found) return found;
       }
     }
@@ -488,7 +507,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         const blocks = getColumnBlocks(col);
         const found = blocks.find((b) => b.kind === 'widget' && b.widget.id === widgetId);
         if (found && found.kind === 'widget') return found.widget;
-        const inSub = findWidgetInTree(col.subSections || [], widgetId);
+        const inSub = findWidgetInTree(getColumnSubSections(col), widgetId);
         if (inSub) return inSub;
       }
     }
@@ -506,7 +525,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       return {
         ...mapped,
         columns: (mapped.columns || []).map((col) => {
-          const newSubs = col.subSections ? mapSectionsRecursive(col.subSections, fn) : undefined;
+          const subs = getColumnSubSections(col);
+          const newSubs = subs.length > 0 ? mapSectionsRecursive(subs, fn) : undefined;
           if (Array.isArray(col.blocks) && col.blocks.length > 0) {
             const subById = new Map((newSubs ?? []).map((s) => [s.id, s]));
             return {
@@ -535,7 +555,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       .map((s) => ({
         ...s,
         columns: (s.columns || []).map((col) => {
-          const newSubs = col.subSections ? removeSectionRecursive(col.subSections, id) : undefined;
+          const subs = getColumnSubSections(col);
+          const newSubs = subs.length > 0 ? removeSectionRecursive(subs, id) : undefined;
           if (Array.isArray(col.blocks) && col.blocks.length > 0) {
             const subById = new Map((newSubs ?? []).map((sub) => [sub.id, sub]));
             return {
@@ -557,12 +578,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   /** آیا سکشن sec حاوی سکشن id در زیردرخت خود است؟ (برای جابه‌جایی بلوک) */
   const containsSection = (sec: SectionInstance, id: string): boolean =>
     sec.id === id ||
-    sec.columns.some((col) => (col.subSections || []).some((sub) => containsSection(sub, id)));
+    sec.columns.some((col) => getColumnSubSections(col).some((sub) => containsSection(sub, id)));
 
   /** آیا ستون colId در زیردرخت سکشن sec قرار دارد؟ (جلوگیری از تودرتویی خودارجاع) */
   const isColumnInSection = (sec: SectionInstance, colId: string): boolean =>
     sec.columns.some(
-      (col) => col.id === colId || (col.subSections || []).some((sub) => isColumnInSection(sub, colId))
+      (col) => col.id === colId || getColumnSubSections(col).some((sub) => isColumnInSection(sub, colId))
     );
 
   // Find currently selected items (بازگشتی — ویجت/ستون ممکن است داخل زیربلوک باشد)
@@ -577,14 +598,14 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       if (sec.id === selectedSectionId) currentSection = sec;
       for (const col of sec.columns) {
         if (col.id === selectedColumnId) currentColumn = col;
-        const w = (col.widgets ?? []).find((item) => item.id === selectedWidgetId);
-        if (w) {
-          currentWidget = w;
+        const wBlock = getColumnBlocks(col).find((b) => b.kind === 'widget' && b.widget.id === selectedWidgetId);
+        if (wBlock && wBlock.kind === 'widget') {
+          currentWidget = wBlock.widget;
           currentColumn = col;
           if (!currentSection) currentSection = sec;
           return true;
         }
-        if (col.subSections && findSelection(col.subSections)) return true;
+        if (findSelection(getColumnSubSections(col))) return true;
       }
     }
     return !!currentWidget;
@@ -1363,7 +1384,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
     // والد سطح اصلی که این سکشن داخل زیردرخت آن است (یا خودش اگر سطح اصلی باشد)
     const topLevelIdx = pageSchema.sections.findIndex(
-      s => s.id === sectionId || s.columns.some(col => (col.subSections || []).some(sub => containsSection(sub, sectionId)))
+      s => s.id === sectionId || s.columns.some(col => getColumnSubSections(col).some(sub => containsSection(sub, sectionId)))
     );
     if (topLevelIdx === -1) return;
 

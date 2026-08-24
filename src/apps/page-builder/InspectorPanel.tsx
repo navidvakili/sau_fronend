@@ -663,6 +663,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
+              {selectedWidget.type === 'stat-card' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">مقدار آمار</label>
+                  <input
+                    type="text"
+                    value={selectedWidget.content}
+                    onChange={(e) => onUpdateWidget({ ...selectedWidget, content: e.target.value })}
+                    placeholder="مثال: ۱,۴۲۰+"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-black text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                  <p className="text-[10px] text-slate-400">این مقدار همراه با «عنوان ویجت» (به‌عنوان برچسب بالای کارت) روی کارت آمار نمایش داده می‌شود.</p>
+                </div>
+              )}
+
               {selectedWidget.type === 'image' && (
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">آدرس اینترنتی تصویر (URL)</label>
