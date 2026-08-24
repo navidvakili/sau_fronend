@@ -609,14 +609,16 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
       </div>
 
       {/* Footer Controls */}
-      <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-        <button
-          onClick={handlePrev}
-          disabled={currentStepIndex === 0 && currentPageIndex === 0}
-          className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-        >
-          <ArrowRight className="w-4 h-4" /> صفحه قبلی
-        </button>
+      <div className={`p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex items-center ${steps.length > 1 || totalPages > 1 ? 'justify-between' : 'justify-end'}`}>
+        {(steps.length > 1 || totalPages > 1) && (
+          <button
+            onClick={handlePrev}
+            disabled={currentStepIndex === 0 && currentPageIndex === 0}
+            className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <ArrowRight className="w-4 h-4" /> صفحه قبلی
+          </button>
+        )}
 
         <button
           onClick={handleNext}

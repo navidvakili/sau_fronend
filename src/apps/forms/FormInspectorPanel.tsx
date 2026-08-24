@@ -34,7 +34,8 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
-  Palette
+  Palette,
+  GripVertical
 } from 'lucide-react';
 import {
   FormDefinition,
@@ -64,6 +65,8 @@ export default function FormInspectorPanel({
   onDuplicateField
 }: FormInspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('general');
+  const [draggedOptionIndex, setDraggedOptionIndex] = useState<number | null>(null);
+  const [dragOverOptionIndex, setDragOverOptionIndex] = useState<number | null>(null);
 
   if (!selectedField) {
     return (
@@ -142,6 +145,37 @@ export default function FormInspectorPanel({
     const currentOptions = [...(selectedField.options || [])];
     currentOptions.splice(index, 1);
     updateProp('options', currentOptions);
+  };
+
+  // جابجایی گزینه‌ها با کشیدن‌و‌رهاکردن (DnD)
+  const handleReorderOption = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const currentOptions = [...(selectedField.options || [])];
+    const [moved] = currentOptions.splice(fromIndex, 1);
+    currentOptions.splice(toIndex, 0, moved);
+    updateProp('options', currentOptions);
+  };
+
+  const handleOptionDragStart = (index: number) => {
+    setDraggedOptionIndex(index);
+  };
+
+  const handleOptionDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragOverOptionIndex !== index) setDragOverOptionIndex(index);
+  };
+
+  const handleOptionDrop = (index: number) => {
+    if (draggedOptionIndex !== null) {
+      handleReorderOption(draggedOptionIndex, index);
+    }
+    setDraggedOptionIndex(null);
+    setDragOverOptionIndex(null);
+  };
+
+  const handleOptionDragEnd = () => {
+    setDraggedOptionIndex(null);
+    setDragOverOptionIndex(null);
   };
 
   // Matrix Row & Col Handlers
@@ -977,7 +1011,27 @@ export default function FormInspectorPanel({
 
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {(selectedField.options || []).map((opt, idx) => (
-                    <div key={opt.id || idx} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-xl border border-gray-200 dark:border-slate-800">
+                    <div
+                      key={opt.id || idx}
+                      draggable
+                      onDragStart={() => handleOptionDragStart(idx)}
+                      onDragOver={e => handleOptionDragOver(e, idx)}
+                      onDrop={() => handleOptionDrop(idx)}
+                      onDragEnd={handleOptionDragEnd}
+                      className={`flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-xl border transition-all ${
+                        draggedOptionIndex === idx
+                          ? 'opacity-40 border-dashed border-teal-400'
+                          : dragOverOptionIndex === idx && draggedOptionIndex !== null && draggedOptionIndex !== idx
+                          ? 'border-teal-500 ring-2 ring-teal-500/20'
+                          : 'border-gray-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <span
+                        className="p-0.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing shrink-0"
+                        title="برای جابجایی بکشید"
+                      >
+                        <GripVertical className="w-3.5 h-3.5" />
+                      </span>
                       <span className="text-[10px] text-slate-400 w-4 text-center">{idx + 1}</span>
                       <input
                         type="text"
