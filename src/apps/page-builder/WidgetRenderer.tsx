@@ -4636,7 +4636,15 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       return isEditorPreview ? null : <FileManagerWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'form':
-      return isEditorPreview ? null : <FormEmbedWidget binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? (
+        <div style={containerStyle} className="p-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 text-center">
+          {binding.formId
+            ? 'جاسازی فرم — محتوای فرم در پیش‌نمایش/انتشار نمایش داده می‌شود'
+            : 'هنوز فرمی برای این بلوک انتخاب نشده — از پنل تنظیمات یک فرم منتشرشده انتخاب کنید.'}
+        </div>
+      ) : (
+        <FormEmbedWidget binding={binding} containerStyle={containerStyle} />
+      );
 
     // بلوک‌های صفحات اختصاصی — اتصال به یک DedicatedPage مشخص (binding.dedicatedPageId)
     case 'dp-news':
