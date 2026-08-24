@@ -182,35 +182,8 @@ export const Canvas: React.FC<CanvasProps> = ({
           zIndex: sec.zIndex || undefined,
           // برای fixed/sticky معمولاً چسبیدن به بالای صفحه کافی است
           top: sec.position === 'fixed' || sec.position === 'sticky' ? 0 : undefined,
-          backgroundColor:
-            sec.backgroundImage || sec.backgroundGradient
-              ? undefined
-              : sec.backgroundColor
-                ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
-                : undefined,
-          backgroundImage: buildSectionBackgroundImage(sec),
-          // وقتی تصویر پس‌زمینه هست، پیش‌فرض cover/center/no-repeat — نه auto (وگرنه تصویر با اندازهٔ طبیعی کوچک دیده می‌شود)
-          backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
-          backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
-          backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
           marginTop: sec.marginTop !== undefined ? `${sec.marginTop}px` : undefined,
-          marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined,
-          boxShadow: resolveBoxShadow(sec.boxShadow),
-          paddingTop: `${sec.paddingTop}px`,
-          paddingBottom: `${sec.paddingBottom}px`,
-          paddingLeft: sec.paddingLeft !== undefined ? `${sec.paddingLeft}px` : undefined,
-          paddingRight: sec.paddingRight !== undefined ? `${sec.paddingRight}px` : undefined,
-          // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
-          borderRadius: sec.borderRadius
-            ? [
-                sec.borderRadius.topLeft,
-                sec.borderRadius.topRight,
-                sec.borderRadius.bottomRight,
-                sec.borderRadius.bottomLeft
-              ]
-                .map((v) => (v ? `${v}px` : '0px'))
-                .join(' ')
-            : undefined
+          marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined
         }}
         className={`relative group transition-all border-2 ${
           isSecSelected
@@ -305,8 +278,41 @@ export const Canvas: React.FC<CanvasProps> = ({
           </button>
         </div>
 
-        {/* Section Content Container (Boxed or Full Width) */}
-        <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
+        {/* Section Content Container (Boxed or Full Width) — پس‌زمینه/سایه/گردی گوشه/پدینگ
+            سکشن هم روی همین لایه اعمال می‌شود تا برای layout=boxed کل «کارت» باکس‌بندی شود،
+            نه فقط گرید ستون‌ها */}
+        <div
+          className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}
+          style={{
+            backgroundColor:
+              sec.backgroundImage || sec.backgroundGradient
+                ? undefined
+                : sec.backgroundColor
+                  ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                  : undefined,
+            backgroundImage: buildSectionBackgroundImage(sec),
+            // وقتی تصویر پس‌زمینه هست، پیش‌فرض cover/center/no-repeat — نه auto (وگرنه تصویر با اندازهٔ طبیعی کوچک دیده می‌شود)
+            backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
+            backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
+            backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
+            boxShadow: resolveBoxShadow(sec.boxShadow),
+            paddingTop: `${sec.paddingTop}px`,
+            paddingBottom: `${sec.paddingBottom}px`,
+            paddingLeft: sec.paddingLeft !== undefined ? `${sec.paddingLeft}px` : undefined,
+            paddingRight: sec.paddingRight !== undefined ? `${sec.paddingRight}px` : undefined,
+            // شعاع گوشه‌های جداگانه (مانند فتوشاپ) — ترتیب CSS: TL TR BR BL
+            borderRadius: sec.borderRadius
+              ? [
+                  sec.borderRadius.topLeft,
+                  sec.borderRadius.topRight,
+                  sec.borderRadius.bottomRight,
+                  sec.borderRadius.bottomLeft
+                ]
+                  .map((v) => (v ? `${v}px` : '0px'))
+                  .join(' ')
+              : undefined
+          }}
+        >
           <div className="grid grid-cols-12 gap-4 md:gap-6">
             {sec.columns.map((col) => {
               const isColSelected = selectedColumnId === col.id;
