@@ -310,6 +310,9 @@ export default function PageWizardModal({
     if (reg?.isDisabled) return;
 
     setPageType(typeId);
+    if (typeId !== 'interactive_survey') {
+      setFormId('');
+    }
     if (reg) {
       setAccentColor(reg.color);
       if (typeId === 'faculty_member') {
@@ -1309,40 +1312,31 @@ export default function PageWizardModal({
                 </div>
               </div>
 
-              {/* Attached Form */}
-              <div
-                className={`p-4 rounded-2xl border space-y-2 ${
-                  pageType === 'interactive_survey'
-                    ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60'
-                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                  فرم متصل به این صفحه {pageType === 'interactive_survey' ? '(الزامی)' : '(اختیاری)'}
-                </label>
-                <p className="text-[11px] text-slate-500">
-                  {pageType === 'interactive_survey'
-                    ? 'برای صفحات پرسشنامه و نظرسنجی تعاملی، انتخاب یک فرم الزامی است — آدرس این صفحه مستقیماً همان فرم را نشان می‌دهد.'
-                    : 'اگر فرمی انتخاب و منتشر شده باشد، آدرس این صفحه به‌جای محتوای معمولی، همان فرم را نشان می‌دهد.'}
-                </p>
-                <select
-                  value={formId}
-                  onChange={e => setFormId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
-                >
-                  {pageType !== 'interactive_survey' && (
-                    <option value="">بدون فرم — محتوای معمولی صفحه نمایش داده شود</option>
-                  )}
-                  {pageType === 'interactive_survey' && !formId && (
-                    <option value="" disabled>یک فرم انتخاب کنید...</option>
-                  )}
-                  {availableForms.map(f => (
-                    <option key={f.id} value={f.id}>
-                      {f.title} {f.status === 'published' ? '(منتشرشده)' : '(پیش‌نویس)'}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Attached Form — فقط برای صفحات از نوع پرسشنامه و نظرسنجی تعاملی */}
+              {pageType === 'interactive_survey' && (
+                <div className="p-4 rounded-2xl border space-y-2 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/60">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                    فرم متصل به این صفحه (الزامی)
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    برای صفحات پرسشنامه و نظرسنجی تعاملی، انتخاب یک فرم الزامی است — آدرس این صفحه مستقیماً همان فرم را نشان می‌دهد.
+                  </p>
+                  <select
+                    value={formId}
+                    onChange={e => setFormId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                  >
+                    {!formId && (
+                      <option value="" disabled>یک فرم انتخاب کنید...</option>
+                    )}
+                    {availableForms.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.title} {f.status === 'published' ? '(منتشرشده)' : '(پیش‌نویس)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Visibility Options */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
