@@ -146,6 +146,7 @@ export default function FormTemplateLibraryModal({
           validation: { required: true }
         }
       ],
+      layoutBlocks: [],
       logicRules: [],
       quizConfig: {
         isQuiz: tplId.includes('quiz'),

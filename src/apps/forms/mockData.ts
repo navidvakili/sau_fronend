@@ -126,6 +126,7 @@ export const sampleForms: FormDefinition[] = [
         validation: { allowedExtensions: ['.pdf', '.jpg', '.png'], maxFileSizeMb: 5 }
       }
     ],
+    layoutBlocks: [],
     logicRules: [
       {
         id: 'lr_1',
@@ -313,6 +314,7 @@ export const sampleForms: FormDefinition[] = [
         columnWidth: '100%'
       }
     ],
+    layoutBlocks: [],
     logicRules: [],
     quizConfig: {
       isQuiz: false,
@@ -469,6 +471,7 @@ export const sampleForms: FormDefinition[] = [
         ]
       }
     ],
+    layoutBlocks: [],
     logicRules: [],
     quizConfig: {
       isQuiz: true,
@@ -614,6 +617,7 @@ export const sampleForms: FormDefinition[] = [
         validation: { required: true }
       }
     ],
+    layoutBlocks: [],
     logicRules: [
       {
         id: 'lr_p1',

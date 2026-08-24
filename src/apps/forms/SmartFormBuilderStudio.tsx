@@ -270,6 +270,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       updatedAt: '۱۴۰۵/۰۵/۱۰',
       steps: [{ id: 's1', title: 'گام نخست', order: 1 }],
       fields: [],
+      layoutBlocks: [],
       logicRules: [],
       quizConfig: {
         isQuiz: type === 'quiz',

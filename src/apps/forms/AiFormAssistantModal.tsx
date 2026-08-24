@@ -136,6 +136,7 @@ export const AiFormAssistantModal: React.FC<AiFormAssistantModalProps> = ({
         version: 1,
         steps: [{ id: 's_ai', title: 'گام اصلی پرسشنامه', order: 1 }],
         fields: generatedFields.map(f => ({ ...f, stepId: f.stepId || 's_ai' })),
+        layoutBlocks: [],
         logicRules: [],
         quizConfig: {
           isQuiz: formType === 'quiz',

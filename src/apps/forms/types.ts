@@ -145,6 +145,8 @@ export interface FormField {
   stepId?: string; // Step page assignment
   sectionTitle?: string;
   order?: number;
+  layoutBlockId?: string; // اگر ست شده باشد، فیلد داخل یک بلوک ستونی قرار دارد
+  layoutColumnId?: string; // ستون این بلوک که فیلد در آن است
 
   // General State Flags
   disabled?: boolean;
@@ -238,6 +240,25 @@ export interface FormStep {
     mode: 'all' | 'pagination';
     fieldsPerPage?: number;
   };
+}
+
+/** ستون یک بلوک چیدمانی — فهرست شناسهٔ فیلدهای داخل آن به ترتیب نمایش */
+export interface FormLayoutColumn {
+  id: string;
+  fieldIds: string[];
+}
+
+/** بلوک چیدمانی تک/دو/سه‌ستونهٔ مساوی — دقیقاً مثل ColumnInstance در صفحه‌ساز هوشمند اما بدون عرض متغیر */
+export interface FormLayoutBlock {
+  id: string;
+  stepId: string;
+  columns: FormLayoutColumn[]; // طول ۱، ۲ یا ۳
+  /**
+   * فقط وقتی بلوک هنوز هیچ فیلدی ندارد استفاده می‌شود: شناسهٔ فیلدی که این بلوک بلافاصله
+   * بعد از آن قرار دارد (یا null برای ابتدای گام) — چون موقعیت بلوک معمولاً از روی اولین
+   * فیلد عضوش تعیین می‌شود و بلوک خالی چنین فیلدی ندارد تا لنگر بگیرد.
+   */
+  afterFieldId?: string | null;
 }
 
 export type LogicOperator = 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'is_empty' | 'is_not_empty';
@@ -413,6 +434,7 @@ export interface FormDefinition {
   publishedAt?: string;
   steps: FormStep[];
   fields: FormField[];
+  layoutBlocks: FormLayoutBlock[];
   logicRules: LogicRule[];
   quizConfig: FormQuizConfig;
   theme: FormTheme;

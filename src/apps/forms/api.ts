@@ -31,6 +31,7 @@ interface FormRowDto {
   tags: string[] | null;
   steps: FormDefinition['steps'] | null;
   fields: FormDefinition['fields'] | null;
+  layout_blocks: FormDefinition['layoutBlocks'] | null;
   logic_rules: FormDefinition['logicRules'] | null;
   quiz_config: FormDefinition['quizConfig'] | null;
   theme: FormDefinition['theme'] | null;
@@ -77,6 +78,7 @@ const toFormDefinition = (row: FormRowDto): FormDefinition => ({
   publishedAt: row.published_at || undefined,
   steps: row.steps || [],
   fields: row.fields || [],
+  layoutBlocks: row.layout_blocks || [],
   logicRules: row.logic_rules || [],
   quizConfig: row.quiz_config || {
     isQuiz: row.type === 'quiz',
@@ -148,6 +150,7 @@ const toPayload = (form: Partial<FormDefinition>): Record<string, any> => {
   if (form.tags !== undefined) payload.tags = form.tags;
   if (form.steps !== undefined) payload.steps = form.steps;
   if (form.fields !== undefined) payload.fields = form.fields;
+  if (form.layoutBlocks !== undefined) payload.layout_blocks = form.layoutBlocks;
   if (form.logicRules !== undefined) payload.logic_rules = form.logicRules;
   if (form.quizConfig !== undefined) payload.quiz_config = form.quizConfig;
   if (form.theme !== undefined) payload.theme = form.theme;
