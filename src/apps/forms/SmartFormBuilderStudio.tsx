@@ -395,15 +395,33 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             F
           </div>
           <div>
-            <h1 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-              <span>سیستم هوشمند فرم‌ساز و پرسشنامه‌ساز دیداری</span>
-              <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-bold">
-                v2.4 Pro
-              </span>
-            </h1>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">
-              {activeForm ? activeForm.title : 'Visual Form & Survey Intelligence Engine'}
-            </p>
+            {activeForm ? (
+              <>
+                <input
+                  type="text"
+                  value={activeForm.title}
+                  onChange={e => handleUpdateActiveForm({ ...activeForm, title: e.target.value })}
+                  className="w-64 md:w-96 text-xs font-black text-slate-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-slate-700 focus:border-teal-500 focus:outline-none px-0.5 -mx-0.5"
+                />
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-bold">
+                    v2.4 Pro
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>سیستم هوشمند فرم‌ساز و پرسشنامه‌ساز دیداری</span>
+                  <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-bold">
+                    v2.4 Pro
+                  </span>
+                </h1>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Visual Form & Survey Intelligence Engine
+                </p>
+              </>
+            )}
           </div>
         </div>
 
