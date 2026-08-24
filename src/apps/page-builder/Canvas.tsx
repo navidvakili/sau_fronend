@@ -322,7 +322,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                   data-col-id={col.id}
                   style={{
                     gridColumn: `span ${getColumnWidth(col, activeBreakpoint)} / span ${getColumnWidth(col, activeBreakpoint)}`,
-                    backgroundColor: col.style?.backgroundColor
+                    backgroundColor: col.style?.backgroundColor,
+                    position: col.position || undefined,
+                    zIndex: col.zIndex || undefined,
+                    top: col.position === 'fixed' || col.position === 'sticky' ? `${col.offsetTop ?? 0}px` : undefined
                   }}
                   onClick={(e) => {
                     e.stopPropagation();

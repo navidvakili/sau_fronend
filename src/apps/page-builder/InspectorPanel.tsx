@@ -58,7 +58,8 @@ import {
   Pencil,
   Upload,
   FileSpreadsheet,
-  FileX
+  FileX,
+  Pin as PinIcon
 } from 'lucide-react';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
@@ -146,6 +147,8 @@ interface InspectorPanelProps {
   onUpdateSection: (updated: SectionInstance) => void;
   onUpdateSectionColumnLayout?: (sectionId: string, preset: '1col' | '2col' | '3col' | '4col' | '7-5' | '8-4') => void;
   onUpdateColumnWidth?: (sectionId: string, columnId: string, bp: Breakpoint, value: number) => void;
+  /** به‌روزرسانی خصوصیات یک ستون (مثلاً موقعیت چسبان/ثابت برای سایدبار) — نه کل سکشن */
+  onUpdateColumn?: (sectionId: string, columnId: string, patch: Partial<ColumnInstance>) => void;
   onDeleteWidget: (widgetId: string) => void;
   onDeleteSection: (sectionId: string) => void;
   onDuplicateWidget: (widget: WidgetInstance) => void;
@@ -165,6 +168,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onUpdateSection,
   onUpdateSectionColumnLayout,
   onUpdateColumnWidth,
+  onUpdateColumn,
   onDeleteWidget,
   onDeleteSection,
   onDuplicateWidget,
@@ -3621,6 +3625,71 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {selectedColumn && onUpdateColumn && (
+            <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-slate-800">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <PinIcon className="w-3.5 h-3.5 text-teal-500" />
+                موقعیت ستون انتخاب‌شده (سایدبار چسبان/ثابت)
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">موقعیت</label>
+                  <select
+                    value={selectedColumn.position || 'static'}
+                    onChange={(e) =>
+                      onUpdateColumn(selectedSection.id, selectedColumn.id, {
+                        position: (e.target.value || 'static') as ColumnInstance['position']
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="static">معمولی (static)</option>
+                    <option value="relative">نسبی (relative)</option>
+                    <option value="sticky">چسبان (sticky)</option>
+                    <option value="fixed">ثابت (fixed)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">لایه (z-index)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedColumn.zIndex ?? ''}
+                    placeholder="خودکار"
+                    onChange={(e) =>
+                      onUpdateColumn(selectedSection.id, selectedColumn.id, {
+                        zIndex: e.target.value === '' ? undefined : parseInt(e.target.value) || 0
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {(selectedColumn.position === 'sticky' || selectedColumn.position === 'fixed') && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">فاصله از بالا هنگام چسبیدن (px)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={selectedColumn.offsetTop ?? 0}
+                    onChange={(e) =>
+                      onUpdateColumn(selectedSection.id, selectedColumn.id, {
+                        offsetTop: parseInt(e.target.value) || 0
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
+
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                برخلاف «موقعیت سکشن» که کل ردیف را می‌چسباند، این فقط همین ستون را کنار ستون‌های دیگر چسبان/ثابت می‌کند — مناسب سایدبار میانبرها که هنگام اسکرول محتوای اصلی ثابت می‌ماند. با «چسبان (sticky)» ستون فقط تا پایان ارتفاع سکشن با شما همراه است.
+              </p>
             </div>
           )}
 

@@ -315,6 +315,17 @@ export const TabSectionEditorModal: React.FC<TabSectionEditorModalProps> = ({ op
     setLocalSection(applyToSection(localSection));
   };
 
+  const handleUpdateColumn = (secId: string, colId: string, patch: Partial<ColumnInstance>) => {
+    const applyToSection = (sec: SectionInstance): SectionInstance => ({
+      ...sec,
+      columns: sec.columns.map((col) => {
+        if (col.id !== colId) return { ...col, subSections: (col.subSections || []).map(applyToSection) };
+        return { ...col, ...patch };
+      })
+    });
+    setLocalSection(applyToSection(localSection));
+  };
+
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3">
       <div className="w-full h-full max-w-[1600px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -386,6 +397,7 @@ export const TabSectionEditorModal: React.FC<TabSectionEditorModalProps> = ({ op
             onUpdateSection={handleUpdateSection}
             onUpdateSectionColumnLayout={handleUpdateSectionColumnLayout}
             onUpdateColumnWidth={handleUpdateColumnWidth}
+            onUpdateColumn={handleUpdateColumn}
             onDeleteWidget={handleDeleteWidget}
             onDeleteSection={handleDeleteSection}
             onDuplicateWidget={handleDuplicateWidget}

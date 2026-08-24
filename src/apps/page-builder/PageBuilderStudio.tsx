@@ -961,6 +961,17 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     pushState({ ...pageSchema, sections: updatedSections });
   };
 
+  const handleUpdateColumn = (secId: string, colId: string, patch: Partial<ColumnInstance>) => {
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => {
+      if (sec.id !== secId) return sec;
+      return {
+        ...sec,
+        columns: sec.columns.map(col => (col.id === colId ? { ...col, ...patch } : col))
+      };
+    });
+    pushState({ ...pageSchema, sections: updatedSections });
+  };
+
   // Adding new Widget
   const handleAddWidget = (widgetType: WidgetType, targetColumnId?: string) => {
     const colId = targetColumnId || selectedColumnId || pageSchema.sections[0]?.columns[0]?.id;
@@ -1823,6 +1834,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onUpdateSection={handleUpdateSection}
           onUpdateSectionColumnLayout={handleUpdateSectionColumnLayout}
           onUpdateColumnWidth={handleUpdateColumnWidth}
+          onUpdateColumn={handleUpdateColumn}
           onDeleteWidget={handleDeleteWidget}
           onDeleteSection={handleDeleteSection}
           onDuplicateWidget={handleDuplicateWidget}
