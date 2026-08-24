@@ -2748,136 +2748,144 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           {/* TAB 2: STYLES & TYPOGRAPHY */}
           {inspectorTab === 'style' && (
             <div className="space-y-4">
-              {/* Text Color & Background Color */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ متن</label>
-                  <input
-                    type="color"
-                    value={selectedWidget.settings.style.textColor || '#000000'}
-                    onChange={(e) => handleStyleChange('textColor', e.target.value)}
-                    className="w-full h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه</label>
-                  <div className="flex items-center gap-1.5">
-                    <ColorBox
-                      value={selectedWidget.settings.style.backgroundColor}
-                      onChange={(color) => handleStyleChange('backgroundColor', color)}
-                      className="flex-1 min-w-0 h-9"
+              {/* Text Color & Background Color — برای خط جداکننده معنا ندارد */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ متن</label>
+                    <input
+                      type="color"
+                      value={selectedWidget.settings.style.textColor || '#000000'}
+                      onChange={(e) => handleStyleChange('textColor', e.target.value)}
+                      className="w-full h-9 rounded-xl border border-gray-200 dark:border-slate-800 cursor-pointer bg-slate-50 dark:bg-slate-950 p-1"
                     />
-                    <button
-                      type="button"
-                      title="حذف رنگ پس‌زمینه"
-                      onClick={() => handleStyleChange('backgroundColor', undefined)}
-                      className="px-2 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shrink-0"
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه</label>
+                    <div className="flex items-center gap-1.5">
+                      <ColorBox
+                        value={selectedWidget.settings.style.backgroundColor}
+                        onChange={(color) => handleStyleChange('backgroundColor', color)}
+                        className="flex-1 min-w-0 h-9"
+                      />
+                      <button
+                        type="button"
+                        title="حذف رنگ پس‌زمینه"
+                        onClick={() => handleStyleChange('backgroundColor', undefined)}
+                        className="px-2 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shrink-0"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Widget Background Gradient — colorpicker with stops + angle — برای خط جداکننده معنا ندارد */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    گرادیان پس‌زمینه ویجت (اختیاری)
+                  </label>
+                  {selectedWidget.settings.style.backgroundGradient ? (
+                    <>
+                      <GradientPicker
+                        value={selectedWidget.settings.style.backgroundGradient}
+                        onChange={(css) => handleStyleChange('backgroundGradient', css)}
+                      />
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleStyleChange('backgroundGradient', undefined)}
+                          className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                        >
+                          حذف گرادیان
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+                        { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+                        { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
+                        { label: 'نقره‌ای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handleStyleChange('backgroundGradient', preset.value)}
+                          className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Font Size & Weight — برای خط جداکننده معنا ندارد */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه قلم</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 18px"
+                      value={selectedWidget.settings.style.fontSize || ''}
+                      onChange={(e) => handleStyleChange('fontSize', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">وزن متنی</label>
+                    <select
+                      value={selectedWidget.settings.style.fontWeight || '400'}
+                      onChange={(e) => handleStyleChange('fontWeight', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                     >
-                      حذف
+                      <option value="400">عادی (400)</option>
+                      <option value="600">نیمه ضخیم (600)</option>
+                      <option value="700">ضخیم (700)</option>
+                      <option value="900">بسیار ضخیم (900)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Text Alignment — برای خط جداکننده معنا ندارد (به‌جای آن تراز راست/چپ خودِ خط پایین‌تر است) */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ترازبندی متن</label>
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-gray-200 dark:border-slate-800">
+                    <button
+                      onClick={() => handleStyleChange('textAlign', 'right')}
+                      className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
+                        selectedWidget.settings.style.textAlign === 'right' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
+                      }`}
+                    >
+                      <AlignRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleStyleChange('textAlign', 'center')}
+                      className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
+                        selectedWidget.settings.style.textAlign === 'center' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
+                      }`}
+                    >
+                      <AlignCenter className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleStyleChange('textAlign', 'left')}
+                      className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
+                        selectedWidget.settings.style.textAlign === 'left' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
+                      }`}
+                    >
+                      <AlignLeft className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Widget Background Gradient — colorpicker with stops + angle */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  گرادیان پس‌زمینه ویجت (اختیاری)
-                </label>
-                {selectedWidget.settings.style.backgroundGradient ? (
-                  <>
-                    <GradientPicker
-                      value={selectedWidget.settings.style.backgroundGradient}
-                      onChange={(css) => handleStyleChange('backgroundGradient', css)}
-                    />
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleStyleChange('backgroundGradient', undefined)}
-                        className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-                      >
-                        حذف گرادیان
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {[
-                      { label: 'تیره', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
-                      { label: 'آبی تیره', value: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
-                      { label: 'سرمه‌ای', value: 'linear-gradient(135deg, #0f766e 0%, #1e1b4b 100%)' },
-                      { label: 'نقره‌ای', value: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)' },
-                    ].map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => handleStyleChange('backgroundGradient', preset.value)}
-                        className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Font Size & Weight */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">اندازه قلم</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 18px"
-                    value={selectedWidget.settings.style.fontSize || ''}
-                    onChange={(e) => handleStyleChange('fontSize', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">وزن متنی</label>
-                  <select
-                    value={selectedWidget.settings.style.fontWeight || '400'}
-                    onChange={(e) => handleStyleChange('fontWeight', e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="400">عادی (400)</option>
-                    <option value="600">نیمه ضخیم (600)</option>
-                    <option value="700">ضخیم (700)</option>
-                    <option value="900">بسیار ضخیم (900)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Text Alignment */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ترازبندی متن</label>
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-gray-200 dark:border-slate-800">
-                  <button
-                    onClick={() => handleStyleChange('textAlign', 'right')}
-                    className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
-                      selectedWidget.settings.style.textAlign === 'right' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
-                    }`}
-                  >
-                    <AlignRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleStyleChange('textAlign', 'center')}
-                    className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
-                      selectedWidget.settings.style.textAlign === 'center' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
-                    }`}
-                  >
-                    <AlignCenter className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleStyleChange('textAlign', 'left')}
-                    className={`flex-1 py-1.5 rounded-lg flex justify-center text-xs font-bold cursor-pointer ${
-                      selectedWidget.settings.style.textAlign === 'left' ? 'bg-teal-500 text-slate-950' : 'text-slate-500'
-                    }`}
-                  >
-                    <AlignLeft className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              )}
 
               {/* ── تنظیمات لایه (هم‌سطح slider-studio) ── */}
 
@@ -2940,45 +2948,47 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </>
               )}
 
-              {/* Padding — all sides */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
-                  <input
-                    type="number"
-                    value={selectedWidget.settings.style.paddingTop || 0}
-                    onChange={(e) => handleStyleChange('paddingTop', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
+              {/* Padding — all sides — برای خط جداکننده معنا ندارد */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ بالا (px)</label>
+                    <input
+                      type="number"
+                      value={selectedWidget.settings.style.paddingTop || 0}
+                      onChange={(e) => handleStyleChange('paddingTop', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ پایین (px)</label>
+                    <input
+                      type="number"
+                      value={selectedWidget.settings.style.paddingBottom || 0}
+                      onChange={(e) => handleStyleChange('paddingBottom', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ راست (px)</label>
+                    <input
+                      type="number"
+                      value={selectedWidget.settings.style.paddingRight || 0}
+                      onChange={(e) => handleStyleChange('paddingRight', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ چپ (px)</label>
+                    <input
+                      type="number"
+                      value={selectedWidget.settings.style.paddingLeft || 0}
+                      onChange={(e) => handleStyleChange('paddingLeft', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ پایین (px)</label>
-                  <input
-                    type="number"
-                    value={selectedWidget.settings.style.paddingBottom || 0}
-                    onChange={(e) => handleStyleChange('paddingBottom', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ راست (px)</label>
-                  <input
-                    type="number"
-                    value={selectedWidget.settings.style.paddingRight || 0}
-                    onChange={(e) => handleStyleChange('paddingRight', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">پدینگ چپ (px)</label>
-                  <input
-                    type="number"
-                    value={selectedWidget.settings.style.paddingLeft || 0}
-                    onChange={(e) => handleStyleChange('paddingLeft', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Margin — all sides */}
               <div className="grid grid-cols-2 gap-2">
@@ -3020,66 +3030,71 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               </div>
 
-              {/* Per-corner border radius — Photoshop style */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">شعاع گوشه‌ها (px) — مانند فتوشاپ</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا راست</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={selectedWidget.settings.style.borderRadiusTopRight || 0}
-                      onChange={(e) => handleStyleChange('borderRadiusTopRight', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا چپ</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={selectedWidget.settings.style.borderRadiusTopLeft || 0}
-                      onChange={(e) => handleStyleChange('borderRadiusTopLeft', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین راست</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={selectedWidget.settings.style.borderRadiusBottomRight || 0}
-                      onChange={(e) => handleStyleChange('borderRadiusBottomRight', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین چپ</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={selectedWidget.settings.style.borderRadiusBottomLeft || 0}
-                      onChange={(e) => handleStyleChange('borderRadiusBottomLeft', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                    />
+              {/* Per-corner border radius — Photoshop style — برای خط جداکننده معنا ندارد */}
+              {selectedWidget.type !== 'divider' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">شعاع گوشه‌ها (px) — مانند فتوشاپ</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا راست</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={selectedWidget.settings.style.borderRadiusTopRight || 0}
+                        onChange={(e) => handleStyleChange('borderRadiusTopRight', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 block">بالا چپ</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={selectedWidget.settings.style.borderRadiusTopLeft || 0}
+                        onChange={(e) => handleStyleChange('borderRadiusTopLeft', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین راست</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={selectedWidget.settings.style.borderRadiusBottomRight || 0}
+                        onChange={(e) => handleStyleChange('borderRadiusBottomRight', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 block">پایین چپ</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={selectedWidget.settings.style.borderRadiusBottomLeft || 0}
+                        onChange={(e) => handleStyleChange('borderRadiusBottomLeft', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Border — width / style / color */}
+              {/* Border — width / style / color — برای خط جداکننده معنای «رنگ/ضخامت/نوع خودِ خط» را می‌دهد */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ضخامت خط دور (px)</label>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    {selectedWidget.type === 'divider' ? 'ضخامت خط (px)' : 'ضخامت خط دور (px)'}
+                  </label>
                   <input
                     type="number"
                     min={0}
                     value={selectedWidget.settings.style.borderWidth || 0}
                     onChange={(e) => {
                       const val = parseInt(e.target.value) || 0;
+                      const defaultColor = selectedWidget.type === 'divider' ? '#94a3b8' : '#ffffff';
                       const updates: Partial<WidgetStyle> = { borderWidth: val };
                       if (val > 0 && (!selectedWidget.settings.style.borderColor || selectedWidget.settings.style.borderColor === 'transparent')) {
-                        updates.borderColor = '#ffffff';
+                        updates.borderColor = defaultColor;
                       }
                       handleStyleChange('borderWidth', updates.borderWidth);
                       if (updates.borderColor) handleStyleChange('borderColor', updates.borderColor);
@@ -3101,13 +3116,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   </select>
                 </div>
               </div>
-              {(selectedWidget.settings.style.borderWidth || 0) > 0 && (
+              {(selectedWidget.type === 'divider' || (selectedWidget.settings.style.borderWidth || 0) > 0) && (
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ خط دور</label>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    {selectedWidget.type === 'divider' ? 'رنگ خط' : 'رنگ خط دور'}
+                  </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
-                      value={!selectedWidget.settings.style.borderColor || selectedWidget.settings.style.borderColor === 'transparent' ? '#0f172a' : selectedWidget.settings.style.borderColor}
+                      value={!selectedWidget.settings.style.borderColor || selectedWidget.settings.style.borderColor === 'transparent' ? (selectedWidget.type === 'divider' ? '#94a3b8' : '#0f172a') : selectedWidget.settings.style.borderColor}
                       onChange={(e) => handleStyleChange('borderColor', e.target.value)}
                       className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
                     />
@@ -3245,17 +3262,21 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </label>
               )}
 
-              {/* Width mode — همه ویجت‌ها (دکمه هم شامل می‌شود: تمام‌عرض/اندازه محتوا/وسط‌چین) */}
+              {/* Width mode — همه ویجت‌ها (تمام‌عرض/اندازه محتوا/وسط‌چین/راست‌چین/چپ‌چین — برای خط جداکننده همان تراز راست و چپ خط است) */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حالت عرض</label>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  {selectedWidget.type === 'divider' ? 'ترازبندی خط' : 'حالت عرض'}
+                </label>
                 <select
                   value={selectedWidget.settings.style.widthMode || 'full'}
-                  onChange={(e) => handleStyleChange('widthMode', e.target.value as 'full' | 'auto' | 'center')}
+                  onChange={(e) => handleStyleChange('widthMode', e.target.value as 'full' | 'auto' | 'center' | 'left' | 'right')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                 >
                   <option value="full">تمام‌عرض (پیش‌فرض)</option>
                   <option value="auto">اندازه محتوا</option>
                   <option value="center">اندازه محتوا — وسط‌چین</option>
+                  <option value="right">اندازه محتوا — راست‌چین</option>
+                  <option value="left">اندازه محتوا — چپ‌چین</option>
                 </select>
               </div>
 

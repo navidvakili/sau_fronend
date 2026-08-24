@@ -4211,6 +4211,22 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
   const style = widget.settings.style || {};
   const binding = widget.settings.binding || { dataSource: 'none' };
+  // برای خط جداکننده، borderWidth/borderColor/borderStyle/borderRadius معنای «رنگ/ضخامت/نوع
+  // خودِ خط» را دارند (روی خودِ <hr> اعمال می‌شوند در case مربوطه) نه یک قاب دور بلوک —
+  // پس از اعمال آن‌ها به عنوان border جعبهٔ containerStyle صرف‌نظر می‌کنیم
+  const isDivider = widget.type === 'divider';
+
+  // راست‌چین/چپ‌چین/وسط‌چین کردن ویجتِ کوچک‌تر از عرض کامل — با auto کردن حاشیهٔ سمتِ مقابل
+  // (فیزیکی، نه وابسته به RTL) — همان الگوی cardAlign در icon-box؛ اگر کاربر خودش حاشیهٔ آن
+  // سمت را دستی تنظیم کرده باشد، به‌جای auto همان مقدار دستی حفظ می‌شود
+  const alignMarginLeft =
+    style.widthMode === 'center' || style.widthMode === 'right'
+      ? 'auto'
+      : style.marginLeft !== undefined ? `${style.marginLeft}px` : undefined;
+  const alignMarginRight =
+    style.widthMode === 'center' || style.widthMode === 'left'
+      ? 'auto'
+      : style.marginRight !== undefined ? `${style.marginRight}px` : undefined;
 
   // Calculate container inline style (تنظیمات لایه — هم‌سطح slider-studio)
   const containerStyle: React.CSSProperties = {
@@ -4230,17 +4246,16 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     paddingRight: style.paddingRight !== undefined ? `${style.paddingRight}px` : undefined,
     marginTop: style.marginTop !== undefined ? `${style.marginTop}px` : undefined,
     marginBottom: style.marginBottom !== undefined ? `${style.marginBottom}px` : undefined,
-    marginLeft: style.marginLeft !== undefined ? `${style.marginLeft}px` : undefined,
-    marginRight: style.marginRight !== undefined ? `${style.marginRight}px` : undefined,
-    borderRadius: resolveBorderRadius(style),
-    borderWidth: style.borderWidth !== undefined ? `${style.borderWidth}px` : undefined,
-    borderColor: style.borderColor,
-    borderStyle: style.borderWidth ? (style.borderStyle || 'solid') : undefined,
+    marginLeft: alignMarginLeft,
+    marginRight: alignMarginRight,
+    borderRadius: isDivider ? undefined : resolveBorderRadius(style),
+    borderWidth: isDivider || style.borderWidth === undefined ? undefined : `${style.borderWidth}px`,
+    borderColor: isDivider ? undefined : style.borderColor,
+    borderStyle: isDivider || !style.borderWidth ? undefined : (style.borderStyle || 'solid'),
     boxShadow: resolveBoxShadow(style.shadow),
     opacity: style.opacity,
     maxWidth: style.maxWidth !== undefined ? `${style.maxWidth}px` : undefined,
-    width: style.widthMode === 'auto' || style.widthMode === 'center' ? 'fit-content' : undefined,
-    marginInline: style.widthMode === 'center' ? 'auto' : undefined
+    width: style.widthMode === 'auto' || style.widthMode === 'center' || style.widthMode === 'left' || style.widthMode === 'right' ? 'fit-content' : undefined
   };
 
   // State for accordions
@@ -4427,12 +4442,27 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
 
-    case 'divider':
+    case 'divider': {
+      // وقتی خط تراز راست/چپ/وسط دارد (widthMode !== 'full')، عرض خودِ خط کوتاه‌تر از
+      // ۱۰۰٪ می‌شود (پیش‌فرض ۵۰٪ یا حداکثر عرض دستی) و بلوکِ دربرگیرنده (containerStyle)
+      // با marginLeft/marginRight محاسبه‌شده در بالا آن را به همان سمت می‌چسباند
+      const isAligned = style.widthMode === 'left' || style.widthMode === 'right' || style.widthMode === 'center';
+      const lineWidth = isAligned ? (style.maxWidth !== undefined ? `${style.maxWidth}px` : '50%') : '100%';
+      const lineBorderStyle: 'solid' | 'dashed' | 'dotted' | 'none' = style.borderStyle || 'solid';
       return (
         <div style={containerStyle} className="py-3">
-          <hr className="border-t border-slate-200 dark:border-slate-800" />
+          <hr
+            className={!style.borderColor ? 'border-slate-200 dark:border-slate-800' : ''}
+            style={{
+              width: lineWidth,
+              borderTopWidth: `${style.borderWidth ?? 1}px`,
+              borderTopColor: style.borderColor || undefined,
+              borderTopStyle: lineBorderStyle
+            }}
+          />
         </div>
       );
+    }
 
     case 'spacer':
       return <div style={{ height: `${style.paddingTop || 32}px` }} />;

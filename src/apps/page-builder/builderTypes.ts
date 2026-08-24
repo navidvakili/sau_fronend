@@ -163,8 +163,8 @@ export interface WidgetStyle {
   imageHoverZoom?: boolean;
   maxWidth?: number; // px — caps widget width
   fullWidth?: boolean; // button stretches to full column width
-  /** 'full' (default) | 'auto' (fit-content) | 'center' (fit-content + centered) */
-  widthMode?: 'full' | 'auto' | 'center';
+  /** 'full' (default) | 'auto' (fit-content) | 'center'/'left'/'right' (fit-content + aligned) */
+  widthMode?: 'full' | 'auto' | 'center' | 'left' | 'right';
   alignVertical?: 'top' | 'center' | 'bottom'; // vertical alignment inside the widget box
   // Video layer settings (slider-studio parity)
   videoAutoplay?: boolean;
