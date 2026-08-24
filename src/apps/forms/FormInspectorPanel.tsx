@@ -35,7 +35,8 @@ import {
   ChevronUp,
   Tag,
   Palette,
-  GripVertical
+  GripVertical,
+  X
 } from 'lucide-react';
 import {
   FormDefinition,
@@ -46,6 +47,51 @@ import {
   FieldApiConfig,
   FieldVisibilityConfig
 } from './types';
+
+// انتخاب‌گر رنگ آیکون فیلد — سوآچ + کد رنگ + دکمهٔ بازگشت به رنگ پیش‌فرض همان نوع فیلد
+const IconColorPicker: React.FC<{
+  label: string;
+  value?: string;
+  defaultColor: string;
+  onChange: (color: string | undefined) => void;
+}> = ({ label, value, defaultColor, onChange }) => {
+  const effective = value || defaultColor;
+  return (
+    <div>
+      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <div className="relative w-8 h-8 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden shrink-0">
+          <div className="w-full h-full" style={{ backgroundColor: effective }} />
+          <input
+            type="color"
+            value={effective}
+            onChange={e => onChange(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            title="انتخاب رنگ آیکون"
+          />
+        </div>
+        <input
+          type="text"
+          dir="ltr"
+          value={value || ''}
+          placeholder={defaultColor}
+          onChange={e => onChange(e.target.value || undefined)}
+          className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-left"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="shrink-0 p-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+            title="بازگشت به رنگ پیش‌فرض"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface FormInspectorPanelProps {
   selectedField: FormField | null;
@@ -724,6 +770,13 @@ export default function FormInspectorPanel({
                   </select>
                 </div>
 
+                <IconColorPicker
+                  label="رنگ آیکون تقویم"
+                  value={selectedField.iconColor}
+                  defaultColor="#94a3b8"
+                  onChange={c => updateProp('iconColor', c)}
+                />
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     مقدار تاریخ پیش‌فرض:
@@ -814,6 +867,13 @@ export default function FormInspectorPanel({
             {/* File & Image Upload Settings */}
             {['file', 'image'].includes(selectedField.type) && (
               <div className="space-y-3">
+                <IconColorPicker
+                  label="رنگ آیکون آپلود"
+                  value={selectedField.iconColor}
+                  defaultColor="#0d9488"
+                  onChange={c => updateProp('iconColor', c)}
+                />
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     پسوندهای مجاز برای آپلود:
@@ -890,6 +950,13 @@ export default function FormInspectorPanel({
                   </select>
                 </div>
 
+                <IconColorPicker
+                  label="رنگ آیکون امتیاز"
+                  value={selectedField.iconColor}
+                  defaultColor="#fbbf24"
+                  onChange={c => updateProp('iconColor', c)}
+                />
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -936,6 +1003,12 @@ export default function FormInspectorPanel({
                     <option value="upload">آپلود تصویر اسکن‌شده امضا</option>
                   </select>
                 </div>
+                <IconColorPicker
+                  label="رنگ آیکون امضا"
+                  value={selectedField.iconColor}
+                  defaultColor="#0d9488"
+                  onChange={c => updateProp('iconColor', c)}
+                />
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     ارتفاع کادر امضا (پیکسل):

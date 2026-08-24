@@ -203,6 +203,9 @@ export interface FormField {
   startRatingLabel?: string;
   endRatingLabel?: string;
   ratingIconType?: 'star' | 'heart' | 'emoji' | 'number';
+  // رنگ اختصاصی آیکون فیلد — برای هر فیلدی که آیکون نمایش می‌دهد (امتیاز، آپلود فایل/تصویر،
+  // امضای دیجیتال، تاریخ/زمان). خالی یعنی رنگ پیش‌فرض همان نوع فیلد استفاده شود
+  iconColor?: string;
 
   // Color & URL
   colorFormat?: 'HEX' | 'RGB' | 'HSL';

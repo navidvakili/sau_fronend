@@ -471,10 +471,13 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                       >
                         <Star
                           className={`w-8 h-8 ${
-                            (answers[field.id] || 0) >= starVal
-                              ? 'text-amber-400 fill-amber-400'
-                              : 'text-slate-300 dark:text-slate-700'
+                            (answers[field.id] || 0) >= starVal ? '' : 'text-slate-300 dark:text-slate-700'
                           }`}
+                          style={
+                            (answers[field.id] || 0) >= starVal
+                              ? { color: field.iconColor || '#fbbf24', fill: field.iconColor || '#fbbf24' }
+                              : undefined
+                          }
                         />
                       </button>
                     ))}
@@ -548,7 +551,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
                 {field.type === 'file' && (
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition-colors">
-                    <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: field.iconColor || '#94a3b8' }} />
                     <label className="cursor-pointer text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline">
                       انتخاب فایل از رایانه
                       <input

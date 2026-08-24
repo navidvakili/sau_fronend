@@ -824,9 +824,13 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
           )}
 
           {field.type === 'rating' && (
-            <div className="flex items-center gap-2 text-amber-400 py-1">
+            <div className="flex items-center gap-2 py-1">
               {[1, 2, 3, 4, 5].map(st => (
-                <Star key={st} className={`w-5 h-5 ${st <= 4 ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-700'}`} />
+                <Star
+                  key={st}
+                  className={`w-5 h-5 ${st <= 4 ? '' : 'text-slate-300 dark:text-slate-700'}`}
+                  style={st <= 4 ? { color: field.iconColor || '#fbbf24', fill: field.iconColor || '#fbbf24' } : undefined}
+                />
               ))}
               <span className="text-xs text-slate-400 mr-2">(۴ از ۵)</span>
             </div>
@@ -861,14 +865,14 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
 
           {['file', 'image'].includes(field.type) && (
             <div className="border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-4 text-center text-slate-400">
-              <Upload className="w-5 h-5 mx-auto mb-1 text-teal-600" />
+              <Upload className="w-5 h-5 mx-auto mb-1" style={{ color: field.iconColor || '#0d9488' }} />
               <span>برای بارگذاری فایل کلیک کنید یا فایل را اینجا بکشید</span>
             </div>
           )}
 
           {field.type === 'signature' && (
             <div className="border border-gray-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 text-center text-slate-400 flex items-center justify-center gap-2">
-              <PenTool className="w-4 h-4 text-teal-600" />
+              <PenTool className="w-4 h-4" style={{ color: field.iconColor || '#0d9488' }} />
               <span>محل امضای دیجیتال کاربر</span>
             </div>
           )}
@@ -876,7 +880,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
           {['date', 'time', 'datetime'].includes(field.type) && (
             <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400">
               <span>{field.calendarType === 'gregorian' ? 'انتخاب تاریخ میلادی' : 'انتخاب تاریخ خورشیدی (شمسی)'}</span>
-              <Calendar className="w-4 h-4 text-slate-400" />
+              <Calendar className="w-4 h-4" style={{ color: field.iconColor || '#94a3b8' }} />
             </div>
           )}
         </div>
