@@ -55,6 +55,7 @@ interface SubmissionRowDto {
   score_total: number | null;
   grade_label: string | null;
   ip_address: string | null;
+  user_agent: string | null;
   completion_time_seconds: number | null;
   internal_notes: string | null;
   expert_assigned: string | null;
@@ -133,6 +134,7 @@ const toFormSubmission = (row: SubmissionRowDto): FormSubmission => ({
   scoreTotal: row.score_total ?? undefined,
   gradeLabel: row.grade_label || undefined,
   ipAddress: row.ip_address || '',
+  userAgent: row.user_agent || undefined,
   completionTimeSeconds: row.completion_time_seconds || 0,
   internalNotes: row.internal_notes || undefined,
   expertAssigned: row.expert_assigned || undefined,

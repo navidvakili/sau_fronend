@@ -462,6 +462,7 @@ export interface FormSubmission {
   scoreTotal?: number;
   gradeLabel?: string;
   ipAddress: string;
+  userAgent?: string;
   completionTimeSeconds: number;
   internalNotes?: string;
   expertAssigned?: string;

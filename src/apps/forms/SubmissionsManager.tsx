@@ -21,6 +21,44 @@ interface SubmissionsManagerProps {
   submissions: FormSubmission[];
 }
 
+/** تبدیل تاریخ ثبت (ISO از بک‌اند) به تاریخ و ساعت شمسی، هم‌الگو با toLocaleDateString('fa-IR') رایج در این پروژه */
+const formatJalaliDateTime = (iso: string): string => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${d.toLocaleDateString('fa-IR')} - ${d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
+/** پارسر سبک User-Agent — بدون وابستگی جدید؛ فقط مرورگر و سیستم‌عامل‌های رایج را تشخیص می‌دهد */
+const parseUserAgent = (ua?: string): { browser: string; os: string } => {
+  if (!ua) return { browser: 'نامشخص', os: 'نامشخص' };
+
+  let browser = 'نامشخص';
+  if (/Edg\//.test(ua)) browser = 'Microsoft Edge';
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/CriOS\//.test(ua)) browser = 'Chrome (iOS)';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Safari\//.test(ua) && /Version\//.test(ua)) browser = 'Safari';
+
+  let os = 'نامشخص';
+  if (/Windows NT/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua)) os = 'macOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  return { browser, os };
+};
+
+/** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش برای خروجی اکسل */
+const formatAnswerForExcel = (value: any): string => {
+  if (value === undefined || value === null || value === '') return '-';
+  if (Array.isArray(value)) return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join('، ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
   form,
   submissions
@@ -44,7 +82,12 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
       { header: 'نام پاسخ‌دهنده', key: 'respondentName', width: 24 },
       { header: 'نقش', key: 'respondentRole', width: 18 },
       { header: 'تاریخ ثبت', key: 'submittedAt', width: 22 },
-      ...(includeScore ? [{ header: 'نمره آزمون', key: 'scoreTotal', width: 14 }] : [])
+      ...(includeScore ? [{ header: 'نمره آزمون', key: 'scoreTotal', width: 14 }] : []),
+      ...form.fields.map(field => ({
+        header: field.label,
+        key: `field_${field.id}`,
+        width: field.type === 'textarea' || field.type === 'matrix' ? 34 : 22
+      }))
     ];
     const colCount = columns.length;
 
@@ -91,12 +134,17 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
 
     // ردیف‌های داده
     filteredSubmissions.forEach((s, idx) => {
+      const fieldValues: Record<string, string> = {};
+      form.fields.forEach(field => {
+        fieldValues[`field_${field.id}`] = formatAnswerForExcel(s.answers[field.id]);
+      });
       const row = sheet.addRow({
         trackingCode: s.trackingCode,
         respondentName: s.respondentName || 'ناشناس',
         respondentRole: s.respondentRole || 'کاربر',
-        submittedAt: s.submittedAt,
-        scoreTotal: includeScore ? s.scoreTotal ?? '-' : undefined
+        submittedAt: formatJalaliDateTime(s.submittedAt),
+        scoreTotal: includeScore ? s.scoreTotal ?? '-' : undefined,
+        ...fieldValues
       });
       const isEven = idx % 2 === 1;
       row.eachCell({ includeEmpty: true }, cell => {
@@ -197,7 +245,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="p-4 text-slate-500">{sub.submittedAt}</td>
+                  <td className="p-4 text-slate-500">{formatJalaliDateTime(sub.submittedAt)}</td>
                   <td className="p-4 text-slate-500">{sub.completionTimeSeconds} ثانیه</td>
                   {form.quizConfig.isQuiz && (
                     <td className="p-4 font-extrabold text-indigo-600 dark:text-indigo-400">
@@ -230,7 +278,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                   جزئیات کامل پاسخ کد: {selectedSubmission.trackingCode}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  ثبت شده توسط {selectedSubmission.respondentName || 'کاربر'} در تاریخ {selectedSubmission.submittedAt}
+                  ثبت شده توسط {selectedSubmission.respondentName || 'کاربر'} در تاریخ {formatJalaliDateTime(selectedSubmission.submittedAt)}
                 </p>
               </div>
               <button
@@ -245,11 +293,61 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
             <div className="p-6 overflow-y-auto space-y-6 text-xs">
               <div className="space-y-3">
                 <h4 className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
+                  مشخصات ثبت‌کننده:
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                    <span className="block text-[10px] text-slate-400 mb-0.5">نام</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {selectedSubmission.respondentName || 'ناشناس'}
+                    </span>
+                  </div>
+                  {selectedSubmission.respondentEmail && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 mb-0.5">ایمیل</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200" dir="ltr">
+                        {selectedSubmission.respondentEmail}
+                      </span>
+                    </div>
+                  )}
+                  {selectedSubmission.respondentRole && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                      <span className="block text-[10px] text-slate-400 mb-0.5">نقش</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {selectedSubmission.respondentRole}
+                      </span>
+                    </div>
+                  )}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                    <span className="block text-[10px] text-slate-400 mb-0.5">آدرس IP</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200" dir="ltr">
+                      {selectedSubmission.ipAddress || '-'}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                    <span className="block text-[10px] text-slate-400 mb-0.5">مرورگر</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {parseUserAgent(selectedSubmission.userAgent).browser}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                    <span className="block text-[10px] text-slate-400 mb-0.5">سیستم‌عامل</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {parseUserAgent(selectedSubmission.userAgent).os}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">
                   پاسخ‌های ثبت‌شده:
                 </h4>
 
                 {Object.entries(selectedSubmission.answers).map(([fId, val], idx) => {
                   const field = form.fields.find(f => f.id === fId);
+                  const isMultiline = field?.type === 'textarea';
+                  const displayValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
                   return (
                     <div
                       key={idx}
@@ -258,9 +356,15 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">
                         {field ? field.label : fId}:
                       </span>
-                      <span className="text-teal-700 dark:text-teal-300 font-semibold block">
-                        {typeof val === 'object' ? JSON.stringify(val) : String(val)}
-                      </span>
+                      {isMultiline ? (
+                        <p className="text-teal-700 dark:text-teal-300 font-semibold whitespace-pre-wrap">
+                          {displayValue}
+                        </p>
+                      ) : (
+                        <span className="text-teal-700 dark:text-teal-300 font-semibold block">
+                          {displayValue}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
