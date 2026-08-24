@@ -46,6 +46,29 @@ import {
   Sliders
 } from 'lucide-react';
 import { FormDefinition, FormField, FormSubmission, FormStatus, FormType, FieldType } from './types';
+
+const FORM_STATUS_BADGES: Record<FormStatus, { label: string; className: string }> = {
+  published: {
+    label: 'منتشر شده',
+    className: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
+  },
+  page_builder_only: {
+    label: 'انتشار در صفحه‌ساز',
+    className: 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30'
+  },
+  draft: {
+    label: 'پیش‌نویس',
+    className: 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
+  },
+  paused: {
+    label: 'غیرفعال',
+    className: 'bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600/40'
+  },
+  archived: {
+    label: 'بایگانی‌شده',
+    className: 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
+  }
+};
 import { sampleForms, formTemplates, defaultTheme } from './mockData';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
@@ -682,7 +705,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
               >
                 <option value="all">همه وضعیت‌ها</option>
                 <option value="published">منتشر شده</option>
+                <option value="page_builder_only">انتشار در صفحه‌ساز</option>
                 <option value="draft">پیش‌نویس</option>
+                <option value="paused">غیرفعال</option>
+                <option value="archived">بایگانی‌شده</option>
               </select>
             </div>
           </div>
@@ -702,13 +728,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`px-3 py-0.5 rounded-full text-[10px] font-bold ${
-                        formItem.status === 'published'
-                          ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
-                          : 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
-                      }`}
+                      className={`px-3 py-0.5 rounded-full text-[10px] font-bold ${FORM_STATUS_BADGES[formItem.status].className}`}
                     >
-                      {formItem.status === 'published' ? 'منتشر شده' : 'پیش‌نویس'}
+                      {FORM_STATUS_BADGES[formItem.status].label}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       v{formItem.version} • {new Date(formItem.updatedAt).toLocaleDateString('fa-IR')}
