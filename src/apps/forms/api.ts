@@ -249,6 +249,9 @@ export const submitForm = async (
   formId: string | number,
   data: {
     answers: Record<string, any>;
+    // پاسخ فیلدهای امنیتی (توکن/مقدار کپچا، مقدار تلهٔ ضدربات) — جدا از answers، چون
+    // این‌ها صرفاً برای بررسی ضدربات مصرف می‌شوند و در پاسخ ذخیره‌شده نگه‌داشته نمی‌شوند
+    security_challenges?: Record<string, any>;
     respondent_name?: string;
     respondent_email?: string;
     respondent_role?: string;

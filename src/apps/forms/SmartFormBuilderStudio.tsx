@@ -906,7 +906,16 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                 onSubmitted={async answers => {
                   if (activeForm.status !== 'published') return;
                   try {
-                    const submission = await submitForm(activeForm.id, { answers });
+                    // فیلدهای امنیتی (کپچا/تلهٔ ضدربات) جدا از answers ارسال می‌شوند — این‌ها
+                    // فقط برای بررسی ضدربات لازم‌اند و نباید در پاسخ ذخیره‌شده بمانند
+                    const submissionAnswers: Record<string, any> = {};
+                    const securityChallenges: Record<string, any> = {};
+                    activeForm.fields.forEach(f => {
+                      if (!(f.id in answers)) return;
+                      if (f.type === 'security') securityChallenges[f.id] = answers[f.id];
+                      else submissionAnswers[f.id] = answers[f.id];
+                    });
+                    const submission = await submitForm(activeForm.id, { answers: submissionAnswers, security_challenges: securityChallenges });
                     const result = await fetchSubmissions(activeForm.id, { per_page: 500 });
                     setSubmissions(result.data);
                     return {
