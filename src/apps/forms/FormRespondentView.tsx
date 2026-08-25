@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   RotateCcw,
   Send,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from 'lucide-react';
 import { FormDefinition, FormField, FormStep, LogicRule } from './types';
 
@@ -596,6 +597,47 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     >
                       پاک‌سازی امضا
                     </button>
+                  </div>
+                )}
+
+                {field.type === 'security' && field.securityType !== 'honeypot' && (
+                  <div
+                    className={`flex items-center gap-2 ${
+                      field.securityStyle === 'card'
+                        ? 'p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm'
+                        : field.securityStyle === 'minimal'
+                        ? ''
+                        : 'p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
+                    }`}
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono tracking-[0.3em] text-slate-500 select-none shrink-0"
+                      style={{ height: field.securitySize === 'lg' ? 72 : field.securitySize === 'sm' ? 40 : 56, minWidth: 120 }}
+                    >
+                      {field.securityType === 'image_challenge' ? '۷ + ۴ = ؟' : 'A7K9P'}
+                    </div>
+                    <button
+                      type="button"
+                      disabled
+                      title="در حالت پیش‌نمایش، کد امنیتی واقعی تولید نمی‌شود"
+                      className="p-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-400 cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={answers[field.id]?.value || ''}
+                      onChange={e => handleInputChange(field.id, { token: 'preview', value: e.target.value })}
+                      placeholder={field.placeholder || 'کد را وارد کنید'}
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-left"
+                    />
+                  </div>
+                )}
+
+                {field.type === 'security' && field.securityType === 'honeypot' && (
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-[11px] text-amber-700 dark:text-amber-400">
+                    این فیلد امنیتی نامرئی است؛ در فرم نهایی هیچ کادری برای کاربر واقعی نمایش داده نمی‌شود.
                   </div>
                 )}
 

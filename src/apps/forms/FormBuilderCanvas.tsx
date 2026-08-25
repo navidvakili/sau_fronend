@@ -40,7 +40,9 @@ import {
   Columns,
   Columns2,
   Columns3,
-  LogOut
+  LogOut,
+  ShieldCheck,
+  RotateCw
 } from 'lucide-react';
 import { FormDefinition, FormField, FieldType, FormStep, FormLayoutBlock, FormLayoutColumn } from './types';
 import FormInspectorPanel from './FormInspectorPanel';
@@ -98,6 +100,12 @@ const FIELD_PALETTE: {
       { type: 'location', label: 'موقعیت نقشه (GPS)', icon: MapPin, color: 'text-rose-500', desc: 'انتخاب نقطه جغرافیایی روی نقشه' },
       { type: 'color', label: 'انتخاب رنگ (Color Picker)', icon: Palette, color: 'text-pink-500', desc: 'کدهای رنگی HEX / RGB' },
       { type: 'url', label: 'پیوند وب‌سایت (URL)', icon: Globe, color: 'text-blue-500', desc: 'آدرس اینترنتی معتبر با https' }
+    ]
+  },
+  {
+    category: 'امنیت و ضدربات',
+    items: [
+      { type: 'security', label: 'فیلد امنیتی (کپچا و ضدربات)', icon: ShieldCheck, color: 'text-red-600 dark:text-red-400', desc: 'کد امنیتی تصویری، کد چندرقمی، چالش تصویری یا تله ضدربات' }
     ]
   }
 ];
@@ -205,7 +213,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
 
   // Helper: create a new field instance
   const createNewFieldInstance = (type: FieldType, label: string, targetStepId: string): FormField => {
-    return {
+    const base: FormField = {
       id: `f_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       type,
       label: `سوال جدید ${form.fields.length + 1}: ${label}`,
@@ -219,6 +227,26 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
         value: `val_${idx + 1}`
       }))
     };
+
+    if (type === 'security') {
+      return {
+        ...base,
+        placeholder: undefined,
+        helpText: 'برای تایید انسانی بودن، کد نمایش‌داده‌شده را وارد کنید.',
+        options: undefined,
+        validation: { required: true },
+        securityType: 'image_captcha',
+        securityStyle: 'boxed',
+        securitySize: 'md',
+        securityButtonText: 'دریافت کد جدید',
+        securityMaxAttempts: 4,
+        securityExpirySeconds: 120,
+        securityCodeLength: 5,
+        securityCaseSensitive: false
+      };
+    }
+
+    return base;
   };
 
   // Add field to current step at specific index or at end
@@ -881,6 +909,32 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400">
               <span>{field.calendarType === 'gregorian' ? 'انتخاب تاریخ میلادی' : 'انتخاب تاریخ خورشیدی (شمسی)'}</span>
               <Calendar className="w-4 h-4" style={{ color: field.iconColor || '#94a3b8' }} />
+            </div>
+          )}
+
+          {field.type === 'security' && field.securityType === 'honeypot' && (
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-dashed border-amber-300 dark:border-amber-900/50 rounded-xl text-amber-700 dark:text-amber-400">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span className="text-[11px] leading-relaxed">
+                این فیلد به‌عمد نامرئی است — در فرم نهایی هیچ کادری برای کاربر واقعی نمایش داده نمی‌شود و فقط ربات‌های خودکار را شناسایی می‌کند.
+              </span>
+            </div>
+          )}
+
+          {field.type === 'security' && field.securityType !== 'honeypot' && (
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono tracking-[0.25em] text-slate-400 shrink-0"
+                style={{ height: field.securitySize === 'lg' ? 52 : field.securitySize === 'sm' ? 34 : 42, minWidth: 100 }}
+              >
+                {field.securityType === 'image_challenge' ? '۷ + ۴ = ؟' : 'A7K9P'}
+              </div>
+              <div className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-800 text-slate-400 shrink-0">
+                <RotateCw className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400">
+                {field.placeholder || 'کد را وارد کنید'}
+              </div>
             </div>
           )}
         </div>

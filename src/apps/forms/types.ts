@@ -37,6 +37,7 @@ export type FieldType =
   | 'cascading'
   | 'signature'
   | 'captcha'
+  | 'security'
   | 'qrcode'
   | 'hidden'
   | 'calculated';
@@ -227,6 +228,17 @@ export interface FormField {
   styling?: FieldStyling;
   visibility?: FieldVisibilityConfig;
   auditTrailEnabled?: boolean;
+
+  // Security / Anti-bot (CAPTCHA family)
+  securityType?: 'image_captcha' | 'numeric_code' | 'image_challenge' | 'honeypot';
+  securityStyle?: 'boxed' | 'card' | 'minimal';
+  securitySize?: 'sm' | 'md' | 'lg';
+  securityColor?: string;
+  securityButtonText?: string;
+  securityMaxAttempts?: number;
+  securityExpirySeconds?: number;
+  securityCodeLength?: number;
+  securityCaseSensitive?: boolean;
 
   // Dependencies & Cascading
   cascadingParentId?: string;

@@ -290,7 +290,8 @@ export default function FormInspectorPanel({
     url: 'آدرس اینترنتی (URL)',
     slider: 'اسلایدر بازه‌ای',
     heading: 'عنوان و سربرگ',
-    divider: 'خط جداکننده'
+    divider: 'خط جداکننده',
+    security: 'فیلد امنیتی (ضدربات)'
   };
 
   return (
@@ -1022,6 +1023,143 @@ export default function FormInspectorPanel({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Security / Anti-bot Field Settings */}
+            {selectedField.type === 'security' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    نوع ظاهر و روش امنیتی:
+                  </label>
+                  <select
+                    value={selectedField.securityType || 'image_captcha'}
+                    onChange={e => updateProp('securityType', e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                  >
+                    <option value="image_captcha">کد امنیتی تصویری (CAPTCHA حروف و عدد)</option>
+                    <option value="numeric_code">کد چندرقمی تصویری (فقط عدد)</option>
+                    <option value="image_challenge">چالش تصویری (مسئله ریاضی ساده)</option>
+                    <option value="honeypot">تله ضدربات نامرئی (Honeypot)</option>
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                    {selectedField.securityType === 'honeypot'
+                      ? 'این نوع هیچ کادری برای کاربر واقعی نمایش نمی‌دهد و صرفاً ربات‌های خودکاری که همه فیلدها را پر می‌کنند شناسایی می‌کند.'
+                      : 'کد به‌صورت تصویر (غیرقابل خواندن برای ربات) در سرور تولید و اعتبارسنجی نهایی نیز سمت سرور انجام می‌شود.'}
+                  </p>
+                </div>
+
+                {selectedField.securityType !== 'honeypot' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          سبک نمایش:
+                        </label>
+                        <select
+                          value={selectedField.securityStyle || 'boxed'}
+                          onChange={e => updateProp('securityStyle', e.target.value as any)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                        >
+                          <option value="boxed">قاب‌دار (کارتی)</option>
+                          <option value="card">کارت با سایه</option>
+                          <option value="minimal">ساده و کم‌حجم</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          اندازه نمایش:
+                        </label>
+                        <select
+                          value={selectedField.securitySize || 'md'}
+                          onChange={e => updateProp('securitySize', e.target.value as any)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                        >
+                          <option value="sm">کوچک</option>
+                          <option value="md">متوسط</option>
+                          <option value="lg">بزرگ</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <IconColorPicker
+                      label="رنگ اصلی قاب و دکمه"
+                      value={selectedField.securityColor}
+                      defaultColor="#0d9488"
+                      onChange={c => updateProp('securityColor', c)}
+                    />
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        متن دکمه دریافت/تازه‌سازی کد:
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedField.securityButtonText || ''}
+                        onChange={e => updateProp('securityButtonText', e.target.value)}
+                        placeholder="دریافت کد جدید"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          تعداد کاراکتر کد:
+                        </label>
+                        <input
+                          type="number"
+                          min={3}
+                          max={8}
+                          value={selectedField.securityCodeLength || 5}
+                          onChange={e => updateProp('securityCodeLength', Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          زمان انقضا (ثانیه):
+                        </label>
+                        <input
+                          type="number"
+                          min={30}
+                          max={600}
+                          value={selectedField.securityExpirySeconds || 120}
+                          onChange={e => updateProp('securityExpirySeconds', Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        حداکثر تعداد تلاش مجاز:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={selectedField.securityMaxAttempts || 4}
+                        onChange={e => updateProp('securityMaxAttempts', Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                      <div>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">حساس به بزرگی/کوچکی حروف</span>
+                        <span className="text-[10px] text-slate-400">در صورت غیرفعال بودن، A و a یکسان پذیرفته می‌شوند</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={selectedField.securityCaseSensitive || false}
+                        onChange={e => updateProp('securityCaseSensitive', e.target.checked)}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                    </label>
+                  </>
+                )}
               </div>
             )}
 
