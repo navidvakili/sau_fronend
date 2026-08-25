@@ -176,7 +176,9 @@ const resolveBackgroundColor = (s: WidgetStyle): string | undefined => {
   return s.backgroundColor;
 };
 
-/** اعمال شفافیت روی هر مقدار CSS پس‌زمینه (رنگ ثابت یا گرادیان) — رنگ‌های hex داخل گرادیان هم به rgba تبدیل می‌شوند */
+/** اعمال شفافیت روی هر مقدار CSS پس‌زمینه (رنگ ثابت یا گرادیان) — رنگ‌های hex و rgb/rgba داخل گرادیان
+ * هم به rgba با آلفای جدید تبدیل می‌شوند (مقدار opacity همیشه آلفای نهایی را جایگزین می‌کند، حتی اگر
+ * رنگ از قبل rgba با آلفای دیگری باشد — مثلاً وقتی گرادیان از انتخابگر رنگ به‌صورت rgba ذخیره شده باشد) */
 export const applyBackgroundOpacity = (value?: string, opacity?: number): string | undefined => {
   if (!value) return undefined;
   if (opacity === undefined || opacity >= 100) return value;
@@ -191,12 +193,18 @@ export const applyBackgroundOpacity = (value?: string, opacity?: number): string
     }
     return hex;
   };
-  // گرادیان → همه رنگ‌های hex داخل را شفاف کن (بقیه ساختار دست‌نخورده می‌ماند)
+  const replaceColors = (input: string): string =>
+    input
+      .replace(/#[0-9a-fA-F]{3,8}\b/g, hexToRgba)
+      .replace(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)/gi, (_m, r, g, b) => `rgba(${r}, ${g}, ${b}, ${alpha})`);
+  // گرادیان → همهٔ رنگ‌های hex یا rgb/rgba داخل را شفاف کن (بقیهٔ ساختار دست‌نخورده می‌ماند)
   if (/gradient\(/i.test(value)) {
-    return value.replace(/#[0-9a-fA-F]{3,8}\b/g, hexToRgba);
+    return replaceColors(value);
   }
-  // رنگ ثابت
-  if (/^#[0-9a-fA-F]{3,8}$/.test(value.trim())) return hexToRgba(value.trim());
+  // رنگ ثابت (hex یا rgb/rgba)
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return hexToRgba(trimmed);
+  if (/^rgba?\(/i.test(trimmed)) return replaceColors(trimmed);
   return value;
 };
 
@@ -3902,16 +3910,34 @@ export const RenderSectionReadOnly: React.FC<{
 }> = ({ section, depth = 0, currentUserRole = 'all', isEditorPreview = false, pageId, pageSlug, variables, dedicatedPageId }) => {
   if (depth > 6) return null;
 
-  const bg = applyBackgroundOpacity(section.backgroundGradient || section.backgroundColor, section.backgroundOpacity);
+  // پس‌زمینهٔ لایه‌ای سکشن — همان منطق buildSectionBackgroundImage در Canvas.tsx: گرادیان (یا رنگ ساده
+  // به‌صورت لایهٔ گرادیان یکنواخت) همیشه روی تصویر قرار می‌گیرد، تصویر پایین‌ترین لایه است، وگرنه
+  // (وقتی هر دو backgroundColor/backgroundImage به‌صورت جداگانه ست شوند) تصویر رنگ را کاملاً می‌پوشاند.
+  const bgLayers: string[] = [];
+  if (section.backgroundGradient) {
+    bgLayers.push(applyBackgroundOpacity(section.backgroundGradient, section.backgroundOpacity) || section.backgroundGradient);
+  } else if (section.backgroundColor) {
+    const c = applyBackgroundOpacity(section.backgroundColor, section.backgroundOpacity) || section.backgroundColor;
+    bgLayers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
+  }
+  if (section.backgroundImage) {
+    bgLayers.push(`url("${section.backgroundImage}")`);
+  }
+  const backgroundImageValue = bgLayers.length ? bgLayers.join(', ') : undefined;
 
   return (
     <div
       style={{
-        backgroundColor: section.backgroundGradient ? undefined : bg,
-        backgroundImage: section.backgroundGradient ? bg : section.backgroundImage,
-        backgroundPosition: section.backgroundPosition,
-        backgroundSize: section.backgroundSize,
-        backgroundRepeat: section.backgroundRepeat,
+        backgroundColor:
+          section.backgroundImage || section.backgroundGradient
+            ? undefined
+            : section.backgroundColor
+              ? applyBackgroundOpacity(section.backgroundColor, section.backgroundOpacity)
+              : undefined,
+        backgroundImage: backgroundImageValue,
+        backgroundPosition: section.backgroundImage ? section.backgroundPosition || 'center' : undefined,
+        backgroundSize: section.backgroundImage ? section.backgroundSize || 'cover' : undefined,
+        backgroundRepeat: section.backgroundImage ? section.backgroundRepeat || 'no-repeat' : undefined,
         paddingTop: section.paddingTop,
         paddingBottom: section.paddingBottom,
         paddingLeft: section.paddingLeft,
