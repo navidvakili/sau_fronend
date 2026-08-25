@@ -33,6 +33,7 @@ export interface SmartPageDto {
   } | null;
   schema: Record<string, unknown>;
   language?: string;
+  translation_group?: string | null;
   author_name?: string | null;
   author_username?: string | null;
   author_role?: string | null;
@@ -145,6 +146,14 @@ export const updateSmartPage = async (
 /** Delete a smart page */
 export const deleteSmartPage = async (id: number): Promise<{ message: string }> => {
   return API(`smart-pages/${id}`, {}, 'DELETE');
+};
+
+/** Duplicate a page into another language (copies the layout/content as a translation starting point) */
+export const duplicateSmartPage = async (
+  id: number,
+  lang: string
+): Promise<{ message: string; data: SmartPageDto }> => {
+  return API(`smart-pages/${id}/duplicate`, { lang }, 'POST');
 };
 
 // ===== Data-source fetchers (هر بخش به وب‌سرویس مختص خود متصل می‌شود) =====

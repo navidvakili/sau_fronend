@@ -35,11 +35,13 @@ import {
   createSmartPage,
   updateSmartPage,
   deleteSmartPage,
+  duplicateSmartPage,
   SmartPageDto,
   SmartPageTreeNode
 } from './api';
 import { fetchDedicatedPages } from '../dedicated_pages/api';
 import { getPageVariableValues } from '../dedicated_pages/PageContentVariables';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import {
   Save,
   Undo2,
@@ -75,6 +77,9 @@ interface PageBuilderStudioProps {
 }
 
 export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId, onDirtyChange }) => {
+  // زبان محتوای فعال — فهرست صفحات و ایجاد صفحهٔ جدید همیشه مطابق همین زبان است
+  const { currentLang, languages } = useLanguage();
+
   // Main Page Schema state
   const [pageSchema, setPageSchema] = useState<SmartPageSchema>(INITIAL_SMART_PAGE);
 
@@ -102,6 +107,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [pageToDelete, setPageToDelete] = useState<SmartPageDto | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
 
+  // Duplicate-to-another-language state
+  const [duplicatingPageId, setDuplicatingPageId] = useState<number | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
   // Child-pages manager (زیرصفحه‌ها فقط از داخل استودیوی صفحهٔ والد مدیریت می‌شوند)
   const [showChildPagesModal, setShowChildPagesModal] = useState(false);
   const [childPagesTree, setChildPagesTree] = useState<SmartPageTreeNode[]>([]);
@@ -109,10 +118,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [isCreatingChild, setIsCreatingChild] = useState(false);
   const [childCreateError, setChildCreateError] = useState<string | null>(null);
 
-  // Load saved pages from backend on mount (card list is shown first)
+  // Load saved pages from backend on mount, and again whenever the active
+  // content language changes (the list is scoped to one language at a time).
   useEffect(() => {
     let cancelled = false;
-    fetchSmartPages({ per_page: 100 })
+    setIsLoadingPages(true);
+    fetchSmartPages({ per_page: 100, lang: currentLang })
       .then((res) => {
         if (cancelled) return;
         setPages(res.data);
@@ -124,8 +135,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentLang]);
 
   // Open the editor for a saved page
   const openEditor = (id: number) => {
@@ -275,6 +285,27 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
+  // کپی صفحه به یک زبان دیگر — چون هر زبان یک صفحهٔ مستقل است، این تنها راه
+  // شروع سریع (بدون بازسازی چیدمان از صفر) برای ساخت نسخهٔ همان صفحه در زبان
+  // دیگر است؛ نسخهٔ تازه همیشه پیش‌نویس است تا محتوایش ترجمه/بازبینی شود.
+  const handleDuplicatePage = async (page: SmartPageDto, targetLang: string) => {
+    if (!page.id) return;
+    setDuplicatingPageId(page.id);
+    setDuplicateError(null);
+    try {
+      await duplicateSmartPage(page.id, targetLang);
+      // نسخهٔ تازه در زبان مقصد ساخته شده — اگر همان زبان فعلی است در فهرست هم نمایش داده شود
+      if (targetLang === currentLang) {
+        const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
+        setPages(list.data);
+      }
+    } catch (err) {
+      setDuplicateError(err instanceof Error ? err.message : 'خطا در ایجاد نسخهٔ زبان دیگر');
+    } finally {
+      setDuplicatingPageId(null);
+    }
+  };
+
   // ---- مدیریت زیرصفحه‌ها (Child Pages) ----
 
   // بارگذاری زیرصفحه‌های یک صفحه برای نمایش در مدیر زیرصفحه‌ها
@@ -333,9 +364,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         status: data.status,
         seo: { title: '', description: '', keywords: '', og_image: '' },
         schema: fresh as unknown as Record<string, unknown>,
+        lang: currentLang,
       });
       // به‌روزرسانی فهرست‌ها و رفتن به طراحی زیرصفحهٔ تازه‌ساخته
-      const list = await fetchSmartPages({ per_page: 100 });
+      const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
       setPages(list.data);
       void loadChildPages(activePageId!);
       setShowChildPagesModal(false);
@@ -374,7 +406,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         await updateSmartPage(activePageId, payload);
         setCurrentParentId(data.parent_id ?? null);
       } else {
-        const res = await createSmartPage(payload);
+        const res = await createSmartPage({ ...payload, lang: currentLang });
         setActivePageId(res.data.id!);
         setCurrentParentId(data.parent_id ?? null);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
@@ -386,7 +418,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         status: data.status,
         seo: data.seo,
       }));
-      const list = await fetchSmartPages({ per_page: 100 });
+      const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
       setPages(list.data);
       setShowPageSettingsModal(false);
     } catch {
@@ -1239,12 +1271,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       if (activePageId) {
         await updateSmartPage(activePageId, payload);
       } else {
-        const res = await createSmartPage(payload);
+        const res = await createSmartPage({ ...payload, lang: currentLang });
         setActivePageId(res.data.id!);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
       }
       setPageSchema((prev) => ({ ...prev, status }));
-      const list = await fetchSmartPages({ per_page: 100 });
+      const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
       setPages(list.data);
       setSaveSuccess(true);
       onDirtyChange?.(false);
@@ -1505,6 +1537,11 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             setShowPreviewModal(true);
           }}
           onDeletePage={(page) => handleDeleteRequest(page)}
+          languages={languages}
+          currentLang={currentLang}
+          onDuplicatePage={handleDuplicatePage}
+          duplicatingPageId={duplicatingPageId}
+          duplicateError={duplicateError}
         />
       ) : (
       <div className="flex flex-col flex-1 min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
@@ -1943,6 +1980,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             seo: pageSchema.seo,
             schema: pageSchema as unknown as Record<string, unknown>,
           }}
+          language={
+            (activePageId ? pages.find((p) => p.id === activePageId)?.language : undefined) ?? currentLang
+          }
           pages={pages}
           isSaving={isSavingPage}
           onSave={handleSavePageSettings}

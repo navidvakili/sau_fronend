@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Settings2, Save, Loader2 } from 'lucide-react';
+import { X, Settings2, Save, Loader2, Globe } from 'lucide-react';
 import type { SmartPageDto } from './api';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface PageSettingsModalProps {
   page: SmartPageDto | null;
+  /** زبان محتوای این صفحه — برای صفحهٔ جدید، زبان فعلی انتخاب‌شده در پنل است.
+   *  هر زبان یک صفحهٔ مستقل است؛ زبان یک صفحهٔ موجود از اینجا قابل تغییر نیست
+   *  (برای ساخت نسخهٔ همان صفحه در زبان دیگر از «کپی به زبان دیگر» در فهرست صفحات استفاده کنید). */
+  language?: string;
   /** همهٔ صفحات برای انتخاب والد — خودِ صفحه از فهرست حذف می‌شود */
   pages?: SmartPageDto[];
   isSaving?: boolean;
@@ -20,11 +25,14 @@ interface PageSettingsModalProps {
 
 export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
   page,
+  language,
   pages,
   isSaving,
   onSave,
   onClose
 }) => {
+  const { getLanguage } = useLanguage();
+  const languageInfo = language ? getLanguage(language) : undefined;
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [parentId, setParentId] = useState<number | ''>('');
@@ -135,7 +143,18 @@ export const PageSettingsModal: React.FC<PageSettingsModalProps> = ({
               <Settings2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">مشخصات صفحه و سئو</h2>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                مشخصات صفحه و سئو
+                {language && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 text-[10px] font-black font-sans uppercase"
+                    title="این صفحه یک نسخهٔ مستقل برای این زبان است — برای زبان دیگر از «کپی به زبان دیگر» در فهرست صفحات استفاده کنید"
+                  >
+                    <Globe className="w-3 h-3" />
+                    {language}{languageInfo ? ` • ${languageInfo.name}` : ''}
+                  </span>
+                )}
+              </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 عنوان، لینک (Slug)، وضعیت انتشار و متادیتای سئو
               </p>
