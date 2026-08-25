@@ -3016,6 +3016,8 @@ const IconBoxBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSS
   const buttonEl = props.buttonUrl && (
     <a
       href={props.buttonUrl}
+      target={props.buttonTarget === 'new' ? '_blank' : undefined}
+      rel={props.buttonTarget === 'new' ? 'noopener noreferrer' : undefined}
       className="mt-1 inline-flex items-center gap-1 font-black hover:gap-2 transition-all cursor-pointer"
       style={{ color: props.iconColor || undefined, fontSize: descSize }}
     >
@@ -4360,6 +4362,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         >
           <a
             href={widget.buttonUrl || '#'}
+            target={widget.buttonTarget === 'new' ? '_blank' : undefined}
+            rel={widget.buttonTarget === 'new' ? 'noopener noreferrer' : undefined}
             className={`inline-flex items-center justify-center gap-2 px-6 py-3 font-black text-sm transition-all ${
               style.fullWidth ? 'w-full' : ''
             }`}

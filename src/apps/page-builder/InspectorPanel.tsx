@@ -761,6 +761,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
+                  <label className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 cursor-pointer">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">باز شدن لینک در تب/صفحهٔ جدید</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedWidget.buttonTarget === 'new'}
+                      onChange={(e) => onUpdateWidget({ ...selectedWidget, buttonTarget: e.target.checked ? 'new' : 'self' })}
+                      className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                    />
+                  </label>
                 </>
               )}
 
@@ -1088,6 +1097,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-indigo-500 focus:outline-none focus:border-teal-500"
                     />
                   </div>
+                  <label className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 cursor-pointer">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">باز شدن لینک در تب/صفحهٔ جدید</span>
+                    <input
+                      type="checkbox"
+                      checked={customProps.buttonTarget === 'new'}
+                      onChange={(e) => updateCustomProps({ buttonTarget: e.target.checked ? 'new' : 'self' })}
+                      className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                    />
+                  </label>
                 </>
               )}
 

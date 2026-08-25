@@ -239,6 +239,8 @@ export interface WidgetInstance {
   videoUrl?: string;
   buttonUrl?: string;
   buttonText?: string;
+  /** نحوه باز شدن لینک دکمه — همان صفحه (پیش‌فرض) یا تب/پنجرهٔ جدید */
+  buttonTarget?: 'self' | 'new';
   iconName?: string;
   settings: {
     style: WidgetStyle;
