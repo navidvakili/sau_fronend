@@ -43,7 +43,10 @@ import {
   LayoutGrid,
   Users,
   Activity,
-  Sliders
+  Sliders,
+  Languages,
+  Globe,
+  Loader2
 } from 'lucide-react';
 import { FormDefinition, FormField, FormSubmission, FormStatus, FormType, FieldType } from './types';
 
@@ -79,7 +82,7 @@ import { FormSettingsModal } from './FormSettingsModal';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import { FormRespondentView } from './FormRespondentView';
-import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, slugifyFormTitle } from './api';
+import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, duplicateForm as duplicateFormApi, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
@@ -90,7 +93,7 @@ interface SmartFormBuilderStudioProps {
 }
 
 export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ onDirtyChange }) => {
-  const { currentLang } = useLanguage();
+  const { currentLang, languages } = useLanguage();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [isLoadingForms, setIsLoadingForms] = useState(true);
@@ -342,6 +345,25 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     } catch (error: any) {
       console.error('Failed to clone form:', error);
       showToast(error?.message || 'خطا در کپی فرم', 'error');
+    }
+  };
+
+  // Duplicate Form into another language (translation starting point)
+  const [duplicatingFormId, setDuplicatingFormId] = useState<string | null>(null);
+  const [openLangMenuId, setOpenLangMenuId] = useState<string | null>(null);
+  const handleDuplicateForm = async (formToDuplicate: FormDefinition, targetLang: string) => {
+    setOpenLangMenuId(null);
+    setDuplicatingFormId(formToDuplicate.id);
+    try {
+      const duplicated = await duplicateFormApi(formToDuplicate.id, targetLang);
+      // فقط اگر نسخهٔ تازه هم‌زبان فهرست فعلی باشد، به لیست اضافه می‌شود
+      if (targetLang === currentLang) setForms(prev => [duplicated, ...prev]);
+      showToast('نسخهٔ فرم در زبان مقصد ایجاد شد.', 'success');
+    } catch (error: any) {
+      console.error('Failed to duplicate form:', error);
+      showToast(error?.message || 'خطا در ایجاد نسخهٔ زبان دیگر', 'error');
+    } finally {
+      setDuplicatingFormId(null);
     }
   };
 
@@ -792,6 +814,44 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                     >
                       <Copy className="w-4 h-4" />
                     </button>
+                    {(() => {
+                      const otherLanguages = languages.filter(l => l.code !== currentLang);
+                      if (otherLanguages.length === 0) return null;
+                      const isDuplicating = duplicatingFormId === formItem.id;
+                      const menuOpen = openLangMenuId === formItem.id;
+                      return (
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenLangMenuId(menuOpen ? null : formItem.id)}
+                            disabled={isDuplicating}
+                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            title="کپی این فرم به زبان دیگر"
+                          >
+                            {isDuplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+                          </button>
+                          {menuOpen && (
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              className="absolute top-full mt-1 right-0 z-10 w-40 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-xl overflow-hidden"
+                            >
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 border-b border-gray-100 dark:border-slate-800">
+                                کپی به زبان...
+                              </div>
+                              {otherLanguages.map(l => (
+                                <button
+                                  key={l.code}
+                                  onClick={() => handleDuplicateForm(formItem, l.code)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-right"
+                                >
+                                  <Globe className="w-3.5 h-3.5 text-slate-400" />
+                                  {l.name} <span className="text-slate-400 uppercase" dir="ltr">({l.code})</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={() => handleDeleteForm(formItem.id)}
                       className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors"

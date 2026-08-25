@@ -226,6 +226,12 @@ export const cloneForm = async (id: string | number): Promise<FormDefinition> =>
   return toFormDefinition(res.data);
 };
 
+/** Duplicate a form into another language (copies its content as a translation starting point) */
+export const duplicateForm = async (id: string | number, lang: string): Promise<FormDefinition> => {
+  const res = await API<{ message: string; data: FormRowDto }>(`forms/${id}/duplicate`, { lang }, 'POST');
+  return toFormDefinition(res.data);
+};
+
 export const deleteForm = async (id: string | number): Promise<{ message: string }> => {
   return API(`forms/${id}`, {}, 'DELETE');
 };
