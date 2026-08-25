@@ -79,8 +79,8 @@ export const ICON_CHOICES: string[] = [
   'shetab', 'adobeacrobatreader', 'adobeaftereffects', 'adobeaudition', 'adobe'
 ];
 
-/** نگاشت نام آیکون به کامپوننت — برای پیش‌نمایش انتخابگر */
-const ICON_COMPONENTS: Record<string, LucideIcon | ComponentType<SVGProps<SVGSVGElement>>> = {
+/** نگاشت نام آیکون به کامپوننت — برای پیش‌نمایش انتخابگر (و مصرف‌کنندگان دیگر مثل آمارهای معرفی صفحه اصلی) */
+export const ICON_COMPONENTS: Record<string, LucideIcon | ComponentType<SVGProps<SVGSVGElement>>> = {
   sparkles: Sparkles,
   map: MapPin,
   phone: Phone,

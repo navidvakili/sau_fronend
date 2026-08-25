@@ -15,6 +15,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   news: lazy(() => import('./news')),
   announcements: lazy(() => import('./announcements')),
   'slider-studio': lazy(() => import('./slider-studio')),
+  'home-intro': lazy(() => import('./home-intro')),
   achievements: lazy(() => import('./achievements')),
   people: lazy(() => import('./people')),
   departments: lazy(() => import('./departments')),
@@ -55,6 +56,9 @@ export const moduleToAppMap: Record<string, string> = {
 
   // Slider Studio App
   'slider-studio': 'slider-studio',
+
+  // Home Intro App (معرفی صفحه اصلی)
+  'home-intro': 'home-intro',
 
   // Achievements App
   'achievements': 'achievements',
