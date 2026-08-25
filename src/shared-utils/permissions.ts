@@ -78,6 +78,7 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
   'home-intro': { view: 'home-intro.view', edit: 'home-intro.edit' },
+  'home-portals': { view: 'home-portals.view', edit: 'home-portals.edit' },
   'page-builder': { view: 'page-builder.view', edit: 'page-builder.edit' },
   gallery: { view: 'gallery.view', create: 'gallery.create', edit: 'gallery.edit', delete: 'gallery.delete', approve: 'gallery.approve' },
   forms: { view: 'forms.view', create: 'forms.create', edit: 'forms.edit', delete: 'forms.delete', approve: 'forms.approve' },
