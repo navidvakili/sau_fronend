@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import MediaManager from './MediaManager';
 import { VariableInsertButton } from './PageVariables';
+import { toPersianDigits } from '@/src/shared-utils/formatters';
 
 /** Image extension with configurable width (for resize controls) */
 const ResizableImage = Image.extend({
@@ -57,13 +58,6 @@ const ResizableImage = Image.extend({
     };
   },
 });
-
-/** نگاشت ارقام انگلیسی (0-9) به فارسی (۰-۹) — برای دکمهٔ «تبدیل اعداد» در نوار ابزار */
-const EN_TO_FA_DIGITS: Record<string, string> = {
-  '0': '۰', '1': '۱', '2': '۲', '3': '۳', '4': '۴',
-  '5': '۵', '6': '۶', '7': '۷', '8': '۸', '9': '۹',
-};
-const toPersianDigits = (s: string) => s.replace(/[0-9]/g, (d) => EN_TO_FA_DIGITS[d]);
 
 const IMAGE_SIZE_PRESETS = [
   { label: '۲۵٪', value: '25%' },

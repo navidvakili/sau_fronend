@@ -59,8 +59,10 @@ import {
   Upload,
   FileSpreadsheet,
   FileX,
-  Pin as PinIcon
+  Pin as PinIcon,
+  Languages
 } from 'lucide-react';
+import { toPersianDigits } from '@/src/shared-utils/formatters';
 
 // ── سایه‌های آماده (هم‌سطح slider-studio) ──
 const SHADOW_SM = '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)';
@@ -223,6 +225,23 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       onUpdateWidget({ ...selectedWidget!, content: content + (content ? ' ' : '') + token });
     }
     setIconPickerState({ open: false, mode: 'text' });
+  };
+
+  /** تبدیل ارقام انگلیسی به فارسی در محتوای متنی (heading / text / accordion) —
+   * اگر بخشی از textarea انتخاب شده باشد فقط همان، وگرنه کل متن */
+  const convertContentDigitsToPersian = () => {
+    if (!selectedWidget) return;
+    const content = selectedWidget.content || '';
+    const ta = textareaRef.current;
+    const hasSelection = ta && ta.selectionStart !== ta.selectionEnd;
+    if (hasSelection && ta) {
+      const { selectionStart: start, selectionEnd: end } = ta;
+      const next = content.slice(0, start) + toPersianDigits(content.slice(start, end)) + content.slice(end);
+      onUpdateWidget({ ...selectedWidget, content: next });
+      requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(start, end); });
+    } else {
+      onUpdateWidget({ ...selectedWidget, content: toPersianDigits(content) });
+    }
   };
 
   /** انتخاب آیکون برای دکمه */
@@ -653,6 +672,15 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       >
                         <Sparkles className="w-3 h-3" />
                         درج آیکون
+                      </button>
+                      <button
+                        type="button"
+                        onClick={convertContentDigitsToPersian}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white text-[10px] font-bold transition-all cursor-pointer"
+                        title="تبدیل اعداد انگلیسی به فارسی (روی متن انتخاب‌شده یا کل متن)"
+                      >
+                        <Languages className="w-3 h-3" />
+                        تبدیل اعداد
                       </button>
                     </div>
                   </div>
