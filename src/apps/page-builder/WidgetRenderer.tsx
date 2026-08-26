@@ -177,26 +177,30 @@ const resolveBackgroundColor = (s: WidgetStyle): string | undefined => {
 };
 
 /** اعمال شفافیت روی هر مقدار CSS پس‌زمینه (رنگ ثابت یا گرادیان) — رنگ‌های hex و rgb/rgba داخل گرادیان
- * هم به rgba با آلفای جدید تبدیل می‌شوند (مقدار opacity همیشه آلفای نهایی را جایگزین می‌کند، حتی اگر
- * رنگ از قبل rgba با آلفای دیگری باشد — مثلاً وقتی گرادیان از انتخابگر رنگ به‌صورت rgba ذخیره شده باشد) */
+ * هم پشتیبانی می‌شوند. مقدار opacity آلفای موجود را ضرب می‌کند (نه جایگزین) — دقیقاً مثل رفتار CSS
+ * opacity در پیش‌نمایش خودِ انتخابگر گرادیان — تا اختلاف عمدی آلفای هر نقطهٔ گرادیان (مثلاً یک سمت
+ * کاملاً شفاف rgba(...,0) برای افکت محوشدگی) حفظ شود؛ فقط با اسلایدر شفافیت کمرنگ‌تر می‌شود، نه یکسان. */
 export const applyBackgroundOpacity = (value?: string, opacity?: number): string | undefined => {
   if (!value) return undefined;
   if (opacity === undefined || opacity >= 100) return value;
-  const alpha = Math.max(0, Math.min(100, opacity)) / 100;
+  const factor = Math.max(0, Math.min(100, opacity)) / 100;
+  const scaleAlpha = (existing: number) => Math.round(Math.max(0, Math.min(1, existing * factor)) * 1000) / 1000;
   const hexToRgba = (hex: string): string => {
     const h = hex.replace('#', '');
     if (/^[0-9a-fA-F]{6}$/.test(h)) {
       const r = parseInt(h.slice(0, 2), 16);
       const g = parseInt(h.slice(2, 4), 16);
       const b = parseInt(h.slice(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return `rgba(${r}, ${g}, ${b}, ${scaleAlpha(1)})`;
     }
     return hex;
   };
   const replaceColors = (input: string): string =>
     input
       .replace(/#[0-9a-fA-F]{3,8}\b/g, hexToRgba)
-      .replace(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)/gi, (_m, r, g, b) => `rgba(${r}, ${g}, ${b}, ${alpha})`);
+      .replace(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/gi, (_m, r, g, b, a) =>
+        `rgba(${r}, ${g}, ${b}, ${scaleAlpha(a !== undefined ? parseFloat(a) : 1)})`
+      );
   // گرادیان → همهٔ رنگ‌های hex یا rgb/rgba داخل را شفاف کن (بقیهٔ ساختار دست‌نخورده می‌ماند)
   if (/gradient\(/i.test(value)) {
     return replaceColors(value);

@@ -3,8 +3,10 @@ import { Plus, Trash2 } from 'lucide-react';
 
 // ---- Types ----
 interface ColorStop {
+  /** همیشه hex شش‌رقمی — شفافیت جدا در alpha نگه داشته می‌شود تا هر نقطه اسلایدر شفافیت مستقل داشته باشد */
   color: string;
-  position: number; // 0-100
+  position: number; // 0-100 — محدودهٔ پخش این رنگ روی گرادیان
+  alpha: number; // 0-100 — شفافیت این نقطه (۱۰۰ = کاملاً کدر، ۰ = کاملاً شفاف)
 }
 
 interface GradientPickerProps {
@@ -17,6 +19,25 @@ interface GradientPickerProps {
 // ---- Helpers ----
 
 const DEFAULT_GRADIENT = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
+
+const isValidHex6 = (s: string): boolean => /^#[0-9a-fA-F]{6}$/.test(s.trim());
+
+const rgbToHex = (r: number, g: number, b: number): string =>
+  '#' + [r, g, b].map((n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('');
+
+/** رنگ یک نقطهٔ گرادیان را به {hex, alpha 0-100} تجزیه می‌کند — hex/rgb/rgba/transparent را می‌شناسد */
+function parseStopColor(raw: string, fallbackHex: string): { color: string; alpha: number } {
+  const c = raw.trim();
+  if (c.toLowerCase() === 'transparent') return { color: fallbackHex, alpha: 0 };
+  const rgbaMatch = c.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+  if (rgbaMatch) {
+    const [, r, g, b, a] = rgbaMatch;
+    return { color: rgbToHex(+r, +g, +b), alpha: a !== undefined ? Math.round(parseFloat(a) * 100) : 100 };
+  }
+  if (isValidHex6(c)) return { color: c, alpha: 100 };
+  // رنگ نامعتبر/خالی (مثلاً باقی‌ماندهٔ ویرایش دستی ناقص) — به‌جای خراب‌کردن کل رشته، رنگ پیش‌فرض با نمایان بودن کامل
+  return { color: fallbackHex, alpha: 100 };
+}
 
 /**
  * Parse a CSS linear-gradient string into angle + color stops.
@@ -36,12 +57,15 @@ function parseGradient(css: string): { angle: string; stops: ColorStop[] } {
 
     const stops: ColorStop[] = parts.map((part) => {
       const p = part.trim();
-      const posMatch = p.match(/(\S+)\s+([\d.]+)%/);
-      if (posMatch) {
-        return { color: posMatch[1], position: parseFloat(posMatch[2]) };
-      }
-      // fallback: no position → distribute evenly
-      return { color: p, position: 0 };
+      // موقعیت همیشه یک درصد در انتهای رشته است — حتی اگر رنگ قبل از آن خالی/نامعتبر باشد. قبلاً این
+      // رگرسیون را داشت: نیازمند «رنگ سپس فاصله سپس درصد» بود، پس یک رنگ خالی (مثلاً باقی‌ماندهٔ ویرایش
+      // دستی ناقص) کل رشته را به‌جای رنگ غلط تفسیر می‌کرد و موقعیت را صفر می‌گذاشت — با ادیت بعدی
+      // (مثلاً کشیدن اسلایدر موقعیت) این رشتهٔ خراب («0% 39%») ذخیره می‌شد و گرادیان کلاً نامعتبر می‌شد.
+      const posMatch = p.match(/^(.*?)\s*([\d.]+)%\s*$/);
+      const colorRaw = posMatch ? posMatch[1].trim() : p;
+      const position = posMatch ? parseFloat(posMatch[2]) : 0;
+      const { color, alpha } = parseStopColor(colorRaw, '#0f172a');
+      return { color, position, alpha };
     });
 
     // Normalize positions if they're all 0 (meaning they came from fallback)
@@ -79,12 +103,24 @@ function splitStops(raw: string): string[] {
   return parts;
 }
 
+/** hex شش‌رقمی + آلفای ۰-۱۰۰ → رشتهٔ rgba (یا خودِ hex وقتی آلفا کامل است، برای خروجی تمیزتر) */
+function stopColorToCss(hex: string, alpha: number): string {
+  if (alpha >= 100) return isValidHex6(hex) ? hex : hex;
+  const h = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(100, alpha)) / 100})`;
+}
+
 /**
- * Build a CSS linear-gradient string from angle and stops.
+ * Build a CSS linear-gradient string from angle and stops — هر نقطه با آلفای خودش
+ * (اگر کمتر از ۱۰۰٪ باشد) تا شفافیت مستقل هر نقطه هم در خروجی و هم در پیش‌نمایش دیده شود.
  */
 function buildGradient(angle: string, stops: ColorStop[]): string {
   const stopStr = stops
-    .map((s) => `${s.color} ${s.position}%`)
+    .map((s) => `${stopColorToCss(s.color, s.alpha)} ${s.position}%`)
     .join(', ');
   return `linear-gradient(${angle}, ${stopStr})`;
 }
@@ -274,6 +310,15 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
     [stops, angle, emit]
   );
 
+  const handleStopAlpha = useCallback(
+    (index: number, alpha: number) => {
+      const clamped = Math.max(0, Math.min(100, alpha));
+      const next = stops.map((s, i) => (i === index ? { ...s, alpha: clamped } : s));
+      emit(angle, next);
+    },
+    [stops, angle, emit]
+  );
+
   const addStop = useCallback(() => {
     if (stops.length >= 8) return; // reasonable limit
     // Insert between last two stops or at 100%
@@ -281,7 +326,7 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
       ? Math.min(100, stops[stops.length - 1].position + 10)
       : 100;
     const color = '#3b82f6';
-    const next = [...stops, { color, position: Math.min(100, pos) }];
+    const next = [...stops, { color, position: Math.min(100, pos), alpha: 100 }];
     emit(angle, next);
   }, [stops, angle, emit]);
 
@@ -304,46 +349,74 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
         style={{ background: buildGradient(angle, stops) }}
       />
 
-      {/* Color stops */}
-      <div className="space-y-2 max-h-44 overflow-y-auto scrollbar-thin">
+      {/* Color stops — هر نقطه: رنگ (با کد hex)، شفافیت٪ و محدودهٔ پخش٪ مستقل از هم */}
+      <div className="space-y-2.5 max-h-64 overflow-y-auto scrollbar-thin">
         {stops.map((stop, index) => (
-          <div key={index} className="flex items-center gap-2">
-            {/* Color picker */}
-            <input
-              type="color"
-              value={stop.color}
-              onChange={(e) => handleStopColor(index, e.target.value)}
-              className="w-7 h-7 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
-            />
-            {/* Hex text */}
-            <input
-              type="text"
-              value={stop.color}
-              onChange={(e) => handleStopColor(index, e.target.value)}
-              className="w-16 min-w-0 p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[10px]"
-            />
-            {/* Position slider */}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={stop.position}
-              onChange={(e) => handleStopPosition(index, parseInt(e.target.value))}
-              className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
-              dir="ltr"
-            />
-            <span className="text-[10px] text-slate-500 w-8 shrink-0 text-right font-mono">
-              {stop.position}%
-            </span>
-            {/* Remove button */}
-            {stops.length > 2 && (
-              <button
-                onClick={() => removeStop(index)}
-                className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg cursor-pointer shrink-0"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
+          <div
+            key={index}
+            className="rounded-xl border border-gray-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-2 space-y-1.5"
+          >
+            <div className="flex items-center gap-2">
+              {/* Color picker */}
+              <input
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(stop.color) ? stop.color : '#000000'}
+                onChange={(e) => handleStopColor(index, e.target.value)}
+                className="w-7 h-7 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                title="رنگ نقطه"
+              />
+              {/* Hex text */}
+              <input
+                type="text"
+                value={stop.color}
+                onChange={(e) => handleStopColor(index, e.target.value)}
+                placeholder="#rrggbb"
+                title="کد رنگ (hex)"
+                dir="ltr"
+                className="w-20 min-w-0 p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[10px]"
+              />
+              <span className="flex-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">نقطهٔ {index + 1}</span>
+              {/* Remove button */}
+              {stops.length > 2 && (
+                <button
+                  onClick={() => removeStop(index)}
+                  className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg cursor-pointer shrink-0"
+                  title="حذف این نقطه"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Opacity slider — ۱۰۰٪ = کاملاً کدر، ۰٪ = کاملاً شفاف (برای محوشدن یک سمت گرادیان) */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 w-14 shrink-0">شفافیت</label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={stop.alpha}
+                onChange={(e) => handleStopAlpha(index, parseInt(e.target.value))}
+                className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
+                dir="ltr"
+              />
+              <span className="text-[10px] text-slate-500 w-8 shrink-0 text-right font-mono">{stop.alpha}%</span>
+            </div>
+
+            {/* Position slider — محدودهٔ پخش این رنگ روی طول گرادیان */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 w-14 shrink-0">محدودهٔ پخش</label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={stop.position}
+                onChange={(e) => handleStopPosition(index, parseInt(e.target.value))}
+                className="min-w-0 flex-1 h-1 accent-teal-500 cursor-pointer"
+                dir="ltr"
+              />
+              <span className="text-[10px] text-slate-500 w-8 shrink-0 text-right font-mono">{stop.position}%</span>
+            </div>
           </div>
         ))}
       </div>
