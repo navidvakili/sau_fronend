@@ -27,7 +27,7 @@ import {
   List, ListOrdered, AlignRight, AlignCenter, AlignLeft, AlignJustify,
   Quote, Minus, Undo2, Redo2, Link as LinkIcon, Image as ImageIcon,
   Highlighter, Palette, Table as TableIcon, RemoveFormatting,
-  Globe, CodeSquare, Maximize2, Minimize2, Sparkles,
+  Globe, CodeSquare, Maximize2, Minimize2, Sparkles, Languages,
 } from 'lucide-react';
 import MediaManager from './MediaManager';
 import { VariableInsertButton } from './PageVariables';
@@ -57,6 +57,13 @@ const ResizableImage = Image.extend({
     };
   },
 });
+
+/** نگاشت ارقام انگلیسی (0-9) به فارسی (۰-۹) — برای دکمهٔ «تبدیل اعداد» در نوار ابزار */
+const EN_TO_FA_DIGITS: Record<string, string> = {
+  '0': '۰', '1': '۱', '2': '۲', '3': '۳', '4': '۴',
+  '5': '۵', '6': '۶', '7': '۷', '8': '۸', '9': '۹',
+};
+const toPersianDigits = (s: string) => s.replace(/[0-9]/g, (d) => EN_TO_FA_DIGITS[d]);
 
 const IMAGE_SIZE_PRESETS = [
   { label: '۲۵٪', value: '25%' },
@@ -466,6 +473,38 @@ export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function Wysi
     setTableHover({ r: 0, c: 0 });
   };
 
+  // تبدیل ارقام انگلیسی به فارسی — اگر متنی انتخاب شده باشد فقط همان، وگرنه کل متن ویرایشگر.
+  // برای حفظ فرمت‌بندی (بولد/رنگ و...)، هر گرهٔ متنی با همان مارک‌های خودش جایگزین می‌شود؛
+  // ترتیب اعمال از انتهای سند به ابتدا است تا موقعیت بخش‌های قبلی با ادیت‌های بعدی جابه‌جا نشود.
+  const convertDigitsToPersian = () => {
+    const { state } = editor;
+    const { selection, schema } = state;
+    const hasSelection = !selection.empty;
+    const from = hasSelection ? selection.from : 0;
+    const to = hasSelection ? selection.to : state.doc.content.size;
+
+    const replacements: { from: number; to: number; text: string; marks: any }[] = [];
+    state.doc.nodesBetween(from, to, (node, pos) => {
+      if (!node.isText || !node.text) return;
+      const nodeFrom = Math.max(pos, from);
+      const nodeTo = Math.min(pos + node.text.length, to);
+      if (nodeFrom >= nodeTo) return;
+      const original = node.text.slice(nodeFrom - pos, nodeTo - pos);
+      const converted = toPersianDigits(original);
+      if (converted !== original) {
+        replacements.push({ from: nodeFrom, to: nodeTo, text: converted, marks: node.marks });
+      }
+    });
+    if (replacements.length === 0) return;
+
+    const tr = state.tr;
+    for (let i = replacements.length - 1; i >= 0; i--) {
+      const r = replacements[i];
+      tr.replaceWith(r.from, r.to, schema.text(r.text, r.marks));
+    }
+    editor.view.dispatch(tr);
+  };
+
   const toggleHtmlSource = () => {
     if (showHtmlSource) {
       // Switch back to WYSIWYG — set content from textarea
@@ -667,6 +706,16 @@ export default forwardRef<WysiwygEditorHandle, WysiwygEditorProps>(function Wysi
             title="تراز کامل"
           >
             <AlignJustify className="w-4 h-4" />
+          </ToolbarBtn>
+
+          <ToolbarDivider />
+
+          {/* تبدیل اعداد انگلیسی به فارسی — روی متن انتخاب‌شده، وگرنه کل متن */}
+          <ToolbarBtn
+            onClick={convertDigitsToPersian}
+            title="تبدیل اعداد انگلیسی به فارسی (روی متن انتخاب‌شده یا کل متن)"
+          >
+            <Languages className="w-4 h-4" />
           </ToolbarBtn>
 
           {!isBasic && (
