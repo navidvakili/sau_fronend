@@ -66,7 +66,8 @@ import {
   Settings2,
   Loader2,
   FolderTree,
-  ChevronDown
+  ChevronDown,
+  AlertTriangle
 } from 'lucide-react';
 
 interface PageBuilderStudioProps {
@@ -393,6 +394,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     seo: { title?: string; description?: string; keywords?: string; og_image?: string };
   }) => {
     setIsSavingPage(true);
+    setPublishWarning(null);
     try {
       const payload = {
         title: data.title,
@@ -402,22 +404,29 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         seo: data.seo,
         schema: JSON.parse(JSON.stringify(pageSchema)),
       };
+      let actualStatus: 'published' | 'draft' = data.status;
       if (activePageId) {
-        await updateSmartPage(activePageId, payload);
+        const res = await updateSmartPage(activePageId, payload);
+        actualStatus = res.data.status;
         setCurrentParentId(data.parent_id ?? null);
       } else {
         const res = await createSmartPage({ ...payload, lang: currentLang });
         setActivePageId(res.data.id!);
         setCurrentParentId(data.parent_id ?? null);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
+        actualStatus = res.data.status;
       }
+      // وضعیت واقعیِ بازگشتی از سرور ملاک است (نبود دسترسی «تأیید» می‌تواند انتشار را رد کند)
       setPageSchema((prev) => ({
         ...prev,
         title: data.title,
         slug: data.slug,
-        status: data.status,
+        status: actualStatus,
         seo: data.seo,
       }));
+      if (data.status === 'published' && actualStatus !== 'published') {
+        setPublishWarning('عدم دسترسی «تأیید انتشار» — صفحه به‌صورت پیش‌نویس ذخیره شد و هنوز روی سایت منتشر نیست.');
+      }
       const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
       setPages(list.data);
       setShowPageSettingsModal(false);
@@ -457,6 +466,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
 
   // Status notification state
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [publishWarning, setPublishWarning] = useState<string | null>(null);
   const [showLeaveListConfirm, setShowLeaveListConfirm] = useState(false);
   const [isPageDirty, setIsPageDirty] = useState(false);
 
@@ -1266,6 +1276,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   // Save Page Action — persist full schema to backend (create or update)
   const savePageWithStatus = async (status: 'published' | 'draft') => {
     setIsSavingPage(true);
+    setPublishWarning(null);
     try {
       const payload = {
         title: pageSchema.title,
@@ -1274,14 +1285,22 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
         seo: pageSchema.seo,
         schema: JSON.parse(JSON.stringify(pageSchema)),
       };
+      let actualStatus: 'published' | 'draft' = status;
       if (activePageId) {
-        await updateSmartPage(activePageId, payload);
+        const res = await updateSmartPage(activePageId, payload);
+        actualStatus = res.data.status;
       } else {
         const res = await createSmartPage({ ...payload, lang: currentLang });
         setActivePageId(res.data.id!);
         setPageSchema((prev) => ({ ...prev, id: `page-${res.data.id}` }));
+        actualStatus = res.data.status;
       }
-      setPageSchema((prev) => ({ ...prev, status }));
+      // همیشه از وضعیت واقعیِ بازگشتی از سرور استفاده شود، نه وضعیتِ درخواست‌شده —
+      // چون سرور ممکن است (مثلاً به‌دلیل نبود دسترسیِ «تأیید») انتشار را رد کند.
+      setPageSchema((prev) => ({ ...prev, status: actualStatus }));
+      if (status === 'published' && actualStatus !== 'published') {
+        setPublishWarning('عدم دسترسی «تأیید انتشار» — صفحه به‌صورت پیش‌نویس ذخیره شد و هنوز روی سایت منتشر نیست.');
+      }
       const list = await fetchSmartPages({ per_page: 100, lang: currentLang });
       setPages(list.data);
       setSaveSuccess(true);
@@ -1829,6 +1848,16 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
                     <span>ذخیره پیش‌نویس</span>
                     <span className="mr-auto text-[10px] text-slate-400 font-normal">بدون انتشار</span>
                   </button>
+                </div>
+              </>
+            )}
+
+            {publishWarning && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setPublishWarning(null)} />
+                <div className="absolute top-full left-0 mt-2 z-50 w-72 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-2xl shadow-2xl p-3 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <p className="text-xs text-amber-800 dark:text-amber-300 font-bold leading-5">{publishWarning}</p>
                 </div>
               </>
             )}
