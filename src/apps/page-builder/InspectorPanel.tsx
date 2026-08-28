@@ -1778,6 +1778,70 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
+              {/* نوار جستجو و فیلتر دانشکده — روی سایت عمومی روی کارت‌هایی که conditionalDisplay.searchParamKey/urlParamKey منطبق دارند اثر می‌گذارد */}
+              {selectedWidget.type === 'search-filter-bar' && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">متن راهنمای کادر جستجو</label>
+                    <input
+                      type="text"
+                      value={customProps.placeholder || ''}
+                      onChange={(e) => updateCustomProps({ placeholder: e.target.value })}
+                      placeholder="جستجو در رشته‌ها..."
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نام پارامتر جستجو در URL</label>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={customProps.searchParamKey || 'q'}
+                      onChange={(e) => updateCustomProps({ searchParamKey: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                    <p className="text-[10px] text-slate-400">باید با همین مقدار در بخش «شرط نمایش» کارت‌های هدف (فیلد «نام پارامتر جستجو در URL») یکسان باشد.</p>
+                  </div>
+                  <div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-slate-800">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">عنوان فیلتر دسته (مثلاً «دانشکده»)</label>
+                    <input
+                      type="text"
+                      value={customProps.categoryLabel || ''}
+                      onChange={(e) => updateCustomProps({ categoryLabel: e.target.value })}
+                      placeholder="دانشکده"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نام پارامتر دسته در URL</label>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={customProps.categoryParamKey || 'dept'}
+                      onChange={(e) => updateCustomProps({ categoryParamKey: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                    <p className="text-[10px] text-slate-400">باید با «نام پارامتر در URL» تنظیم‌شده روی برچسب کارت‌های هدف یکسان باشد.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">گزینه‌های دسته (هر خط یک مورد — مثلاً نام دانشکده)</label>
+                    <textarea
+                      rows={5}
+                      dir="rtl"
+                      value={(customProps.categoryOptions || []).join('\n')}
+                      onChange={(e) =>
+                        updateCustomProps({
+                          categoryOptions: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean)
+                        })
+                      }
+                      placeholder={'علوم انسانی\nفنی و مهندسی\nعلوم پایه'}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 resize-y"
+                    />
+                    <p className="text-[10px] text-slate-400">همین متن، هم به‌عنوان گزینه‌های dropdown نمایش داده می‌شود، هم باید عیناً در «برچسب این سکشن» کارت‌های همان دانشکده استفاده شود.</p>
+                  </div>
+                </div>
+              )}
+
               {/* نوار راهبری (منو) */}
               {selectedWidget.type === 'nav-menu' && (
                 <>
@@ -3457,6 +3521,33 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       </div>
                     </div>
 
+                    <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        کلیدواژه‌های جستجو (برای نوار جستجوی متنی)
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedWidget.settings.conditionalDisplay?.searchKeywords || ''}
+                        onChange={(e) => handleConditionalChange('searchKeywords', e.target.value)}
+                        placeholder="کارشناسی ارشد فیزیولوژی ورزشی Sport Physiology علوم انسانی"
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        اگر مقدار پارامتر جستجوی URL به‌صورت بخشی از این متن پیدا شود، بلوک نمایش داده می‌شود؛ این شرط مستقل از برچسب بالا است و هر دو باید هم‌زمان برقرار باشند. اگر خالی بگذارید، این بلوک از جستجو متأثر نمی‌شود.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 shrink-0">نام پارامتر جستجو در URL:</span>
+                        <input
+                          type="text"
+                          dir="ltr"
+                          value={selectedWidget.settings.conditionalDisplay?.searchParamKey || ''}
+                          onChange={(e) => handleConditionalChange('searchParamKey', e.target.value)}
+                          placeholder="q"
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
+
                     {/* حالت: مخفی/نمایش بلوک، یا فقط تغییر رنگ (چیپ/تب فیلتر فعال) */}
                     <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رفتار هنگام تطابق</label>
@@ -4342,6 +4433,43 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     }
                     className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    کلیدواژه‌های جستجو (برای نوار جستجوی متنی)
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedSection.conditionalDisplay?.searchKeywords || ''}
+                    onChange={(e) =>
+                      onUpdateSection({
+                        ...selectedSection,
+                        conditionalDisplay: { ...selectedSection.conditionalDisplay, searchKeywords: e.target.value },
+                      })
+                    }
+                    placeholder="کارشناسی ارشد فیزیولوژی ورزشی Sport Physiology علوم انسانی"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    اگر مقدار پارامتر جستجوی URL به‌صورت بخشی از این متن پیدا شود، سکشن نمایش داده می‌شود؛ این شرط مستقل از برچسب بالا است و هر دو باید هم‌زمان برقرار باشند.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 shrink-0">نام پارامتر جستجو در URL:</span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={selectedSection.conditionalDisplay?.searchParamKey || ''}
+                      onChange={(e) =>
+                        onUpdateSection({
+                          ...selectedSection,
+                          conditionalDisplay: { ...selectedSection.conditionalDisplay, searchParamKey: e.target.value },
+                        })
+                      }
+                      placeholder="q"
+                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
                 </div>
               </div>
             )}

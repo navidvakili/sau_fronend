@@ -162,6 +162,10 @@ const resolveBorderRadius = (s: WidgetStyle): string | undefined => {
   return s.borderRadius !== undefined ? `${s.borderRadius}px` : undefined;
 };
 
+/** یکسان‌سازی کاراکترهای عربی/فارسی مشابه (ي/ك عربی ↔ ی/ک فارسی) پیش از مقایسهٔ جستجوی متنی —
+ *  چون کاربر ممکن است با کیبورد عربی یا فارسی تایپ کند و محتوای صفحه هم می‌تواند مخلوط باشد */
+const normalizeArabicChars = (s: string): string => s.replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+
 /** رنگ پس‌زمینهٔ ساده با اعمال شفافیت (backgroundOpacity) — فقط برای رنگ ثابت */
 const resolveBackgroundColor = (s: WidgetStyle): string | undefined => {
   if (!s.backgroundColor) return undefined;
@@ -3936,6 +3940,14 @@ export const RenderSectionReadOnly: React.FC<{
       return null;
     }
   }
+  // جستجوی متنی (substring) روی کل سکشن — مستقل از urlParamKey/urlParamValue بالا، با AND ترکیب می‌شود
+  const sectionSearchParamKey = sectionCond?.enabled ? sectionCond.searchParamKey?.trim() : undefined;
+  if (sectionSearchParamKey && !isEditorPreview) {
+    const sectionSearchQuery = normalizeArabicChars((new URLSearchParams(sectionUrlSearch).get(sectionSearchParamKey) || '').trim().toLowerCase());
+    if (sectionSearchQuery && !normalizeArabicChars((sectionCond?.searchKeywords || '').toLowerCase()).includes(sectionSearchQuery)) {
+      return null;
+    }
+  }
 
   // پس‌زمینهٔ لایه‌ای سکشن — همان منطق buildSectionBackgroundImage در Canvas.tsx: گرادیان (یا رنگ ساده
   // به‌صورت لایهٔ گرادیان یکنواخت) همیشه روی تصویر قرار می‌گیرد، تصویر پایین‌ترین لایه است، وگرنه
@@ -4240,6 +4252,43 @@ const ExcelTableBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.
   );
 };
 
+/** نوار جستجو و فیلتر دانشکده — روی سایت عمومی روی کارت‌های خواهر/فرزند اثر واقعی دارد
+ *  (از طریق conditionalDisplay.searchParamKey/urlParamKey همان کارت‌ها)؛ این‌جا (بومِ ویرایشگر)
+ *  فقط پیش‌نمایش بصری غیرفعال است */
+const SearchFilterBarBlock: React.FC<{ widget: WidgetInstance; containerStyle: React.CSSProperties }> = ({ widget, containerStyle }) => {
+  const props = widget.settings.customProps || {};
+  const placeholder: string = props.placeholder || 'جستجو...';
+  const categoryLabel: string = props.categoryLabel || 'دانشکده';
+  const categoryOptions: string[] = props.categoryOptions || [];
+  return (
+    <div style={containerStyle} className="flex flex-wrap items-center gap-3">
+      <div className="relative flex-1 min-w-[200px]">
+        <input
+          type="text"
+          disabled
+          placeholder={placeholder}
+          className="w-full bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl pr-9 pl-3 py-2.5 text-xs cursor-not-allowed"
+        />
+        <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
+      </div>
+      {categoryOptions.length > 0 && (
+        <select
+          disabled
+          className="bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs cursor-not-allowed"
+        >
+          <option>همه {categoryLabel}‌ها</option>
+          {categoryOptions.map((opt) => (
+            <option key={opt}>{opt}</option>
+          ))}
+        </select>
+      )}
+      <span className="text-[10px] text-slate-400 basis-full">
+        این نوار فقط در سایت عمومی فعال است (پیش‌نمایش غیرتعاملی)
+      </span>
+    </div>
+  );
+};
+
 export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   widget,
   currentUserRole = 'all',
@@ -4285,6 +4334,14 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     if (filterTags && activeFilterValue && !cond.styleOnly) {
       const allowedTags = filterTags.split(/\s+/);
       if (!allowedTags.includes(activeFilterValue)) {
+        return null;
+      }
+    }
+    // جستجوی متنی (substring) — مستقل از urlParamKey/urlParamValue بالا، با AND ترکیب می‌شود
+    const searchParamKey = cond.searchParamKey?.trim();
+    if (searchParamKey) {
+      const searchQuery = normalizeArabicChars((new URLSearchParams(urlSearch).get(searchParamKey) || '').trim().toLowerCase());
+      if (searchQuery && !normalizeArabicChars((cond.searchKeywords || '').toLowerCase()).includes(searchQuery)) {
         return null;
       }
     }
@@ -4699,6 +4756,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'excel-table':
       return <ExcelTableBlock widget={widget} containerStyle={containerStyle} />;
+
+    case 'search-filter-bar':
+      return <SearchFilterBarBlock widget={widget} containerStyle={containerStyle} />;
 
     // -------------------------------------------------------------
     // SMART DYNAMIC WIDGETS — اتصال به وب‌سرویس‌های واقعی

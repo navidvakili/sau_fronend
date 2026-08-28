@@ -20,6 +20,13 @@ export interface ConditionalDisplayRule {
   /** برای styleOnly: به‌جای تطابق با urlParamValue، «فعال» یعنی پارامتر URL خالی/غایب است —
    *  برای چیپ «همه» که وقتی هیچ فیلتری ست نشده باید فعال به نظر برسد */
   matchWhenEmpty?: boolean;
+  /** نام پارامتر URL جستجوی متنی (مثلاً "q") — مستقل از urlParamKey/urlParamValue، برای
+   *  تطبیق substring (نه exact-match) روی searchKeywords؛ با urlParamKey/urlParamValue
+   *  به‌صورت AND ترکیب می‌شود (هر دو باید برقرار باشند تا بلوک نمایش داده شود) */
+  searchParamKey?: string;
+  /** متنی که مقدار پارامتر searchParamKey باید به‌صورت substring (case-insensitive) داخلش
+   *  پیدا شود — مثلاً عنوان فارسی/انگلیسی/دانشکدهٔ یک کارت رشته */
+  searchKeywords?: string;
 }
 
 export type WidgetCategory = 'static' | 'dynamic' | 'layout';
@@ -54,7 +61,8 @@ export type StaticWidgetType =
   | 'testimonial'
   | 'tabs'
   | 'interactive-map'
-  | 'excel-table';
+  | 'excel-table'
+  | 'search-filter-bar';
 
 export type SmartWidgetType =
   | 'announcements-feed'
@@ -110,6 +118,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   tabs: 'تب‌ها',
   'interactive-map': 'نقشه تعاملی',
   'excel-table': 'جدول اکسل',
+  'search-filter-bar': 'نوار جستجو و فیلتر',
   // ویجت‌های هوشمند (ماژول‌ها)
   'announcements-feed': 'خوراک اطلاعیه‌ها',
   'news-feed': 'خوراک اخبار',

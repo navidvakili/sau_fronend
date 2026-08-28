@@ -99,6 +99,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'tabs', category: 'basic', name: 'تب‌ها (Tabs)', desc: 'محتوای چندگانه با سوئیچ بین چند تب — هر تب یک بخش کامل و مستقل', icon: Layers, badge: 'تعاملی' },
     { type: 'interactive-map', category: 'basic', name: 'نقشه تعاملی (Interactive Map)', desc: 'سوئیچ بین چند نقشه/مکان آماده با دکمه‌های انتخاب', icon: Navigation, badge: 'تعاملی' },
     { type: 'excel-table', category: 'basic', name: 'جدول اکسل (Excel Table)', desc: 'آپلود فایل اکسل و نمایش آن به‌صورت جدول قابل جستجو', icon: FileSpreadsheet, badge: 'آپلود' },
+    { type: 'search-filter-bar', category: 'basic', name: 'نوار جستجو و فیلتر', desc: 'جستجوی متنی و فیلتر دسته روی کارت‌های استاتیک صفحه (بدون اتصال به بک‌اند)', icon: Search, badge: 'جستجو' },
 
     // Smart items
     { type: 'news-feed', category: 'smart', name: 'خوراک داینامیک اخبار', desc: 'اتصال زنده به ماژول اخبار با گرید و اسلایدر', icon: Newspaper, badge: 'ماژول اخبار' },

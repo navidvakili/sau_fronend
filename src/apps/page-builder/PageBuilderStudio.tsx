@@ -850,6 +850,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       title = 'نقشه تعاملی پردیس‌ها';
     } else if (widgetType === 'excel-table') {
       title = 'جدول وارد شده از اکسل';
+    } else if (widgetType === 'search-filter-bar') {
+      title = 'نوار جستجو و فیلتر';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -872,6 +874,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           limit: 4,
           displayMode: 'grid'
         },
+        customProps: widgetType === 'search-filter-bar' ? { searchParamKey: 'q', categoryParamKey: 'dept', categoryLabel: 'دانشکده' } : undefined,
         visibility: { desktop: true, tablet: true, mobile: true },
         conditionalDisplay: { enabled: false, userRole: 'all' }
       }
@@ -1061,6 +1064,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       title = 'نقشه تعاملی پردیس‌ها';
     } else if (widgetType === 'excel-table') {
       title = 'جدول وارد شده از اکسل';
+    } else if (widgetType === 'search-filter-bar') {
+      title = 'نوار جستجو و فیلتر';
     }
 
     // محتوای اولیه — نوار راهبری آیتم‌های منو را در فیلد جداگانهٔ content نگه می‌دارد (بدون متن پیش‌فرض)
@@ -1083,6 +1088,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           limit: 4,
           displayMode: 'grid'
         },
+        customProps: widgetType === 'search-filter-bar' ? { searchParamKey: 'q', categoryParamKey: 'dept', categoryLabel: 'دانشکده' } : undefined,
         visibility: { desktop: true, tablet: true, mobile: true },
         conditionalDisplay: { enabled: false, userRole: 'all' }
       }
