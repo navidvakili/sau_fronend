@@ -163,6 +163,16 @@ export interface MegaMenuConfig {
   };
 }
 
+/** پیکربندی خالی مگامنو — نقطهٔ شروع «طراح مگا منو» برای آیتمی که هنوز megaMenuConfig
+ *  ندارد. عمداً بدون هیچ ستون نمونه/محتوای placeholder است: قبلاً اینجا یک نمونهٔ ۳ستونه
+ *  با عنوان/لینک‌های واقعی‌نما ساخته می‌شد که باعث می‌شد کاربر تصور کند محتوا از قبل
+ *  ذخیره شده، در حالی که تا کلیک نکردن روی «ذخیره پیکربندی مگا منو» هیچ‌چیز واقعاً ذخیره
+ *  نمی‌شد. حالا کاربر باید خودش با دکمهٔ «افزودن ستون» محتوای واقعی بسازد. */
+export const createEmptyMegaMenuConfig = (): MegaMenuConfig => ({
+  columnsCount: 0,
+  columns: []
+});
+
 export interface NavigationItem {
   id: string;
   menuId: string;

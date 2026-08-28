@@ -27,7 +27,7 @@ import {
   Moon,
   ExternalLink
 } from 'lucide-react';
-import { NavigationItem, MegaMenuConfig, MegaMenuColumn, MegaMenuLinkItem } from './types';
+import { NavigationItem, MegaMenuConfig, MegaMenuColumn, MegaMenuLinkItem, createEmptyMegaMenuConfig } from './types';
 import { MegaMenuPreviewModal } from './MegaMenuPreviewModal';
 
 interface MegaMenuDesignerModalProps {
@@ -41,42 +41,7 @@ export const MegaMenuDesignerModal: React.FC<MegaMenuDesignerModalProps> = ({
   onSave,
   onClose
 }) => {
-  const defaultConfig: MegaMenuConfig = item.megaMenuConfig || {
-    columnsCount: 3,
-    columns: [
-      {
-        id: 'col_1',
-        title: 'دستورالعمل‌ها و دسترسی سریع',
-        type: 'links',
-        widthSpan: 4,
-        links: [
-          { id: 'l1', title: 'راهنمای پذیرش و ثبت‌نام', url: '/admissions', description: 'شرایط ثبت‌نام ورودی‌های جدید' },
-          { id: 'l2', title: 'سامانه آموزش (سما)', url: '/edu-portal', description: 'انتخاب واحد و دریافت کارنامه' },
-          { id: 'l3', title: 'تقویم نیمسال تحصیلی', url: '/calendar', description: 'زمان‌بندی امتحانات و تعطیلات' }
-        ]
-      },
-      {
-        id: 'col_2',
-        title: 'پژوهش و فناوری',
-        type: 'links',
-        widthSpan: 4,
-        links: [
-          { id: 'l4', title: 'آزمایشگاه مرکزی و نانو', url: '/labs', description: 'تجهیزات و رزرو نوبت آنالیز' },
-          { id: 'l5', title: 'مجلات و نشریات ISI', url: '/journals', description: 'ارسال مقاله و داوری علمی' },
-          { id: 'l6', title: 'گرنت‌ها و تسهیلات پژوهشی', url: '/grants', description: 'حمایت مالی از طرح‌های برتر' }
-        ]
-      },
-      {
-        id: 'col_3',
-        title: 'رویداد و همایش ویژه',
-        type: 'image',
-        widthSpan: 4,
-        imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=600&q=80',
-        imageAlt: 'تصویر همایش بین‌المللی',
-        imageCaption: 'ثبت‌نام بیست‌وهشتمین کنفرانس بین‌المللی AI و نانوفناوری'
-      }
-    ]
-  };
+  const defaultConfig: MegaMenuConfig = item.megaMenuConfig || createEmptyMegaMenuConfig();
 
   const [columns, setColumns] = useState<MegaMenuColumn[]>(defaultConfig.columns);
   const [selectedColId, setSelectedColId] = useState<string>(defaultConfig.columns[0]?.id || '');
@@ -329,6 +294,11 @@ export const MegaMenuDesignerModal: React.FC<MegaMenuDesignerModalProps> = ({
               </span>
             </div>
 
+            {columns.length === 0 && (
+              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 text-xs font-bold">
+                هنوز هیچ ستونی اضافه نشده — با دکمهٔ «افزودن ستون جدید» بالا شروع کنید.
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {columns.map((col, idx) => {
                 const isSelected = col.id === activeColumn?.id;
