@@ -45,6 +45,7 @@ interface CanvasProps {
   onAddSection: (preset: '1col' | '2col' | '3col' | '7-5' | '8-4') => void;
   onOpenComponentPicker?: (targetInsertIndex?: number, targetColumnId?: string) => void;
   onDeleteSection: (sectionId: string) => void;
+  onDuplicateSection?: (sectionId: string) => void;
   onDeleteWidget: (widgetId: string) => void;
   onMoveWidget: (widgetId: string, direction: 'up' | 'down') => void;
   onMoveWidgetToColumn?: (widgetId: string, targetColumnId: string, index?: number) => void;
@@ -75,6 +76,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   onAddSection,
   onOpenComponentPicker,
   onDeleteSection,
+  onDuplicateSection,
   onDeleteWidget,
   onMoveWidget,
   onMoveWidgetToColumn,
@@ -265,6 +267,16 @@ export const Canvas: React.FC<CanvasProps> = ({
             title="ویرایش مشخصات سکشن در پنل تنظیمات"
           >
             <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicateSection?.(sec.id);
+            }}
+            className="p-1 rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-md cursor-pointer"
+            title="کپی سکشن (با تمام محتوای داخلش)"
+          >
+            <Copy className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={(e) => {

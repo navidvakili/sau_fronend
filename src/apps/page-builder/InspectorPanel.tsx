@@ -153,6 +153,7 @@ interface InspectorPanelProps {
   onUpdateColumn?: (sectionId: string, columnId: string, patch: Partial<ColumnInstance>) => void;
   onDeleteWidget: (widgetId: string) => void;
   onDeleteSection: (sectionId: string) => void;
+  onDuplicateSection?: (sectionId: string) => void;
   onDuplicateWidget: (widget: WidgetInstance) => void;
   /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ متصل به این لایوت — برای دسته‌بندی‌های بلوک گالری صفحات اختصاصی */
   dedicatedPageId?: number;
@@ -173,6 +174,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   onUpdateColumn,
   onDeleteWidget,
   onDeleteSection,
+  onDuplicateSection,
   onDuplicateWidget,
   dedicatedPageId,
   onEditTabSection
@@ -3703,13 +3705,22 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             <div className="text-[10px] text-slate-400 truncate">{selectedSection.name}</div>
           </div>
 
-          <button
-            onClick={() => onDeleteSection(selectedSection.id)}
-            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white cursor-pointer"
-            title="حذف سکشن"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onDuplicateSection?.(selectedSection.id)}
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-teal-500 cursor-pointer"
+              title="کپی سکشن (با تمام محتوای داخلش)"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onDeleteSection(selectedSection.id)}
+              className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white cursor-pointer"
+              title="حذف سکشن"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

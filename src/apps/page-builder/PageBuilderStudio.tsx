@@ -13,7 +13,9 @@ import {
   PageTemplate,
   ColumnBlock,
   getColumnBlocks,
-  setColumnBlocks
+  setColumnBlocks,
+  createIdGenerator,
+  cloneSectionWithNewIds
 } from './builderTypes';
 import { INITIAL_SMART_PAGE } from './mockData';
 import { Canvas } from './Canvas';
@@ -1169,6 +1171,52 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     }
   };
 
+  // Duplicate Section (بازگشتی — با تمام ستون‌ها/ویجت‌ها/زیربلوک‌هایش، id های کاملاً جدید)
+  // نسخهٔ کپی‌شده بلافاصله بعد از سکشن اصلی، در همان سطح (اصلی یا همان ستونِ والد) درج می‌شود
+  const handleDuplicateSection = (secId: string) => {
+    const sec = findSectionRecursive(pageSchema.sections, secId);
+    if (!sec) return;
+
+    const duplicated = cloneSectionWithNewIds(sec, createIdGenerator());
+    duplicated.name = `${sec.name} (کپی)`;
+
+    // سطح اصلی
+    const topIdx = pageSchema.sections.findIndex(s => s.id === secId);
+    if (topIdx !== -1) {
+      const copy = [...pageSchema.sections];
+      copy.splice(topIdx + 1, 0, duplicated);
+      pushState({ ...pageSchema, sections: copy });
+      setSelectedSectionId(duplicated.id);
+      setSelectedColumnId(null);
+      setSelectedWidgetId(null);
+      return;
+    }
+
+    // زیربلوک تودرتو — بلافاصله بعد از سکشن اصلی در همان ستون درج شود
+    let inserted = false;
+    const updatedSections = mapSectionsRecursive(pageSchema.sections, s => {
+      if (inserted) return s;
+      const newCols = s.columns.map(col => {
+        if (inserted) return col;
+        const blocks = getColumnBlocks(col);
+        const idx = blocks.findIndex(b => b.kind === 'section' && b.section.id === secId);
+        if (idx === -1) return col;
+        const newBlocks = [...blocks];
+        newBlocks.splice(idx + 1, 0, { kind: 'section', section: duplicated });
+        inserted = true;
+        return setColumnBlocks(col, newBlocks);
+      });
+      return { ...s, columns: newCols };
+    });
+
+    if (inserted) {
+      pushState({ ...pageSchema, sections: updatedSections });
+      setSelectedSectionId(duplicated.id);
+      setSelectedColumnId(null);
+      setSelectedWidgetId(null);
+    }
+  };
+
   // Deleting Widget (بازگشتی)
   const handleDeleteWidget = (wId: string) => {
     const updatedSections = mapSectionsRecursive(pageSchema.sections, sec => ({
@@ -1886,6 +1934,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onAddSection={handleAddSection}
           onOpenComponentPicker={handleOpenComponentPicker}
           onDeleteSection={handleDeleteSection}
+          onDuplicateSection={handleDuplicateSection}
           onDeleteWidget={handleDeleteWidget}
           onMoveWidget={handleMoveWidget}
           onMoveWidgetToColumn={handleMoveWidgetToColumn}
@@ -1909,6 +1958,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onUpdateColumn={handleUpdateColumn}
           onDeleteWidget={handleDeleteWidget}
           onDeleteSection={handleDeleteSection}
+          onDuplicateSection={handleDuplicateSection}
           onDuplicateWidget={handleDuplicateWidget}
           dedicatedPageId={previewDedicatedPageId}
           onEditTabSection={(widgetId, tabIndex) => {

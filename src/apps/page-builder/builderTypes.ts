@@ -328,6 +328,35 @@ export const setColumnBlocks = (col: ColumnInstance, blocks: ColumnBlock[]): Col
   subSections: blocks.filter((b) => b.kind === 'section').map((b) => b.section)
 });
 
+/** تولیدکنندهٔ id یکتا برای عملیاتی که چند id را پشت‌سرهم (در یک تیک همزمان) می‌سازند —
+ *  بر خلاف الگوی رایج `${prefix}-${Date.now()}` در این پروژه، اینجا از یک شمارندهٔ افزایشی
+ *  هم استفاده می‌شود چون Date.now() به‌تنهایی در فراخوانی‌های پیاپیِ همزمان (مثل کپی یک سکشن
+ *  با چند ویجت/زیربلوک) ممکن است چند بار مقدار یکسان برگرداند و id ها تصادم کنند. */
+export const createIdGenerator = () => {
+  const stamp = Date.now();
+  let seq = 0;
+  return (prefix: string) => `${prefix}-${stamp}-${seq++}`;
+};
+
+/** کپی عمیق یک سکشن (و همهٔ ستون‌ها/ویجت‌ها/زیربلوک‌های تودرتویش) با id های کاملاً جدید —
+ *  برای «کپی سکشن». از getColumnBlocks/setColumnBlocks استفاده می‌کند تا نسخهٔ legacy
+ *  (widgets/subSections) هم به‌طور خودکار با blocks هم‌گام بماند. */
+export const cloneSectionWithNewIds = (
+  section: SectionInstance,
+  nextId: (prefix: string) => string
+): SectionInstance => {
+  const clonedColumns = section.columns.map((col) => {
+    const clonedBlocks: ColumnBlock[] = getColumnBlocks(col).map((block) =>
+      block.kind === 'widget'
+        ? { kind: 'widget' as const, widget: { ...block.widget, id: nextId('widget') } }
+        : { kind: 'section' as const, section: cloneSectionWithNewIds(block.section, nextId) }
+    );
+    return setColumnBlocks({ ...col, id: nextId('col') }, clonedBlocks);
+  });
+
+  return { ...section, id: nextId('section'), columns: clonedColumns };
+};
+
 /** عرض ستون در یک دستگاه خاص — پیش‌فرض: موبایل تک‌ستونه، تبلت/دسکتاپ = width */
 export const getColumnWidth = (col: ColumnInstance, bp: Breakpoint): number => {
   const w = col.widths?.[bp];
