@@ -4229,8 +4229,23 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   variables,
   dedicatedPageId
 }) => {
+  // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
+  // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
+  const [urlSearch, setUrlSearch] = useState<string>(() => (typeof window !== 'undefined' ? window.location.search : ''));
+  useEffect(() => {
+    const onUrlChange = () => setUrlSearch(window.location.search);
+    window.addEventListener('popstate', onUrlChange);
+    return () => window.removeEventListener('popstate', onUrlChange);
+  }, []);
+
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
+  // برچسب‌های این ویجت (مثلاً "field-card degree-masters faculty-humanities") — هم برای فیلتر
+  // بر اساس URL استفاده می‌شوند، هم به‌عنوان class واقعی روی عنصر رندرشده اعمال می‌شوند
+  const filterTags = cond?.urlParamValue?.trim();
+  const filterParamKey = cond?.urlParamKey?.trim() || 'filter';
+  const activeFilterValue = new URLSearchParams(urlSearch).get(filterParamKey);
+
   if (cond && cond.enabled && !isEditorPreview) {
     if (cond.userRole && cond.userRole !== 'all') {
       if (currentUserRole !== 'all' && currentUserRole !== cond.userRole) {
@@ -4239,6 +4254,12 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
             [محتوا بر اساس نقش کاربر «{cond.userRole}» فیلتر شده است]
           </div>
         );
+      }
+    }
+    if (filterTags && activeFilterValue) {
+      const allowedTags = filterTags.split(/\s+/);
+      if (!allowedTags.includes(activeFilterValue)) {
+        return null;
       }
     }
   }
@@ -4296,6 +4317,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   const [accordionOpen, setAccordionOpen] = useState(false);
 
   // Dynamic Widget Rendering
+  const renderedWidget: React.ReactNode = (() => {
   switch (widget.type) {
     // -------------------------------------------------------------
     // STATIC WIDGETS
@@ -4719,4 +4741,18 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
   }
+  })();
+
+  // برچسب‌ها را به‌عنوان class واقعی روی یک عنصر دربرگیرنده اعمال می‌کنیم — فقط وقتی برچسبی
+  // ست شده باشد (بدون برچسب، هیچ عنصر اضافه‌ای دور ویجت اضافه نمی‌شود، یعنی صفر تغییر برای
+  // ویجت‌های فعلی که از این قابلیت استفاده نمی‌کنند)
+  if (filterTags) {
+    return (
+      <div className={filterTags} data-filter-tags={filterTags}>
+        {renderedWidget}
+      </div>
+    );
+  }
+
+  return renderedWidget;
 };
