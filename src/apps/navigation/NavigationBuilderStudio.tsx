@@ -72,6 +72,11 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [menuLocations, setMenuLocations] = useState<{ id: MenuLocation; label: string; icon: any; sortOrder?: number }[]>([]);
   const [activeLocation, setActiveLocation] = useState<MenuLocation>('Header Main Menu');
   const [draggedLocation, setDraggedLocation] = useState<MenuLocation | null>(null);
+  // Drag & Drop آیتم‌های ساختار درختی منو (برخلاف draggedLocation که یک لیست تخت است،
+  // اینجا باید بتوان آیتم را به هر عمقی از درخت (زیرمنوها) هم برد)
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | 'inside' | null>(null);
   const [newLocationName, setNewLocationName] = useState('');
   const [locationLabelDraft, setLocationLabelDraft] = useState('');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
@@ -583,6 +588,96 @@ export const NavigationBuilderStudio: React.FC = () => {
     showToast('آیتم در سطح اصلی قرار دارد');
   };
 
+  // ============ Drag & Drop ساختار درختی منو ============
+  // برخلاف دکمه‌های بالا/پایین/تورفتگی (که فقط روی سطح ریشهٔ activeMenu.items کار می‌کنند)،
+  // این توابع کاملاً بازگشتی‌اند تا بتوان آیتم را از/به هر عمقی از درخت جابه‌جا کرد.
+
+  /** حذف بازگشتی یک آیتم از هر جای درخت — خودِ آیتم حذف‌شده و درخت باقی‌مانده را برمی‌گرداند */
+  const removeItemRecursive = (
+    items: NavigationItem[],
+    itemId: string
+  ): { removed: NavigationItem | null; items: NavigationItem[] } => {
+    let removed: NavigationItem | null = null;
+    const newItems = items
+      .filter(item => {
+        if (item.id === itemId) {
+          removed = item;
+          return false;
+        }
+        return true;
+      })
+      .map(item => {
+        if (removed || !item.children || item.children.length === 0) return item;
+        const result = removeItemRecursive(item.children, itemId);
+        if (result.removed) removed = result.removed;
+        return { ...item, children: result.items };
+      });
+    return { removed, items: newItems };
+  };
+
+  /** آیا targetId در زیردرخت item قرار دارد؟ برای جلوگیری از رها‌کردن یک آیتم داخل فرزند خودش (حلقه) */
+  const isDescendantOf = (item: NavigationItem, targetId: string): boolean =>
+    !!item.children?.some(child => child.id === targetId || isDescendantOf(child, targetId));
+
+  /** درج بازگشتیِ newItem قبل/بعد/داخلِ آیتم هدف — parentIdAtThisLevel برای به‌روزرسانی صحیح parentId است */
+  const insertItemRecursive = (
+    items: NavigationItem[],
+    targetId: string,
+    newItem: NavigationItem,
+    position: 'before' | 'after' | 'inside',
+    parentIdAtThisLevel: string | null = null
+  ): NavigationItem[] => {
+    const targetIndex = items.findIndex(item => item.id === targetId);
+    if (targetIndex !== -1) {
+      if (position === 'inside') {
+        const target = items[targetIndex];
+        const updatedTarget: NavigationItem = {
+          ...target,
+          // نمایش «ساده» یک آیتم بدون زیرمنو معنا ندارد — با اولین فرزند به کشویی تبدیل شود
+          displayType: target.displayType === 'simple' ? 'dropdown' : target.displayType,
+          children: [...(target.children || []), { ...newItem, parentId: target.id }]
+        };
+        const copy = [...items];
+        copy[targetIndex] = updatedTarget;
+        return copy;
+      }
+      const copy = [...items];
+      copy.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, {
+        ...newItem,
+        parentId: parentIdAtThisLevel
+      });
+      return copy;
+    }
+    return items.map(item =>
+      item.children && item.children.length > 0
+        ? { ...item, children: insertItemRecursive(item.children, targetId, newItem, position, item.id) }
+        : item
+    );
+  };
+
+  /** جابه‌جایی واقعی یک آیتم (drag) به موقعیت جدید نسبت به آیتم هدف (drop) */
+  const handleDropItem = (draggedId: string, targetId: string, position: 'before' | 'after' | 'inside') => {
+    if (draggedId === targetId) return;
+    const { removed, items: itemsWithoutDragged } = removeItemRecursive(activeMenu.items, draggedId);
+    if (!removed) return;
+    if (isDescendantOf(removed, targetId)) return; // نمی‌توان آیتم را داخل فرزند خودش انداخت
+    const newItems = insertItemRecursive(itemsWithoutDragged, targetId, removed, position);
+    updateActiveMenuItems(newItems);
+  };
+
+  const handleTreeDragEnd = () => {
+    setDraggedItemId(null);
+    setDragOverItemId(null);
+    setDragOverPosition(null);
+  };
+
+  const handleTreeDrop = () => {
+    if (draggedItemId && dragOverItemId && dragOverPosition) {
+      handleDropItem(draggedItemId, dragOverItemId, dragOverPosition);
+    }
+    handleTreeDragEnd();
+  };
+
   // Save & Publish Menu Version (ذخیره در وب‌سرویس + انتشار)
   const handlePublishMenu = async () => {
     try {
@@ -1081,6 +1176,16 @@ export const NavigationBuilderStudio: React.FC = () => {
                       onOutdent={handleOutdent}
                       isFirst={idx === 0}
                       isLast={idx === activeMenu.items.length - 1}
+                      draggedItemId={draggedItemId}
+                      dragOverItemId={dragOverItemId}
+                      dragOverPosition={dragOverPosition}
+                      onDragStartItem={setDraggedItemId}
+                      onDragOverItem={(id, position) => {
+                        setDragOverItemId(id);
+                        setDragOverPosition(position);
+                      }}
+                      onDropItem={handleTreeDrop}
+                      onDragEndItem={handleTreeDragEnd}
                     />
                   )
                 )}

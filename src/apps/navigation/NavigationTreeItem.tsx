@@ -37,6 +37,15 @@ interface NavigationTreeItemProps {
   onOutdent: (itemId: string) => void;
   isFirst: boolean;
   isLast: boolean;
+  /** شناسهٔ آیتمی که در حال حاضر درگ می‌شود (در کل درخت، نه فقط این سطح) */
+  draggedItemId: string | null;
+  /** شناسهٔ آیتمی که هم‌اکنون روی آن hover شده و موقعیت رهاسازی (قبل/بعد/داخل) */
+  dragOverItemId: string | null;
+  dragOverPosition: 'before' | 'after' | 'inside' | null;
+  onDragStartItem: (itemId: string) => void;
+  onDragOverItem: (itemId: string, position: 'before' | 'after' | 'inside') => void;
+  onDropItem: () => void;
+  onDragEndItem: () => void;
 }
 
 export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
@@ -53,18 +62,52 @@ export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
   onIndent,
   onOutdent,
   isFirst,
-  isLast
+  isLast,
+  draggedItemId,
+  dragOverItemId,
+  dragOverPosition,
+  onDragStartItem,
+  onDragOverItem,
+  onDropItem,
+  onDragEndItem
 }) => {
   const hasChildren = item.children && item.children.length > 0;
+  const isBeingDragged = draggedItemId === item.id;
+  const isDragOver = dragOverItemId === item.id && draggedItemId !== item.id;
 
   return (
     <div className="space-y-2 text-xs font-sans">
       {/* Main Row */}
       <div
-        className={`p-3.5 rounded-2xl border transition-all flex flex-wrap items-center justify-between gap-3 ${
+        draggable
+        onDragStart={(e) => {
+          e.stopPropagation();
+          e.dataTransfer.effectAllowed = 'move';
+          onDragStartItem(item.id);
+        }}
+        onDragOver={(e) => {
+          if (draggedItemId === item.id) return; // نمی‌توان روی خودش رها کرد
+          e.preventDefault();
+          e.stopPropagation();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const ratio = (e.clientY - rect.top) / rect.height;
+          const position = ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside';
+          onDragOverItem(item.id, position);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDropItem();
+        }}
+        onDragEnd={onDragEndItem}
+        className={`p-3.5 rounded-2xl border transition-all flex flex-wrap items-center justify-between gap-3 cursor-grab active:cursor-grabbing ${
           item.status === 'active'
             ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:border-teal-300 dark:hover:border-teal-700'
             : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60'
+        } ${isBeingDragged ? 'opacity-40 scale-[0.98]' : ''} ${
+          isDragOver && dragOverPosition === 'inside' ? 'ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950/40' : ''
+        } ${isDragOver && dragOverPosition === 'before' ? 'border-t-4 border-t-teal-500' : ''} ${
+          isDragOver && dragOverPosition === 'after' ? 'border-b-4 border-b-teal-500' : ''
         }`}
         style={{ marginRight: `${level * 24}px` }}
       >
@@ -276,6 +319,13 @@ export const NavigationTreeItem: React.FC<NavigationTreeItemProps> = ({
               onOutdent={onOutdent}
               isFirst={cIdx === 0}
               isLast={cIdx === item.children!.length - 1}
+              draggedItemId={draggedItemId}
+              dragOverItemId={dragOverItemId}
+              dragOverPosition={dragOverPosition}
+              onDragStartItem={onDragStartItem}
+              onDragOverItem={onDragOverItem}
+              onDropItem={onDropItem}
+              onDragEndItem={onDragEndItem}
             />
           ))}
         </div>
