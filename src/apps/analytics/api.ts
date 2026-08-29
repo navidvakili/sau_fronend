@@ -128,6 +128,8 @@ export interface TopContentItem {
   views: number;
   unique_visitors: number;
   title: string;
+  /** آخرین مسیر ثبت‌شده برای این محتوا (نسبی، مثل /news/12/slug) */
+  path: string;
 }
 
 export interface TopContentResponse {

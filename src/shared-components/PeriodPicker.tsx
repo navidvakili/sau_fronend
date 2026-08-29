@@ -41,13 +41,19 @@ const PRESETS: { key: PeriodPreset; label: string }[] = [
 ];
 
 /** ISO (میلادی، YYYY-MM-DD) → DateObject جلالی برای نمایش در تقویم */
-function isoToJalali(iso?: string): DateObject | undefined {
+export function isoToJalali(iso?: string): DateObject | undefined {
   if (!iso) return undefined;
   try {
     return new DateObject({ date: iso, format: 'YYYY-MM-DD', calendar: gregorian, locale: gregorian_en }).convert(persian, persian_fa);
   } catch {
     return undefined;
   }
+}
+
+/** ماه میلادی (YYYY-MM) → DateObject جلالی (روز اول ماه) — برای برچسب نمودار ماهانه */
+export function isoMonthToJalali(month?: string): DateObject | undefined {
+  if (!month) return undefined;
+  return isoToJalali(`${month}-01`);
 }
 
 /** DateObject جلالی → رشتهٔ ISO میلادی (YYYY-MM-DD) برای ارسال به بک‌اند */

@@ -13,8 +13,9 @@ import {
   TrendingUp, TrendingDown, Minus, Link2, FileDown, Globe, BarChart2, Loader2,
   ArrowRightLeft, AlertTriangle, Flame,
 } from 'lucide-react';
-import { PeriodPicker, type PeriodPreset } from '@/src/shared-components/PeriodPicker';
+import { PeriodPicker, type PeriodPreset, isoToJalali, isoMonthToJalali } from '@/src/shared-components/PeriodPicker';
 import { toPersianDigits } from '@/src/shared-utils';
+import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 import {
   getOverview, getCompare, getTimeseries, getTrafficSources, getTopContent, getTopLinks, getDownloads, getSearchTerms,
 } from './api';
@@ -95,6 +96,18 @@ const TREND_METRICS: { key: 'views' | 'unique_visitors' | 'sessions'; label: str
 ];
 
 const GRANULARITY_LABELS: Record<Granularity, string> = { day: 'روزانه', week: 'هفتگی', month: 'ماهانه' };
+
+/** برچسب شمسی محور نمودار — روز/هفته: YYYY/MM/DD، ماه: نام ماه + سال */
+function formatChartLabel(point: TimeseriesPoint, granularity: Granularity): string {
+  if (granularity === 'month' && point.period) {
+    const d = isoMonthToJalali(point.period);
+    return d ? toPersianDigits(d.format('MMMM YYYY')) : point.period;
+  }
+  const iso = point.date ?? point.period;
+  if (!iso) return '';
+  const d = isoToJalali(iso);
+  return d ? toPersianDigits(d.format('YYYY/MM/DD')) : iso;
+}
 
 const KPI_CARD_STYLES = [
   'bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50 text-teal-700 dark:text-teal-300',
@@ -215,8 +228,8 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
   };
 
   const trendData = useMemo(
-    () => timeseries.map(p => ({ ...p, label: p.date ?? p.period ?? '' })),
-    [timeseries]
+    () => timeseries.map(p => ({ ...p, label: formatChartLabel(p, granularity) })),
+    [timeseries, granularity]
   );
 
   const visibleKpis = KPI_CONFIGS.filter(k => isSiteWide || !k.siteWideOnly);
@@ -474,17 +487,30 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
           ) : (
             <div className="space-y-2.5">
               {topContent.map((item, idx) => (
-                <div key={`${item.viewable_type}-${item.viewable_id}`} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-6 h-6 shrink-0 rounded-full bg-amber-500/10 text-amber-600 font-black text-[10px] flex items-center justify-center font-mono">
-                      {toPersianDigits(idx + 1)}
-                    </span>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{item.title}</span>
+                <div key={`${item.viewable_type}-${item.viewable_id}`} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-6 h-6 shrink-0 rounded-full bg-amber-500/10 text-amber-600 font-black text-[10px] flex items-center justify-center font-mono">
+                        {toPersianDigits(idx + 1)}
+                      </span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{item.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono font-bold">
+                      <span className="text-teal-600 dark:text-teal-400 flex items-center gap-0.5"><Eye className="w-3 h-3" />{formatInt(item.views)}</span>
+                      <span className="text-indigo-500 flex items-center gap-0.5"><Users className="w-3 h-3" />{formatInt(item.unique_visitors)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono font-bold">
-                    <span className="text-teal-600 dark:text-teal-400 flex items-center gap-0.5"><Eye className="w-3 h-3" />{formatInt(item.views)}</span>
-                    <span className="text-indigo-500 flex items-center gap-0.5"><Users className="w-3 h-3" />{formatInt(item.unique_visitors)}</span>
-                  </div>
+                  {item.path && (
+                    <a
+                      href={`${PUBLIC_SITE_URL}${item.path}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-[10px] text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 truncate transition-colors"
+                      dir="ltr"
+                    >
+                      {item.path}
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
