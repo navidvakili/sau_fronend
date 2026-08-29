@@ -487,7 +487,7 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
           ) : (
             <div className="space-y-2.5">
               {topContent.map((item, idx) => (
-                <div key={`${item.viewable_type}-${item.viewable_id}`} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-1">
+                <div key={`${item.viewable_type ?? 'generic'}-${item.viewable_id ?? item.path}`} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="w-6 h-6 shrink-0 rounded-full bg-amber-500/10 text-amber-600 font-black text-[10px] flex items-center justify-center font-mono">

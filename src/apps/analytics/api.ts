@@ -123,8 +123,9 @@ export async function getTrafficSources(params: AnalyticsQueryParams = {}): Prom
 // ===== Top Content =====
 
 export interface TopContentItem {
-  viewable_type: ViewableType;
-  viewable_id: number;
+  /** null یعنی صفحه‌ی هاردکد بدون رکورد محتوایی (مثل «درباره ما») — فقط در آمار سراسر سایت لحاظ می‌شود */
+  viewable_type: ViewableType | null;
+  viewable_id: number | null;
   views: number;
   unique_visitors: number;
   title: string;
