@@ -13,7 +13,7 @@ import {
   TrendingUp, TrendingDown, Minus, Link2, FileDown, Globe, BarChart2, Loader2,
   ArrowRightLeft, AlertTriangle, Flame,
 } from 'lucide-react';
-import { PeriodPicker, type PeriodPreset, isoToJalali, isoMonthToJalali } from '@/src/shared-components/PeriodPicker';
+import { PeriodPicker, type PeriodPreset, isoToJalali } from '@/src/shared-components/PeriodPicker';
 import { toPersianDigits } from '@/src/shared-utils';
 import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 import {
@@ -103,11 +103,20 @@ const TREND_METRICS: { key: 'views' | 'unique_visitors' | 'sessions'; label: str
 
 const GRANULARITY_LABELS: Record<Granularity, string> = { day: 'روزانه', week: 'هفتگی', month: 'ماهانه' };
 
+const JALALI_MONTH_NAMES = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+];
+
 /** برچسب شمسی محور نمودار — روز/هفته: YYYY/MM/DD، ماه: نام ماه + سال */
 function formatChartLabel(point: TimeseriesPoint, granularity: Granularity): string {
+  // period در حالت ماهانه از سرور همین حالا به‌صورت جلالی (YYYY-MM) می‌آید —
+  // چون بندی ماه‌ها بر مبنای تقویم شمسی انجام می‌شود، نه میلادی؛ پس دیگر نباید
+  // از میلادی تبدیل شود (وگرنه نتیجه دوباره اشتباه می‌شود).
   if (granularity === 'month' && point.period) {
-    const d = isoMonthToJalali(point.period);
-    return d ? toPersianDigits(d.format('MMMM YYYY')) : point.period;
+    const [jy, jm] = point.period.split('-').map(Number);
+    const monthName = JALALI_MONTH_NAMES[(jm || 1) - 1] ?? point.period;
+    return `${monthName} ${toPersianDigits(String(jy))}`;
   }
   const iso = point.date ?? point.period;
   if (!iso) return '';
