@@ -30,6 +30,7 @@ import { PagesList, buildPagePath } from './PagesList';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { PageSettingsModal } from './PageSettingsModal';
 import { ChildPagesManagerModal } from './ChildPagesManagerModal';
+import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
 import {
   fetchSmartPages,
   fetchSmartPage,
@@ -77,9 +78,11 @@ interface PageBuilderStudioProps {
   onDirtyChange?: (dirty: boolean) => void;
   /** اگر تنظیم شود، استودیو مستقیماً همان صفحه را باز می‌کند (نه فهرست) — مثلاً هنگام ورود از «ویرایش لایوت» یک صفحهٔ اختصاصی */
   initialPageId?: string | number;
+  /** شناسهٔ ماژول فعلی — اگر برابر با تب «آمار بازدیدکنندگان صفحات هوشمند» باشد، استودیو مستقیماً همان تب را باز می‌کند */
+  moduleId?: string;
 }
 
-export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId, onDirtyChange }) => {
+export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPortal, initialPageId, onDirtyChange, moduleId }) => {
   // زبان محتوای فعال — فهرست صفحات و ایجاد صفحهٔ جدید همیشه مطابق همین زبان است
   const { currentLang, languages } = useLanguage();
 
@@ -99,8 +102,10 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
 
-  // View mode: card-list of pages (default) OR the builder editor
-  const [viewMode, setViewMode] = useState<'list' | 'editor'>('list');
+  // View mode: card-list of pages (default) OR the builder editor OR the visitor-analytics dashboard
+  const [viewMode, setViewMode] = useState<'list' | 'editor' | 'analytics'>(
+    () => (moduleId === 'smart-page-visitor-analytics' ? 'analytics' : 'list')
+  );
 
   // Version history dropdown (moved from the removed right sidebar into the top bar)
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -1615,7 +1620,21 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           onDuplicatePage={handleDuplicatePage}
           duplicatingPageId={duplicatingPageId}
           duplicateError={duplicateError}
+          onOpenAnalytics={() => setViewMode('analytics')}
         />
+      ) : viewMode === 'analytics' ? (
+        <div className="h-[calc(100dvh_-_13rem)] min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 overflow-y-auto rtl text-right transition-colors">
+          <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+            <button
+              onClick={() => setViewMode('list')}
+              className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-800 font-black text-xs flex items-center gap-1.5 transition-colors cursor-pointer w-fit"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>بازگشت به فهرست صفحات</span>
+            </button>
+            <AnalyticsDashboard viewableType="smart_page" />
+          </div>
+        </div>
       ) : (
       <div className="flex flex-col flex-1 min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans overflow-hidden rtl text-right transition-colors">
       {/* ============================================================== */}

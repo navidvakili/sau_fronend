@@ -26,6 +26,7 @@ import {
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
+import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
 
 interface AnnouncementManagementProps {
   user?: User | null;
@@ -35,7 +36,7 @@ interface AnnouncementManagementProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-type SubTab = 'list' | 'editor' | 'categories';
+type SubTab = 'list' | 'editor' | 'categories' | 'visitor-analytics';
 
 export default function AnnouncementManagement({ user, moduleId, onDirtyChange }: AnnouncementManagementProps) {
   const { can } = useAppPermissions();
@@ -53,6 +54,7 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
   // ===== Sub-tab state =====
   const [activeTab, setActiveTab] = useState<SubTab>(() => {
     if (moduleId === 'announcements-create') return 'editor';
+    if (moduleId === 'announcements-visitor-analytics') return 'visitor-analytics';
     return 'list';
   });
 
@@ -581,6 +583,18 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
             <Layers className="w-4 h-4" />
             <span>دسته‌بندی‌ها</span>
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('visitor-analytics')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'visitor-analytics' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              <span>آمار بازدیدکنندگان</span>
+            </button>
+          )}
         </div>
 
         {activeTab === 'list' && (
@@ -1407,6 +1421,11 @@ export default function AnnouncementManagement({ user, moduleId, onDirtyChange }
         filter="all"
         title="انتخاب فایل پیوست"
       />
+
+      {/* ===== TAB: VISITOR ANALYTICS (آمار بازدیدکنندگان) ===== */}
+      {activeTab === 'visitor-analytics' && (
+        <AnalyticsDashboard viewableType="announcement" />
+      )}
 
       {/* ===== Toast Notification ===== */}
       <ToastNotification toast={toast} />

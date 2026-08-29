@@ -33,7 +33,9 @@ import {
   ArrowUpDown,
   Check,
   Loader2,
-  LayoutTemplate
+  LayoutTemplate,
+  ArrowRight,
+  BarChart2
 } from 'lucide-react';
 import { DedicatedPage, PageType, PageContentItem, PageTypeDefinition, DEDICATED_PAGE_TYPES } from './types';
 import { fetchDedicatedPages, fetchPageContents, createDedicatedPage, updateDedicatedPage, deleteDedicatedPage, publishDedicatedPage, unpublishDedicatedPage } from './api';
@@ -45,6 +47,7 @@ import LinkLayoutDialog from './LinkLayoutDialog';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import Pagination from '@/src/shared-components/Pagination';
 import ToastNotification from '@/src/shared-components/ToastNotification';
+import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
 import { getDedicatedPagePublicUrl } from './utils';
 import type { DedicatedPagesStats } from './types';
 
@@ -53,9 +56,15 @@ const EMPTY_STATS: DedicatedPagesStats = { total: 0, active: 0, total_contents: 
 
 interface DedicatedPagesStudioProps {
   onOpenTab?: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
+  /** شناسهٔ ماژول فعلی — اگر برابر با تب «آمار بازدیدکنندگان صفحات اختصاصی» باشد، همان تب مستقیماً باز می‌شود */
+  moduleId?: string;
 }
 
-export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudioProps) {
+export default function DedicatedPagesStudio({ onOpenTab, moduleId }: DedicatedPagesStudioProps) {
+  // نمای فعلی: فهرست صفحات اختصاصی (پیش‌فرض) یا داشبورد آمار بازدیدکنندگان
+  const [view, setView] = useState<'list' | 'analytics'>(
+    () => (moduleId === 'dedicated-page-visitor-analytics' ? 'analytics' : 'list')
+  );
   // Primary State
   const [pages, setPages] = useState<DedicatedPage[]>([]);
   const [pageTypeRegistry] = useState<PageTypeDefinition[]>(DEDICATED_PAGE_TYPES);
@@ -318,6 +327,23 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
     );
   }
 
+  // نمای آمار بازدیدکنندگان — سراسری نیست، فقط برای صفحات اختصاصی (dedicated_page)
+  if (view === 'analytics') {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-6">
+        <ToastNotification toast={toast} />
+        <button
+          onClick={() => setView('list')}
+          className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-black text-xs flex items-center gap-1.5 transition-colors cursor-pointer w-fit"
+        >
+          <ArrowRight className="w-4 h-4" />
+          <span>بازگشت به فهرست صفحات اختصاصی</span>
+        </button>
+        <AnalyticsDashboard viewableType="dedicated_page" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-6">
       <ToastNotification toast={toast} />
@@ -338,23 +364,33 @@ export default function DedicatedPagesStudio({ onOpenTab }: DedicatedPagesStudio
           </p>
         </div>
 
-        {/* Persona & Role Switcher */}
-        <div className="bg-slate-800/90 border border-slate-700/80 p-3 rounded-2xl flex flex-col gap-2 w-full md:w-auto">
-          <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
-            <Shield className="w-4 h-4 text-amber-400" />
-            <span>شبیه‌ساز نقش و احراز هویت ایزوله:</span>
-          </div>
-          <select
-            value={currentPersona}
-            onChange={e => handlePersonaChange(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={() => setView('analytics')}
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
           >
-            {PERSONA_OPTIONS.map(opt => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <BarChart2 className="w-4 h-4" />
+            <span>آمار بازدیدکنندگان</span>
+          </button>
+
+          {/* Persona & Role Switcher */}
+          <div className="bg-slate-800/90 border border-slate-700/80 p-3 rounded-2xl flex flex-col gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold">
+              <Shield className="w-4 h-4 text-amber-400" />
+              <span>شبیه‌ساز نقش و احراز هویت ایزوله:</span>
+            </div>
+            <select
+              value={currentPersona}
+              onChange={e => handlePersonaChange(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+            >
+              {PERSONA_OPTIONS.map(opt => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

@@ -13,7 +13,8 @@ import {
   Loader2,
   FolderTree,
   Languages,
-  Globe
+  Globe,
+  BarChart2
 } from 'lucide-react';
 import type { SmartPageDto } from './api';
 import type { Language } from '@/src/shared-types';
@@ -54,6 +55,8 @@ interface PagesListProps {
   /** شناسهٔ صفحه‌ای که در حال کپی‌شدن است (برای نمایش لودینگ روی دکمه) */
   duplicatingPageId?: number | null;
   duplicateError?: string | null;
+  /** رفتن به تب «آمار بازدیدکنندگان» صفحات هوشمند (اگر تعیین شود، دکمه نمایش داده می‌شود) */
+  onOpenAnalytics?: () => void;
 }
 
 /** وضعیت انتشار صفحه */
@@ -278,7 +281,8 @@ export const PagesList: React.FC<PagesListProps> = ({
   currentLang,
   onDuplicatePage,
   duplicatingPageId,
-  duplicateError
+  duplicateError,
+  onOpenAnalytics
 }) => {
   // فقط صفحات ریشه (بدون والد) در فهرست نمایش داده می‌شوند؛ زیرصفحه‌ها از داخل
   // استودیوی صفحهٔ والد مدیریت می‌شوند و نیازی به فهرست شدن اینجا ندارند.
@@ -320,13 +324,24 @@ export const PagesList: React.FC<PagesListProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onCreatePage}
-            className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>ایجاد صفحه جدید</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenAnalytics && (
+              <button
+                onClick={onOpenAnalytics}
+                className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-800 font-black text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <BarChart2 className="w-4 h-4" />
+                <span>آمار بازدیدکنندگان</span>
+              </button>
+            )}
+            <button
+              onClick={onCreatePage}
+              className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>ایجاد صفحه جدید</span>
+            </button>
+          </div>
         </div>
 
         {/* Grid */}

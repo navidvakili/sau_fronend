@@ -20,6 +20,7 @@ import {
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
+import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
 
 interface AchievementManagementProps {
   user?: User | null;
@@ -28,7 +29,7 @@ interface AchievementManagementProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
 }
 
-type SubTab = 'list' | 'editor';
+type SubTab = 'list' | 'editor' | 'visitor-analytics';
 
 // Icon options — کلیدهای آیکون باید با ACHIEVEMENT_ICONS در سایت عمومی یکی باشند
 const ICON_OPTIONS: Array<{ key: string; label: string; icon: React.ReactNode }> = [
@@ -50,7 +51,7 @@ function getIconNode(key: string | null | undefined, size: number = 18): React.R
   return <Award size={size} />;
 }
 
-export default function AchievementManagement({ user }: AchievementManagementProps) {
+export default function AchievementManagement({ user, moduleId }: AchievementManagementProps) {
   const { can } = useAppPermissions();
   const { currentLang, getLanguage } = useLanguage();
   const activeLanguage = getLanguage(currentLang);
@@ -64,7 +65,10 @@ export default function AchievementManagement({ user }: AchievementManagementPro
   const canDelete = roleCanEdit || permCanDelete;
 
   // ===== Sub-tab state =====
-  const [activeTab, setActiveTab] = useState<SubTab>('list');
+  const [activeTab, setActiveTab] = useState<SubTab>(() => {
+    if (moduleId === 'achievements-visitor-analytics') return 'visitor-analytics';
+    return 'list';
+  });
 
   // ===== Data state =====
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
@@ -305,6 +309,44 @@ export default function AchievementManagement({ user }: AchievementManagementPro
       </div>
 
       <ToastNotification toast={toast} />
+
+      {/* ===== Sub-tabs ===== */}
+      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#161618] rounded-2xl p-2 border border-gray-100 dark:border-white/10 shadow-sm">
+        <button
+          onClick={() => setActiveTab('list')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'list' ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          <span>آرشیو افتخارات</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/10 dark:bg-white/20 font-mono">{total}</span>
+        </button>
+
+        {canEdit && (
+          <button
+            onClick={() => { handleResetForm(); setActiveTab('editor'); }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'editor' ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>{editingId ? 'ویرایش افتخار' : 'ثبت افتخار جدید'}</span>
+          </button>
+        )}
+
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('visitor-analytics')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'visitor-analytics' ? 'bg-amber-500 text-amber-950 shadow-md shadow-amber-500/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>آمار بازدیدکنندگان</span>
+          </button>
+        )}
+      </div>
 
       {/* ===== List View ===== */}
       {activeTab === 'list' && (
@@ -639,6 +681,11 @@ export default function AchievementManagement({ user }: AchievementManagementPro
             </button>
           </div>
         </form>
+      )}
+
+      {/* ===== TAB: VISITOR ANALYTICS (آمار بازدیدکنندگان) ===== */}
+      {activeTab === 'visitor-analytics' && (
+        <AnalyticsDashboard viewableType="achievement" />
       )}
 
       {/* ===== Media Manager ===== */}

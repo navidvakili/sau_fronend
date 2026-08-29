@@ -10,3 +10,5 @@ export { default as TagInput } from './TagInput';
 export { default as MediaManager } from './MediaManager';
 export { default as LanguageManagerModal } from './LanguageManagerModal';
 export { ConfirmDialog } from './ConfirmDialog';
+export { PeriodPicker, default as PeriodPickerDefault } from './PeriodPicker';
+export type { PeriodPreset, PeriodValue } from './PeriodPicker';

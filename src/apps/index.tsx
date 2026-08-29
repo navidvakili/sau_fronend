@@ -10,6 +10,7 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 're
 // ===== تعریف App های اصلی با Lazy Loading =====
 export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>> = {
   accounting: lazy(() => import('./accounting')),
+  analytics: lazy(() => import('./analytics')),
   auth: lazy(() => import('./auth')),
   users: lazy(() => import('./users')),
   news: lazy(() => import('./news')),
@@ -36,6 +37,9 @@ export const moduleToAppMap: Record<string, string> = {
   // Accounting App
   'finance': 'accounting',
 
+  // Analytics App (آمار بازدیدکنندگان سراسر سایت — ماژول مستقل در پیشخوان)
+  'analytics': 'analytics',
+
   // Auth App
   'profile': 'auth',
   'change-password': 'auth',
@@ -50,10 +54,12 @@ export const moduleToAppMap: Record<string, string> = {
   'news-create': 'news',
   'news-categories': 'news',
   'news-analytics': 'news',
+  'news-visitor-analytics': 'news',
 
   // Announcements App
   'announcements': 'announcements',
   'announcements-create': 'announcements',
+  'announcements-visitor-analytics': 'announcements',
 
   // Slider Studio App
   'slider-studio': 'slider-studio',
@@ -67,6 +73,7 @@ export const moduleToAppMap: Record<string, string> = {
   // Achievements App
   'achievements': 'achievements',
   'achievements-create': 'achievements',
+  'achievements-visitor-analytics': 'achievements',
 
   // People App (اعضای دانشگاه)
   'people': 'people',
@@ -80,6 +87,7 @@ export const moduleToAppMap: Record<string, string> = {
   // Smart Page Builder App (صفحه ساز هوشمند)
   'page-builder': 'page-builder',
   'smart-page-builder': 'page-builder',
+  'smart-page-visitor-analytics': 'page-builder',
 
   // Gallery App (مدیریت دارایی‌های دیجیتال / DAM)
   'gallery': 'gallery',
@@ -104,6 +112,7 @@ export const moduleToAppMap: Record<string, string> = {
   'dedicated_pages': 'dedicated-pages',
   'special-pages': 'dedicated-pages',
   'portal-pages': 'dedicated-pages',
+  'dedicated-page-visitor-analytics': 'dedicated-pages',
 
 };
 

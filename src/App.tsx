@@ -209,16 +209,22 @@ export default function App() {
     { targetId: 'news-create', title: 'ایجاد اخبار', iconName: 'Plus', category: 'اخبار' },
     { targetId: 'news-categories', title: 'دسته‌بندی اخبار', iconName: 'Folder', category: 'اخبار' },
     { targetId: 'news-analytics', title: 'آمار اخبار', iconName: 'FileText', category: 'اخبار' },
+    { targetId: 'news-visitor-analytics', title: 'آمار بازدیدکنندگان اخبار', iconName: 'BarChart2', category: 'اخبار' },
     { targetId: 'announcements-create', title: 'ایجاد اطلاعیه', iconName: 'Plus', category: 'اطلاعیه‌ها' },
+    { targetId: 'announcements-visitor-analytics', title: 'آمار بازدیدکنندگان اطلاعیه‌ها', iconName: 'BarChart2', category: 'اطلاعیه‌ها' },
     { targetId: 'achievements-create', title: 'ایجاد افتخار', iconName: 'Plus', category: 'افتخارات' },
+    { targetId: 'achievements-visitor-analytics', title: 'آمار بازدیدکنندگان افتخارات', iconName: 'BarChart2', category: 'افتخارات' },
     { targetId: 'smart-page-builder', title: 'صفحه‌ساز هوشمند', iconName: 'LayoutDashboard', category: 'صفحه‌ساز' },
+    { targetId: 'smart-page-visitor-analytics', title: 'آمار بازدیدکنندگان صفحات هوشمند', iconName: 'BarChart2', category: 'صفحه‌ساز' },
     { targetId: 'dam-studio', title: 'استودیو دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
     { targetId: 'dam-assets', title: 'دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },
     { targetId: 'dedicated-pages', title: 'صفحات اختصاصی و مستقل', iconName: 'FileText', category: 'صفحات اختصاصی' },
+    { targetId: 'dedicated-page-visitor-analytics', title: 'آمار بازدیدکنندگان صفحات اختصاصی', iconName: 'BarChart2', category: 'صفحات اختصاصی' },
     { targetId: 'finance', title: 'حسابداری و مالی', iconName: 'DollarSign', category: 'مالی' },
     { targetId: 'profile', title: 'پروفایل کاربری', iconName: 'User', category: 'کاربری' },
     { targetId: 'change-password', title: 'تغییر رمز عبور', iconName: 'Lock', category: 'کاربری' },
     { targetId: 'admin-sessions', title: 'نشست‌های مدیریتی', iconName: 'Clock', category: 'کاربری' },
+    { targetId: 'analytics', title: 'آمار بازدیدکنندگان', iconName: 'BarChart2', category: 'داشبورد' },
   ], []);
 
   // ========== Handlers ==========
