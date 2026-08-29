@@ -31,23 +31,29 @@ interface AnalyticsDashboardProps {
 
 // ===== Helpers =====
 
+/** ورودی‌های عددی API گاهی (مثلاً ستون‌های DECIMAL) به‌صورت رشته می‌رسند */
+function toNumber(n: unknown): number {
+  const num = typeof n === 'string' ? parseFloat(n) : (n as number);
+  return Number.isFinite(num) ? num : 0;
+}
+
 function formatDuration(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds || 0));
+  const total = Math.max(0, Math.round(toNumber(seconds)));
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function formatInt(n: number | undefined | null): string {
-  return toPersianDigits(Math.round(n || 0).toLocaleString('en-US'));
+  return toPersianDigits(Math.round(toNumber(n)).toLocaleString('en-US'));
 }
 
 function formatPercent(n: number | undefined | null): string {
-  return toPersianDigits((n ?? 0).toFixed(1)) + '٪';
+  return toPersianDigits(toNumber(n).toFixed(1)) + '٪';
 }
 
 function formatFloat1(n: number | undefined | null): string {
-  return toPersianDigits((n ?? 0).toFixed(1));
+  return toPersianDigits(toNumber(n).toFixed(1));
 }
 
 const TRAFFIC_LABELS: Record<TrafficSource, string> = {
@@ -533,6 +539,23 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
                     <span className="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400 shrink-0">{formatInt(link.clicks)}</span>
                   </div>
                   <div className="text-[10px] text-gray-400 truncate" dir="ltr">{link.href}</div>
+                  {link.path && (
+                    <div className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                      <span className="shrink-0">از صفحه:</span>
+                      <a
+                        href={`${PUBLIC_SITE_URL}${link.path}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-indigo-600 dark:hover:text-indigo-400 truncate transition-colors"
+                        dir="ltr"
+                      >
+                        {link.path}
+                      </a>
+                      {link.pages_count > 1 && (
+                        <span className="shrink-0 text-gray-400">(و {toPersianDigits(String(link.pages_count - 1))} صفحه‌ی دیگر)</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -549,9 +572,28 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
           ) : (
             <div className="space-y-2.5">
               {downloads.map((d, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                  <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{d.file_name || d.file_url}</span>
-                  <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{formatInt(d.downloads)}</span>
+                <div key={idx} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{d.file_name || d.file_url}</span>
+                    <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{formatInt(d.downloads)}</span>
+                  </div>
+                  {d.path && (
+                    <div className="text-[10px] text-gray-400 truncate flex items-center gap-1">
+                      <span className="shrink-0">از صفحه:</span>
+                      <a
+                        href={`${PUBLIC_SITE_URL}${d.path}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-emerald-600 dark:hover:text-emerald-400 truncate transition-colors"
+                        dir="ltr"
+                      >
+                        {d.path}
+                      </a>
+                      {d.pages_count > 1 && (
+                        <span className="shrink-0 text-gray-400">(و {toPersianDigits(String(d.pages_count - 1))} صفحه‌ی دیگر)</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

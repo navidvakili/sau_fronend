@@ -149,6 +149,10 @@ export interface TopLinkItem {
   href: string;
   label: string | null;
   clicks: number;
+  /** آخرین صفحه‌ای که این لینک از آن کلیک شده */
+  path: string | null;
+  /** تعداد صفحه‌های متفاوتی که این لینک از آن‌ها کلیک شده */
+  pages_count: number;
 }
 
 export interface TopLinksResponse {
@@ -167,6 +171,10 @@ export interface DownloadItem {
   file_url: string;
   file_name: string | null;
   downloads: number;
+  /** آخرین صفحه‌ای که این فایل از آن دانلود شده */
+  path: string | null;
+  /** تعداد صفحه‌های متفاوتی که این فایل از آن‌ها دانلود شده */
+  pages_count: number;
 }
 
 export interface DownloadsResponse {
