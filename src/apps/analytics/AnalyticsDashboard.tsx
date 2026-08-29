@@ -287,12 +287,20 @@ export default function AnalyticsDashboard({ viewableType }: AnalyticsDashboardP
           </button>
         </div>
 
-        <PeriodPicker
-          preset={preset}
-          from={from}
-          to={to}
-          onChange={(v) => { setPreset(v.preset); setFrom(v.from); setTo(v.to); }}
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <PeriodPicker
+            preset={preset}
+            from={from}
+            to={to}
+            onChange={(v) => { setPreset(v.preset); setFrom(v.from); setTo(v.to); }}
+          />
+          {(loadingOverview || loadingTimeseries || loadingCompare) && (
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-teal-600 dark:text-teal-400">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              در حال بارگذاری...
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ===== KPI Cards ===== */}
