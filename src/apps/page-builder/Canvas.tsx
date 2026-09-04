@@ -73,6 +73,14 @@ interface CanvasProps {
    *  در نگاه اول هم مشخص باشد کدام بخش‌ها قابل‌ویرایش نیستند. اگر پاس داده نشود، همهٔ ویجت‌ها
    *  قابل‌انتخاب فرض می‌شوند (رفتار قبلی).*/
   isWidgetEditable?: (widget: WidgetInstance) => boolean;
+  /** مشابه isWidgetEditable ولی برای تصویر پس‌زمینهٔ خودِ سکشن (backgroundImage) — وقتی true
+   *  باشد، یک آیکون ویرایش کوچک روی سکشن نشان داده می‌شود و کلیک روی سکشن، onSelectSection
+   *  را صدا می‌زند (که در VisualDataEditor تصمیم می‌گیرد Media Manager را باز کند) */
+  isSectionEditable?: (section: SectionInstance) => boolean;
+  /** کلیک روی آیکون ویرایش تصویر پس‌زمینهٔ سکشن — عمداً از onSelectSection جدا است، چون
+   *  onSelectSection هنگام کلیک روی هر ویجتِ داخل همین سکشن هم (به‌عنوان جزئی از دنبالهٔ
+   *  انتخاب) صدا زده می‌شود و نباید هر بار پنجرهٔ انتخاب تصویر را باز کند */
+  onEditSectionBackground?: (sectionId: string) => void;
 }
 
 /** حداکثر عمق تودرتو برای جلوگیری از رندر بینهایت */
@@ -109,7 +117,9 @@ export const Canvas: React.FC<CanvasProps> = ({
   departmentInstructors,
   departmentInfoFiles,
   departmentNewsCategoryName,
-  isWidgetEditable
+  isWidgetEditable,
+  isSectionEditable,
+  onEditSectionBackground
 }) => {
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
   const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
@@ -149,7 +159,14 @@ export const Canvas: React.FC<CanvasProps> = ({
       layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
     }
     if (sec.backgroundImage) {
-      layers.push(`url("${sec.backgroundImage}")`);
+      // اگر backgroundImage خودش یک توکن {{...}} باشد (مثلاً {{image}})، مقدار واقعی از variables خوانده می‌شود
+      const tokenMatch = /^\{\{(\w+)\}\}$/.exec(sec.backgroundImage);
+      const resolved = tokenMatch && variables && tokenMatch[1] in variables
+        ? variables[tokenMatch[1]]
+        : sec.backgroundImage;
+      if (resolved) {
+        layers.push(`url("${resolved}")`);
+      }
     }
     return layers.length ? layers.join(', ') : undefined;
   };
@@ -320,6 +337,24 @@ export const Canvas: React.FC<CanvasProps> = ({
         </div>
         )}
 
+        {/* آیکون ویرایش تصویر پس‌زمینهٔ سکشن — فقط وقتی این سکشن مشخصاً به یک فیلد واقعی
+            (مثل {{image}}) وصل باشد؛ کلیک روی خودِ سکشن هم همین را باز می‌کند */}
+        {restrictedMode && isSectionEditable?.(sec) && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectSection(sec.id);
+              onEditSectionBackground?.(sec.id);
+            }}
+            className={`absolute top-3 left-3 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
+              isSecSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+            title="ویرایش تصویر پس‌زمینه"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+        )}
+
         {/* Section Content Container (Boxed or Full Width) — پس‌زمینه/سایه/گردی گوشه/پدینگ
             سکشن هم روی همین لایه اعمال می‌شود تا برای layout=boxed کل «کارت» باکس‌بندی شود،
             نه فقط گرید ستون‌ها */}
@@ -424,8 +459,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                       : ''
                   }`}
                 >
-                  {/* Widgets + زیربلوک‌ها inside column — لیست یکپارچه blocks (ترتیب نمایش ملاک است) */}
-                  <div className="space-y-4">
+                  {/* Widgets + زیربلوک‌ها inside column — لیست یکپارچه blocks (ترتیب نمایش ملاک است)
+                      در حالت محدود، فاصلهٔ بین بلوک‌ها کمتر است تا شبیه خروجی واقعی سایت باشد
+                      (بدون کادر/پدینگِ ویرایش دور هر بلوک، فاصلهٔ زیاد غیرطبیعی به‌نظر می‌رسد) */}
+                  <div className={restrictedMode ? 'space-y-1.5' : 'space-y-4'}>
                     {getColumnBlocks(col).length === 0 ? (
                       <div className="p-6 text-center border-2 border-dashed border-gray-200 dark:border-slate-800/80 rounded-xl text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
                         <span>{restrictedMode ? 'ستون خالی است' : 'ستون خالی است — بلوک یا کامپوننت را اینجا رها کنید'}</span>
@@ -598,7 +635,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                       onSelectColumn(col.id);
                                       onSelectWidget(widget.id);
                                     }}
-                                    className={`absolute top-1.5 left-1.5 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
+                                    className={`absolute top-1/2 -translate-y-1/2 left-1.5 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
                                       isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
                                     }`}
                                     title="ویرایش این بخش"

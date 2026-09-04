@@ -128,6 +128,14 @@ const isWidgetEditable = (widget: WidgetInstance): boolean =>
   isDeptImageWidget(widget) ||
   knownTokensInWidget(widget).length > 0;
 
+/** همان قرارداد imageTokenOf ولی برای backgroundImage یک سکشن (مثل تصویر پس‌زمینهٔ بخش معرفی گروه) */
+const sectionImageTokenOf = (section: SectionInstance): string | null => {
+  const m = IMAGE_TOKEN_RE.exec(section.backgroundImage || '');
+  return m && m[1] in IMAGE_TOKEN_MAP ? m[1] : null;
+};
+
+const isSectionEditable = (section: SectionInstance): boolean => sectionImageTokenOf(section) !== null;
+
 /** جست‌وجوی بازگشتیِ یک ویجت با شناسه در همهٔ سکشن‌ها/زیربلوک‌ها */
 const findWidgetById = (sections: SectionInstance[], widgetId: string): WidgetInstance | null => {
   for (const sec of sections) {
@@ -137,6 +145,22 @@ const findWidgetById = (sections: SectionInstance[], widgetId: string): WidgetIn
           if (block.widget.id === widgetId) return block.widget;
         } else {
           const found = findWidgetById([block.section], widgetId);
+          if (found) return found;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+/** جست‌وجوی بازگشتیِ یک سکشن با شناسه در همهٔ سکشن‌ها/زیربلوک‌ها */
+const findSectionById = (sections: SectionInstance[], sectionId: string): SectionInstance | null => {
+  for (const sec of sections) {
+    if (sec.id === sectionId) return sec;
+    for (const col of sec.columns) {
+      for (const block of getColumnBlocks(col)) {
+        if (block.kind === 'section') {
+          const found = findSectionById([block.section], sectionId);
           if (found) return found;
         }
       }
@@ -377,6 +401,18 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     // کلیک روی فضای خالی ستون (نه یک ویجت قابل‌ویرایش) → پاپ‌آور بسته شود
     setPopoverPos(null);
     setSelectedWidgetId(null);
+  };
+
+  // عمداً جدا از onSelectSection — چون onSelectSection هنگام کلیک روی هر ویجتِ داخل همین
+  // سکشن هم (به‌عنوان جزئی از دنبالهٔ انتخاب section→column→widget) صدا زده می‌شود؛ این تابع
+  // فقط از آیکون ویرایش تصویر پس‌زمینه (Canvas.tsx → onEditSectionBackground) صدا زده می‌شود
+  const handleEditSectionBackground = (sectionId: string) => {
+    const section = layoutSchema ? findSectionById(layoutSchema.sections, sectionId) : null;
+    const imgToken = section ? sectionImageTokenOf(section) : null;
+    if (imgToken) {
+      setPendingImageToken(imgToken);
+      setShowMediaSelector(true);
+    }
   };
 
   // بستن پاپ‌آور با کلیک بیرون از بوم/پاپ‌آور (مثلاً روی هدر)
@@ -683,6 +719,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
             onMoveWidget={() => {}}
             restrictedMode
             isWidgetEditable={isWidgetEditable}
+            isSectionEditable={isSectionEditable}
+            onEditSectionBackground={handleEditSectionBackground}
             variables={variables}
             departmentFields={fieldsList}
             departmentInstructors={instructorPool.filter((p) => instructorIds.includes(p.id))}
