@@ -580,13 +580,21 @@ const NewsFeedWidget: React.FC<{
         ? Number(binding.categoryFilter) || null
         : null;
 
+  // وقتی categoryFilter روی current-department است ولی گروه هیچ دستهٔ خبری‌ای وصل نکرده،
+  // بلوک باید خالی بماند (طبق پیام خودِ دیالوگ انتخاب: «بدون اتصال — بلوک اخبار خالی می‌ماند») —
+  // نه اینکه category_id=null به وب‌سرویس اخبار برود و همهٔ اخبار بدون فیلتر برگردد (که برای
+  // هر گروهِ بدون دسته، عملاً یک فید «پیش‌فرض» یکسان نمایش می‌داد).
+  const noDepartmentConnection = binding.categoryFilter === 'current-department' && categoryId === null;
+
   const { data, error, retry } = useSmartData<NewsItem>(() =>
-    fetchDataSourceNews({
-      per_page: binding.limit || 4,
-      category_id: categoryId,
-      status: 'published'
-    }).then((res) => res.data),
-    [binding.limit, categoryId]
+    noDepartmentConnection
+      ? Promise.resolve([])
+      : fetchDataSourceNews({
+          per_page: binding.limit || 4,
+          category_id: categoryId,
+          status: 'published'
+        }).then((res) => res.data),
+    [binding.limit, categoryId, noDepartmentConnection]
   );
 
   const newsList = data || [];
@@ -633,7 +641,7 @@ const NewsFeedWidget: React.FC<{
   }, [displayMode, newsList.length]);
 
   const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || noDepartmentConnection) return;
     setLoadingMore(true);
     try {
       const res = await fetchDataSourceNews({
