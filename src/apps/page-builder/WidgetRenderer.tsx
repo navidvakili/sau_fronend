@@ -4460,7 +4460,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           }`}
         >
           <img
-            src={widget.imageUrl || '/placeholder-news.svg'}
+            src={resolveVariableTokens(widget.imageUrl || '', variables) || '/placeholder-news.svg'}
             alt={widget.title}
             className={`transition-transform duration-300 ${
               style.imageHoverZoom !== false ? 'hover:scale-[1.02]' : ''

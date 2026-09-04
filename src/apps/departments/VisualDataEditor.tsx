@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Save, LayoutTemplate, ArrowRight, AlertCircle, Sparkles, Plus, Trash2, Check, X,
-  Settings2, Link2, Newspaper,
+  Settings2, Link2, Newspaper, CheckCircle2,
 } from 'lucide-react';
 import type { AcademicDepartmentItem, AcademicFieldItem, PersonItem, InfoFileItem, NewsCategory } from '@/src/shared-types';
 import {
@@ -27,6 +27,7 @@ import { getSmartPageForDedicatedPageType, fetchSmartPage } from '../page-builde
 import { Canvas } from '../page-builder/Canvas';
 import { getColumnBlocks, type SmartPageSchema, type SectionInstance, type WidgetInstance } from '../page-builder/builderTypes';
 import ToastNotification from '@/src/shared-components/ToastNotification';
+import MediaManager from '@/src/shared-components/MediaManager';
 import LinkLayoutDialog from '../dedicated_pages/LinkLayoutDialog';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
@@ -37,6 +38,8 @@ interface VisualDataEditorProps {
   /** بازگشت به فرم تخت سنتی (مثلاً وقتی هنوز قالبی متصل نیست) */
   onUseFlatForm: () => void;
   onOpenTab?: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
+  /** مجوز انتشار (departments.approve) — بدون آن، وضعیت همیشه پیش‌نویس ذخیره می‌شود */
+  canApprove?: boolean;
 }
 
 interface TokenFieldMeta {
@@ -94,8 +97,17 @@ const knownTokensInWidget = (widget: WidgetInstance): string[] => {
 const isDeptNewsWidget = (widget: WidgetInstance): boolean =>
   widget.type === 'news-feed' && widget.settings?.binding?.categoryFilter === 'current-department';
 
+/** ویجت «تصویر گروه» — یک widget از نوع image که imageUrl آن با توکنِ {{image}} به
+ *  AcademicDepartment.image_url متصل شده (همان قرارداد {{token}} که برای متن استفاده می‌شود،
+ *  این‌بار روی فیلد imageUrl) */
+const isDeptImageWidget = (widget: WidgetInstance): boolean =>
+  widget.type === 'image' && widget.imageUrl === '{{image}}';
+
 const isWidgetEditable = (widget: WidgetInstance): boolean =>
-  DEPT_WIDGET_TYPES.has(widget.type) || isDeptNewsWidget(widget) || knownTokensInWidget(widget).length > 0;
+  DEPT_WIDGET_TYPES.has(widget.type) ||
+  isDeptNewsWidget(widget) ||
+  isDeptImageWidget(widget) ||
+  knownTokensInWidget(widget).length > 0;
 
 /** جست‌وجوی بازگشتیِ یک ویجت با شناسه در همهٔ سکشن‌ها/زیربلوک‌ها */
 const findWidgetById = (sections: SectionInstance[], widgetId: string): WidgetInstance | null => {
@@ -116,7 +128,7 @@ const findWidgetById = (sections: SectionInstance[], widgetId: string): WidgetIn
 
 type ListDialogKind = 'fields' | 'instructors' | 'files' | 'news' | null;
 
-export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseFlatForm, onOpenTab }: VisualDataEditorProps) {
+export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseFlatForm, onOpenTab, canApprove = false }: VisualDataEditorProps) {
   const { currentLang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -139,6 +151,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [filesList, setFilesList] = useState<InfoFileItem[]>([]);
   const [newsCategoryId, setNewsCategoryId] = useState<number | null>(null);
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
+  const [statusChoice, setStatusChoice] = useState<'published' | 'draft'>('draft');
 
   // ===== انتخاب فعلی در بوم + پاپ‌آور ویرایش کنار همان بلوک (فقط برای فیلدهای متنی) =====
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
@@ -157,6 +170,9 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [slugDraft, setSlugDraft] = useState('');
   const [savingSlug, setSavingSlug] = useState(false);
 
+  // ===== انتخاب تصویر گروه از رسانه =====
+  const [showMediaSelector, setShowMediaSelector] = useState(false);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -173,6 +189,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       setInstructorIds((dept.instructors || []).map((i) => i.id));
       setFilesList(dept.infoFiles || []);
       setNewsCategoryId(dept.newsCategoryId ?? null);
+      setStatusChoice(dept.status || 'draft');
 
       const linkedLayout = await getSmartPageForDedicatedPageType('academic_department');
       if (linkedLayout && linkedLayout.status === 'published') {
@@ -235,8 +252,11 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   };
 
   const variables = useMemo(
-    () => Object.fromEntries(Object.entries(TOKEN_FIELD_MAP).map(([token, meta]) => [token, scalarForm[meta.formKey] || ''])),
-    [scalarForm]
+    () => ({
+      ...Object.fromEntries(Object.entries(TOKEN_FIELD_MAP).map(([token, meta]) => [token, scalarForm[meta.formKey] || ''])),
+      image: imageUrl || '',
+    }),
+    [scalarForm, imageUrl]
   );
 
   const selectedNewsCategoryName = useMemo(
@@ -285,6 +305,12 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       setSelectedWidgetId(widgetId);
       setPopoverPos(null);
       setActiveDialog('news');
+      return;
+    }
+    if (isDeptImageWidget(widget)) {
+      setSelectedWidgetId(widgetId);
+      setPopoverPos(null);
+      setShowMediaSelector(true);
       return;
     }
     if (knownTokensInWidget(widget).length === 0) {
@@ -405,7 +431,10 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateDepartment(departmentId, {
+      // بدون مجوز انتشار (departments.approve)، وضعیت همیشه پیش‌نویس ذخیره می‌شود —
+      // دقیقاً همان قاعده‌ای که فرم تخت هم رعایت می‌کند
+      const finalStatus: 'published' | 'draft' = canApprove ? statusChoice : 'draft';
+      const res = await updateDepartment(departmentId, {
         name: scalarForm.name,
         faculty: scalarForm.faculty || null,
         description: scalarForm.description || null,
@@ -424,7 +453,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         image_url: imageUrl || null,
         instructor_ids: instructorIds,
         news_category_id: newsCategoryId,
-        status: department?.status || 'draft',
+        status: finalStatus,
       });
 
       await Promise.all([
@@ -441,6 +470,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         ...filesList.map((f) => (f.id ? updateDepartmentFile(f.id, { title: f.title, url: f.url }) : Promise.resolve())),
       ]);
 
+      setDepartment(res.data);
+      setStatusChoice(res.data.status || 'draft');
       setToast({ text: 'اطلاعات گروه با موفقیت ذخیره شد.', type: 'success' });
       onSaved();
     } catch (err: any) {
@@ -515,6 +546,28 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
           >
             فرم کامل
           </button>
+          {canApprove ? (
+            <button
+              onClick={() => setStatusChoice((s) => (s === 'published' ? 'draft' : 'published'))}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 border ${
+                statusChoice === 'published'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/40'
+              }`}
+              title="کلیک کنید تا وضعیت انتشار تغییر کند (با «ذخیره تغییرات» اعمال می‌شود)"
+            >
+              {statusChoice === 'published' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              <span>{statusChoice === 'published' ? 'منتشر شده' : 'پیش‌نویس'}</span>
+            </button>
+          ) : (
+            <span
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/40 flex items-center gap-1.5"
+              title="شما مجوز انتشار (departments.approve) ندارید — این گروه به‌صورت پیش‌نویس ذخیره می‌شود تا توسط مدیر منتشر شود."
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>پیش‌نویس</span>
+            </span>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -931,6 +984,13 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
           }}
         />
       )}
+
+      <MediaManager
+        open={showMediaSelector}
+        filter="image"
+        onClose={() => { setShowMediaSelector(false); setSelectedWidgetId(null); }}
+        onSelect={(url) => { setImageUrl(url); setShowMediaSelector(false); setSelectedWidgetId(null); }}
+      />
     </div>
   );
 }

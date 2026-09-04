@@ -598,6 +598,7 @@ export default function DepartmentsManagement({ user, onOpenTab }: DepartmentsMa
           onSaved={() => loadDepartments()}
           onUseFlatForm={() => openFlatFormForId(visualDepartmentId)}
           onOpenTab={onOpenTab}
+          canApprove={canApprove}
         />
       )}
 
