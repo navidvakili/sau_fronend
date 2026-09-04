@@ -601,7 +601,15 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       const c = applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity) || sec.backgroundColor;
       layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
     }
-    if (sec.backgroundImage) layers.push(`url("${sec.backgroundImage}")`);
+    if (sec.backgroundImage) {
+      // برخلاف ویجت‌ها (که WidgetRenderer خودش {{token}} داخل content/imageUrl را resolve می‌کند)،
+      // backgroundImage یک سکشن مستقیماً همین‌جا رندر می‌شود، پس باید دستی resolve شود؛ وگرنه
+      // مقدار خام مثل «{{banner}}» به‌عنوان URL نامعتبر به CSS داده می‌شود و پس‌زمینه خالی می‌ماند
+      const resolvedBg = sec.backgroundImage.replace(/\{\{(\w+)\}\}/g, (match, key) =>
+        key in variables ? variables[key] : match
+      );
+      layers.push(`url("${resolvedBg}")`);
+    }
     return layers.length ? layers.join(', ') : undefined;
   };
 
@@ -1187,6 +1195,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
           const stateKey = pendingImageToken ? IMAGE_TOKEN_MAP[pendingImageToken]?.stateKey : null;
           if (stateKey === 'headImageUrl') setHeadImageUrl(url);
           else if (stateKey === 'expertImageUrl') setExpertImageUrl(url);
+          else if (stateKey === 'bannerImageUrl') setBannerImageUrl(url);
           else setImageUrl(url);
           setShowMediaSelector(false);
           setSelectedWidgetId(null);
