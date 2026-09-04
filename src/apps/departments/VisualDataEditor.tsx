@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Save, LayoutTemplate, ArrowRight, AlertCircle, Sparkles, Plus, Trash2, Check, X,
-  Settings2, Link2, Newspaper, CheckCircle2,
+  Settings2, Link2, Newspaper, CheckCircle2, FolderOpen, FileText,
 } from 'lucide-react';
 import type { AcademicDepartmentItem, AcademicFieldItem, PersonItem, InfoFileItem, NewsCategory } from '@/src/shared-types';
 import {
@@ -29,6 +29,7 @@ import { getColumnBlocks, type SmartPageSchema, type SectionInstance, type Widge
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import MediaManager from '@/src/shared-components/MediaManager';
 import LinkLayoutDialog from '../dedicated_pages/LinkLayoutDialog';
+import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface VisualDataEditorProps {
@@ -97,11 +98,29 @@ const knownTokensInWidget = (widget: WidgetInstance): string[] => {
 const isDeptNewsWidget = (widget: WidgetInstance): boolean =>
   widget.type === 'news-feed' && widget.settings?.binding?.categoryFilter === 'current-department';
 
-/** ویجت «تصویر گروه» — یک widget از نوع image که imageUrl آن با توکنِ {{image}} به
- *  AcademicDepartment.image_url متصل شده (همان قرارداد {{token}} که برای متن استفاده می‌شود،
- *  این‌بار روی فیلد imageUrl) */
-const isDeptImageWidget = (widget: WidgetInstance): boolean =>
-  widget.type === 'image' && widget.imageUrl === '{{image}}';
+interface ImageTokenMeta {
+  label: string;
+  stateKey: 'imageUrl' | 'headImageUrl' | 'expertImageUrl';
+}
+
+/** نگاشتِ توکنِ imageUrl یک ویجت image → فیلد واقعیِ گروه — همان قرارداد {{token}} که برای
+ *  متن استفاده می‌شود، این‌بار روی فیلد imageUrl (نه content) */
+const IMAGE_TOKEN_MAP: Record<string, ImageTokenMeta> = {
+  image: { label: 'تصویر گروه', stateKey: 'imageUrl' },
+  headImage: { label: 'تصویر مدیر گروه', stateKey: 'headImageUrl' },
+  expertImage: { label: 'تصویر کارشناس گروه', stateKey: 'expertImageUrl' },
+};
+
+const IMAGE_TOKEN_RE = /^\{\{(\w+)\}\}$/;
+
+/** اگر این ویجت یک تصویر متصل به فیلد واقعی گروه باشد، نام توکنش را برمی‌گرداند؛ وگرنه null */
+const imageTokenOf = (widget: WidgetInstance): string | null => {
+  if (widget.type !== 'image') return null;
+  const m = IMAGE_TOKEN_RE.exec(widget.imageUrl || '');
+  return m && m[1] in IMAGE_TOKEN_MAP ? m[1] : null;
+};
+
+const isDeptImageWidget = (widget: WidgetInstance): boolean => imageTokenOf(widget) !== null;
 
 const isWidgetEditable = (widget: WidgetInstance): boolean =>
   DEPT_WIDGET_TYPES.has(widget.type) ||
@@ -143,6 +162,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   // ===== دادهٔ اسکالر گروه =====
   const [scalarForm, setScalarForm] = useState<Record<string, string>>(EMPTY_SCALAR_FORM);
   const [imageUrl, setImageUrl] = useState('');
+  const [headImageUrl, setHeadImageUrl] = useState('');
+  const [expertImageUrl, setExpertImageUrl] = useState('');
   const [instructorIds, setInstructorIds] = useState<number[]>([]);
   const [instructorPool, setInstructorPool] = useState<PersonItem[]>([]);
   const [instructorPoolLoaded, setInstructorPoolLoaded] = useState(false);
@@ -170,8 +191,18 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [slugDraft, setSlugDraft] = useState('');
   const [savingSlug, setSavingSlug] = useState(false);
 
-  // ===== انتخاب تصویر گروه از رسانه =====
+  // ===== انتخاب تصویر (گروه/مدیر/کارشناس) از رسانه — pendingImageToken مشخص می‌کند کدام فیلد =====
   const [showMediaSelector, setShowMediaSelector] = useState(false);
+  const [pendingImageToken, setPendingImageToken] = useState<string | null>(null);
+
+  // ===== انتخاب فایل اطلاعاتی گروه از رسانه (ز) — pendingFileIndex مشخص می‌کند کدام ردیف =====
+  const [showFileMediaSelector, setShowFileMediaSelector] = useState(false);
+  const [pendingFileIndex, setPendingFileIndex] = useState<number | null>(null);
+
+  // ===== هشدار خروج بدون ذخیره — همانند صفحه‌ساز =====
+  const [isDirty, setIsDirty] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const skipDirtyRef = useRef(true);
 
   const load = async () => {
     setLoading(true);
@@ -186,6 +217,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         expert_email: dept.expertEmail || '', office: dept.office || '', email: dept.email || '', phone: dept.phone || '',
       });
       setImageUrl(dept.image_url || '');
+      setHeadImageUrl(dept.headImageUrl || '');
+      setExpertImageUrl(dept.expertImageUrl || '');
       setInstructorIds((dept.instructors || []).map((i) => i.id));
       setFilesList(dept.infoFiles || []);
       setNewsCategoryId(dept.newsCategoryId ?? null);
@@ -218,6 +251,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       ]);
       setFieldsList(fields.data || []);
       setNewsCategories(categories.data || []);
+      skipDirtyRef.current = true;
+      setIsDirty(false);
     } catch (err: any) {
       setToast({ text: err.message || 'خطا در بارگذاری اطلاعات گروه', type: 'error' });
     } finally {
@@ -226,6 +261,13 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [departmentId]);
+
+  // ردیابی تغییرات ذخیره‌نشده — هر تغییری در دادهٔ اسکالر/تصاویر/مدرسان/رشته‌ها/فایل‌ها/دستهٔ
+  // خبری/وضعیت انتشار، بعد از بارگذاری اولیه، dirty را true می‌کند؛ با ذخیره یا بارگذاری مجدد ریست می‌شود
+  useEffect(() => {
+    if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
+    setIsDirty(true);
+  }, [scalarForm, imageUrl, headImageUrl, expertImageUrl, instructorIds, fieldsList, filesList, newsCategoryId, statusChoice]);
 
   /** فهرست مدرسان — سنگین است (تا ۵۰۰ نفر)، پس فقط وقتی دیالوگ «مدرسان» واقعاً باز می‌شود
    *  بارگذاری می‌شود، نه هنگام باز شدن ویرایشگر (طبق درخواست: بدون دادهٔ پیش‌فرض/اضافه) */
@@ -252,11 +294,14 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   };
 
   const variables = useMemo(
-    () => ({
-      ...Object.fromEntries(Object.entries(TOKEN_FIELD_MAP).map(([token, meta]) => [token, scalarForm[meta.formKey] || ''])),
-      image: imageUrl || '',
-    }),
-    [scalarForm, imageUrl]
+    () => {
+      const imageValues: Record<string, string> = { imageUrl, headImageUrl, expertImageUrl };
+      return {
+        ...Object.fromEntries(Object.entries(TOKEN_FIELD_MAP).map(([token, meta]) => [token, scalarForm[meta.formKey] || ''])),
+        ...Object.fromEntries(Object.entries(IMAGE_TOKEN_MAP).map(([token, meta]) => [token, imageValues[meta.stateKey] || ''])),
+      };
+    },
+    [scalarForm, imageUrl, headImageUrl, expertImageUrl]
   );
 
   const selectedNewsCategoryName = useMemo(
@@ -307,9 +352,11 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       setActiveDialog('news');
       return;
     }
-    if (isDeptImageWidget(widget)) {
+    const imgToken = imageTokenOf(widget);
+    if (imgToken) {
       setSelectedWidgetId(widgetId);
       setPopoverPos(null);
+      setPendingImageToken(imgToken);
       setShowMediaSelector(true);
       return;
     }
@@ -451,6 +498,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         email: scalarForm.email || null,
         phone: scalarForm.phone || null,
         image_url: imageUrl || null,
+        head_image_url: headImageUrl || null,
+        expert_image_url: expertImageUrl || null,
         instructor_ids: instructorIds,
         news_category_id: newsCategoryId,
         status: finalStatus,
@@ -470,8 +519,10 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         ...filesList.map((f) => (f.id ? updateDepartmentFile(f.id, { title: f.title, url: f.url }) : Promise.resolve())),
       ]);
 
+      skipDirtyRef.current = true;
       setDepartment(res.data);
       setStatusChoice(res.data.status || 'draft');
+      setIsDirty(false);
       setToast({ text: 'اطلاعات گروه با موفقیت ذخیره شد.', type: 'success' });
       onSaved();
     } catch (err: any) {
@@ -479,6 +530,14 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBack = () => {
+    if (isDirty) {
+      setShowLeaveConfirm(true);
+      return;
+    }
+    onBack();
   };
 
   if (loading) {
@@ -503,7 +562,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       <header className="h-16 px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs rounded-t-2xl">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             title="بازگشت به فهرست گروه‌ها"
           >
@@ -689,47 +748,22 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
                 <p className="text-xs text-slate-400 text-center py-6">هنوز رشته‌ای زیر این گروه ثبت نشده است.</p>
               )}
               {fieldsList.map((f) => (
-                <div key={f.id} className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <input
-                      type="text"
-                      value={f.name}
-                      onChange={(e) => handleFieldChange(f.id, { name: e.target.value })}
-                      placeholder="نام رشته"
-                      className={`flex-1 ${inputCls} font-bold`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteField(f.id)}
-                      className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white cursor-pointer shrink-0"
-                      title="حذف رشته"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                <div key={f.id} className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={f.managerName || ''}
-                    onChange={(e) => handleFieldChange(f.id, { managerName: e.target.value })}
-                    placeholder="نام مدیر رشته"
-                    className={inputCls}
+                    value={f.name}
+                    onChange={(e) => handleFieldChange(f.id, { name: e.target.value })}
+                    placeholder="نام رشته"
+                    className={`flex-1 ${inputCls} font-bold`}
                   />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={f.managerPhone || ''}
-                      onChange={(e) => handleFieldChange(f.id, { managerPhone: e.target.value })}
-                      placeholder="تلفن"
-                      className={inputCls}
-                    />
-                    <input
-                      type="text"
-                      value={f.managerInternal || ''}
-                      onChange={(e) => handleFieldChange(f.id, { managerInternal: e.target.value })}
-                      placeholder="داخلی"
-                      className={inputCls}
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteField(f.id)}
+                    className="p-2 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white cursor-pointer shrink-0"
+                    title="حذف رشته"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -831,13 +865,16 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
                     className={inputCls}
                   />
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={file.url}
-                      onChange={(e) => handleFileChange(i, { url: e.target.value })}
-                      placeholder="آدرس فایل"
-                      className={`flex-1 ${inputCls}`}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => { setPendingFileIndex(i); setShowFileMediaSelector(true); }}
+                      className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-right cursor-pointer hover:border-teal-500 transition-colors ${
+                        file.url ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'
+                      }`}
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 shrink-0 text-teal-500" />
+                      <span className="truncate">{file.url ? file.url.split('/').pop() : 'انتخاب فایل از رسانه...'}</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteFile(i)}
@@ -988,8 +1025,44 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       <MediaManager
         open={showMediaSelector}
         filter="image"
-        onClose={() => { setShowMediaSelector(false); setSelectedWidgetId(null); }}
-        onSelect={(url) => { setImageUrl(url); setShowMediaSelector(false); setSelectedWidgetId(null); }}
+        onClose={() => { setShowMediaSelector(false); setSelectedWidgetId(null); setPendingImageToken(null); }}
+        onSelect={(url) => {
+          const stateKey = pendingImageToken ? IMAGE_TOKEN_MAP[pendingImageToken]?.stateKey : null;
+          if (stateKey === 'headImageUrl') setHeadImageUrl(url);
+          else if (stateKey === 'expertImageUrl') setExpertImageUrl(url);
+          else setImageUrl(url);
+          setShowMediaSelector(false);
+          setSelectedWidgetId(null);
+          setPendingImageToken(null);
+        }}
+      />
+
+      <MediaManager
+        open={showFileMediaSelector}
+        filter="all"
+        onClose={() => { setShowFileMediaSelector(false); setPendingFileIndex(null); }}
+        onSelect={(url, mediaFile) => {
+          if (pendingFileIndex !== null) {
+            const autoTitle = filesList[pendingFileIndex]?.title;
+            handleFileChange(pendingFileIndex, {
+              url,
+              title: autoTitle || mediaFile?.title || mediaFile?.name || url.split('/').pop() || 'فایل',
+            });
+          }
+          setShowFileMediaSelector(false);
+          setPendingFileIndex(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={showLeaveConfirm}
+        title="تغییرات ذخیره نشده"
+        message="تغییرات این گروه هنوز ذخیره نشده‌اند. آیا می‌خواهید بدون ذخیره خارج شوید؟"
+        confirmLabel="خروج بدون ذخیره"
+        cancelLabel="ادامه ویرایش"
+        danger={false}
+        onConfirm={() => { setShowLeaveConfirm(false); onBack(); }}
+        onCancel={() => setShowLeaveConfirm(false)}
       />
     </div>
   );

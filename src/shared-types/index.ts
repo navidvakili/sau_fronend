@@ -415,10 +415,12 @@ export interface AcademicDepartmentItem {
   headPhone: string | null;
   headInternal: string | null;
   headEmail: string | null;
+  headImageUrl: string | null;
   expertName: string | null;
   expertPhone: string | null;
   expertInternal: string | null;
   expertEmail: string | null;
+  expertImageUrl: string | null;
   office: string | null;
   email: string | null;
   phone: string | null;
@@ -452,10 +454,12 @@ export interface AcademicDepartmentPayload {
   head_phone?: string | null;
   head_internal?: string | null;
   head_email?: string | null;
+  head_image_url?: string | null;
   expert_name?: string | null;
   expert_phone?: string | null;
   expert_internal?: string | null;
   expert_email?: string | null;
+  expert_image_url?: string | null;
   office?: string | null;
   email?: string | null;
   phone?: string | null;

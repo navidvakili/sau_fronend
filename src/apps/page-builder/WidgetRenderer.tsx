@@ -4781,10 +4781,15 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
     case 'news-feed':
       if (isEditorPreview && binding.categoryFilter === 'current-department') {
-        return (
-          <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2">
+        return departmentNewsCategoryName ? (
+          <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2 cursor-pointer">
             <span>اخبار گروه — دستهٔ خبری:</span>
-            <span className="font-black">{departmentNewsCategoryName || 'تعیین‌نشده'}</span>
+            <span className="font-black">{departmentNewsCategoryName}</span>
+          </div>
+        ) : (
+          <div style={containerStyle} className="p-4 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 text-center font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+            <Plus className="w-3.5 h-3.5" />
+            انتخاب دستهٔ خبری گروه
           </div>
         );
       }
@@ -4852,32 +4857,18 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
         </div>
       ) : departmentFields.length === 0 ? (
-        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
-          هنوز رشته‌ای برای این گروه ثبت نشده است.
+        <div style={containerStyle} className="p-4 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 text-center font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+          <Plus className="w-3.5 h-3.5" />
+          افزودن رشتهٔ تحصیلی
         </div>
       ) : (
-        <div style={containerStyle} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <ul style={{ ...containerStyle, listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {departmentFields.map((field) => (
-            <div key={field.id} className="p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-xs font-black text-slate-900 dark:text-white truncate">{field.name}</span>
-                {field.degreeLevel && (
-                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">{field.degreeLevel}</span>
-                )}
-              </div>
-              {field.managerName && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
-                  <div>مدیر رشته: {field.managerName}</div>
-                  {(field.managerPhone || field.managerInternal) && (
-                    <div dir="ltr" className="text-slate-400 dark:text-slate-500">
-                      {[field.managerPhone, field.managerInternal ? `داخلی ${field.managerInternal}` : ''].filter(Boolean).join(' — ')}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <li key={field.id} className="text-xs font-bold text-slate-700 dark:text-slate-200">
+              {field.name}
+            </li>
           ))}
-        </div>
+        </ul>
       );
 
     case 'dept-instructors':
@@ -4886,8 +4877,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
         </div>
       ) : departmentInstructors.length === 0 ? (
-        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
-          هنوز استاد مدعویی برای این گروه انتخاب نشده است.
+        <div style={containerStyle} className="p-4 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 text-center font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+          <Plus className="w-3.5 h-3.5" />
+          افزودن استاد مدعو
         </div>
       ) : (
         <div style={containerStyle} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -4921,8 +4913,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
         </div>
       ) : departmentInfoFiles.length === 0 ? (
-        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
-          هنوز فایلی برای این گروه ثبت نشده است.
+        <div style={containerStyle} className="p-4 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 text-center font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+          <Plus className="w-3.5 h-3.5" />
+          افزودن فایل اطلاعاتی
         </div>
       ) : (
         <div style={containerStyle} className="space-y-2.5">
