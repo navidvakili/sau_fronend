@@ -505,6 +505,12 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         status: finalStatus,
       });
 
+      // فایل‌هایی که هنوز آدرس واقعی ندارند (مثلاً «افزودن فایل» زده شده ولی هنوز از رسانه
+      // انتخاب نشده) نباید کل ذخیره را با خطای اعتبارسنجی/دیتابیس متوقف کنند — نادیده گرفته
+      // می‌شوند و کاربر با پیامی مطلع می‌شود تا برایشان فایل انتخاب یا حذفشان کند
+      const incompleteFiles = filesList.filter((f) => !f.url || !f.url.trim());
+      const completeFiles = filesList.filter((f) => f.url && f.url.trim());
+
       await Promise.all([
         ...fieldsList.map((f) =>
           updateField(f.id, {
@@ -516,14 +522,18 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
             status: f.status,
           })
         ),
-        ...filesList.map((f) => (f.id ? updateDepartmentFile(f.id, { title: f.title, url: f.url }) : Promise.resolve())),
+        ...completeFiles.map((f) => (f.id ? updateDepartmentFile(f.id, { title: f.title, url: f.url }) : Promise.resolve())),
       ]);
 
       skipDirtyRef.current = true;
       setDepartment(res.data);
       setStatusChoice(res.data.status || 'draft');
       setIsDirty(false);
-      setToast({ text: 'اطلاعات گروه با موفقیت ذخیره شد.', type: 'success' });
+      setToast(
+        incompleteFiles.length > 0
+          ? { text: `اطلاعات گروه ذخیره شد. ${incompleteFiles.length} فایل بدون آدرس نادیده گرفته شد — برایشان از رسانه فایل انتخاب کنید یا حذفشان کنید.`, type: 'error' }
+          : { text: 'اطلاعات گروه با موفقیت ذخیره شد.', type: 'success' }
+      );
       onSaved();
     } catch (err: any) {
       setToast({ text: err.message || 'خطا در ذخیرهٔ اطلاعات', type: 'error' });
