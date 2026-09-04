@@ -426,6 +426,7 @@ export interface AcademicDepartmentItem {
   phone: string | null;
   image: string | null;
   image_url: string | null;
+  bannerImageUrl: string | null;
   infoFiles: InfoFileItem[];
   newsCategoryId: number | null;
   fieldsCount: number;
@@ -464,6 +465,7 @@ export interface AcademicDepartmentPayload {
   email?: string | null;
   phone?: string | null;
   image_url?: string | null;
+  banner_image_url?: string | null;
   info_files?: InfoFileItem[] | null;
   news_category_id?: number | null;
   instructor_ids?: number[] | null;

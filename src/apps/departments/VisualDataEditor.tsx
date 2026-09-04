@@ -100,13 +100,16 @@ const isDeptNewsWidget = (widget: WidgetInstance): boolean =>
 
 interface ImageTokenMeta {
   label: string;
-  stateKey: 'imageUrl' | 'headImageUrl' | 'expertImageUrl';
+  stateKey: 'imageUrl' | 'headImageUrl' | 'expertImageUrl' | 'bannerImageUrl';
 }
 
-/** نگاشتِ توکنِ imageUrl یک ویجت image → فیلد واقعیِ گروه — همان قرارداد {{token}} که برای
- *  متن استفاده می‌شود، این‌بار روی فیلد imageUrl (نه content) */
+/** نگاشتِ توکنِ imageUrl یک ویجت image (یا backgroundImage یک سکشن) → فیلد واقعیِ گروه —
+ *  همان قرارداد {{token}} که برای متن استفاده می‌شود. توجه: «تصویر گروه» (لوگو/آواتار) و
+ *  «تصویر پس‌زمینهٔ پروفایل» (بنر بخش معرفی) عمداً دو فیلد کاملاً جدا هستند تا انتخاب یکی
+ *  دیگری را عوض نکند. */
 const IMAGE_TOKEN_MAP: Record<string, ImageTokenMeta> = {
-  image: { label: 'تصویر گروه', stateKey: 'imageUrl' },
+  image: { label: 'تصویر گروه (لوگو)', stateKey: 'imageUrl' },
+  banner: { label: 'تصویر پس‌زمینهٔ پروفایل', stateKey: 'bannerImageUrl' },
   headImage: { label: 'تصویر مدیر گروه', stateKey: 'headImageUrl' },
   expertImage: { label: 'تصویر کارشناس گروه', stateKey: 'expertImageUrl' },
 };
@@ -188,6 +191,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [imageUrl, setImageUrl] = useState('');
   const [headImageUrl, setHeadImageUrl] = useState('');
   const [expertImageUrl, setExpertImageUrl] = useState('');
+  const [bannerImageUrl, setBannerImageUrl] = useState('');
   const [instructorIds, setInstructorIds] = useState<number[]>([]);
   const [instructorPool, setInstructorPool] = useState<PersonItem[]>([]);
   const [instructorPoolLoaded, setInstructorPoolLoaded] = useState(false);
@@ -243,6 +247,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       setImageUrl(dept.image_url || '');
       setHeadImageUrl(dept.headImageUrl || '');
       setExpertImageUrl(dept.expertImageUrl || '');
+      setBannerImageUrl(dept.bannerImageUrl || '');
       setInstructorIds((dept.instructors || []).map((i) => i.id));
       setFilesList(dept.infoFiles || []);
       setNewsCategoryId(dept.newsCategoryId ?? null);
@@ -291,7 +296,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     setIsDirty(true);
-  }, [scalarForm, imageUrl, headImageUrl, expertImageUrl, instructorIds, fieldsList, filesList, newsCategoryId, statusChoice]);
+  }, [scalarForm, imageUrl, headImageUrl, expertImageUrl, bannerImageUrl, instructorIds, fieldsList, filesList, newsCategoryId, statusChoice]);
 
   /** فهرست مدرسان — سنگین است (تا ۵۰۰ نفر)، پس فقط وقتی دیالوگ «مدرسان» واقعاً باز می‌شود
    *  بارگذاری می‌شود، نه هنگام باز شدن ویرایشگر (طبق درخواست: بدون دادهٔ پیش‌فرض/اضافه) */
@@ -319,13 +324,13 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
 
   const variables = useMemo(
     () => {
-      const imageValues: Record<string, string> = { imageUrl, headImageUrl, expertImageUrl };
+      const imageValues: Record<string, string> = { imageUrl, headImageUrl, expertImageUrl, bannerImageUrl };
       return {
         ...Object.fromEntries(Object.entries(TOKEN_FIELD_MAP).map(([token, meta]) => [token, scalarForm[meta.formKey] || ''])),
         ...Object.fromEntries(Object.entries(IMAGE_TOKEN_MAP).map(([token, meta]) => [token, imageValues[meta.stateKey] || ''])),
       };
     },
-    [scalarForm, imageUrl, headImageUrl, expertImageUrl]
+    [scalarForm, imageUrl, headImageUrl, expertImageUrl, bannerImageUrl]
   );
 
   const selectedNewsCategoryName = useMemo(
@@ -536,6 +541,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         image_url: imageUrl || null,
         head_image_url: headImageUrl || null,
         expert_image_url: expertImageUrl || null,
+        banner_image_url: bannerImageUrl || null,
         instructor_ids: instructorIds,
         news_category_id: newsCategoryId,
         status: finalStatus,
@@ -605,7 +611,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       <ToastNotification toast={toast} />
 
       {/* Header — هم‌سبک با هدر صفحه‌ساز (page-builder) */}
-      <header className="h-16 px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs rounded-t-2xl">
+      <header className="sticky top-0 z-40 h-16 px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs rounded-t-2xl">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
