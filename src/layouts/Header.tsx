@@ -62,7 +62,7 @@ export default function Header({
   const currentLanguage = getLanguage(currentLang);
 
   return (
-    <header className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
+    <header className="relative z-50 p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
         {/* Hamburger button — visible on mobile only */}
