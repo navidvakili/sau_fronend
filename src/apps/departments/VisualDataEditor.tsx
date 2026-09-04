@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Save, LayoutTemplate, ArrowRight, AlertCircle, Sparkles, Plus, Trash2, Check, X,
-  Settings2, Link2, Newspaper, CheckCircle2, FolderOpen, FileText,
+  Settings2, Link2, Newspaper, CheckCircle2, FolderOpen, FileText, Pencil,
 } from 'lucide-react';
 import type { AcademicDepartmentItem, AcademicFieldItem, PersonItem, InfoFileItem, NewsCategory } from '@/src/shared-types';
 import {
@@ -24,8 +24,11 @@ import { fetchFields, createField, updateField, deleteField } from '../fields/ap
 import { fetchPeople } from '../people/api';
 import { fetchCategories } from '../news/api';
 import { getSmartPageForDedicatedPageType, fetchSmartPage } from '../page-builder/api';
-import { Canvas } from '../page-builder/Canvas';
-import { getColumnBlocks, type SmartPageSchema, type SectionInstance, type WidgetInstance } from '../page-builder/builderTypes';
+import { WidgetRenderer, applyBackgroundOpacity } from '../page-builder/WidgetRenderer';
+import {
+  getColumnBlocks, getColumnWidth, resolveBoxShadow, DEFAULT_GLOBAL_STYLES,
+  type SmartPageSchema, type SectionInstance, type WidgetInstance,
+} from '../page-builder/builderTypes';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import MediaManager from '@/src/shared-components/MediaManager';
 import LinkLayoutDialog from '../dedicated_pages/LinkLayoutDialog';
@@ -203,14 +206,12 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
   const [statusChoice, setStatusChoice] = useState<'published' | 'draft'>('draft');
 
-  // ===== انتخاب فعلی در بوم + پاپ‌آور ویرایش کنار همان بلوک (فقط برای فیلدهای متنی) =====
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
-  const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
+  // ===== انتخاب فعلی + پاپ‌آور ویرایش کنار همان بلوک (فقط برای فیلدهای متنی) =====
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
   const lastClickPosRef = useRef({ x: 0, y: 0 });
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const canvasWrapRef = useRef<HTMLDivElement | null>(null);
+  const contentWrapRef = useRef<HTMLDivElement | null>(null);
 
   // ===== دیالوگ‌های کامل برای فهرست رکوردها (رشته‌ها/مدرسان/فایل‌ها/دستهٔ خبری) =====
   const [activeDialog, setActiveDialog] = useState<ListDialogKind>(null);
@@ -267,8 +268,6 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         };
         setLayoutSchema(merged);
         setLayoutLinked(true);
-        setSelectedSectionId(merged.sections?.[0]?.id ?? null);
-        setSelectedColumnId(merged.sections?.[0]?.columns?.[0]?.id ?? null);
         setSelectedWidgetId(null);
       } else {
         setLayoutSchema(null);
@@ -334,11 +333,6 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     [scalarForm, imageUrl, headImageUrl, expertImageUrl, bannerImageUrl]
   );
 
-  const selectedNewsCategoryName = useMemo(
-    () => newsCategories.find((c) => c.id === newsCategoryId)?.name || null,
-    [newsCategories, newsCategoryId]
-  );
-
   const selectedWidget = useMemo(
     () => (layoutSchema && selectedWidgetId ? findWidgetById(layoutSchema.sections, selectedWidgetId) : null),
     [layoutSchema, selectedWidgetId]
@@ -402,16 +396,6 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     setPopoverPos({ x, y });
   };
 
-  const handleSelectColumn = (columnId: string) => {
-    setSelectedColumnId(columnId);
-    // کلیک روی فضای خالی ستون (نه یک ویجت قابل‌ویرایش) → پاپ‌آور بسته شود
-    setPopoverPos(null);
-    setSelectedWidgetId(null);
-  };
-
-  // عمداً جدا از onSelectSection — چون onSelectSection هنگام کلیک روی هر ویجتِ داخل همین
-  // سکشن هم (به‌عنوان جزئی از دنبالهٔ انتخاب section→column→widget) صدا زده می‌شود؛ این تابع
-  // فقط از آیکون ویرایش تصویر پس‌زمینه (Canvas.tsx → onEditSectionBackground) صدا زده می‌شود
   const handleEditSectionBackground = (sectionId: string) => {
     const section = layoutSchema ? findSectionById(layoutSchema.sections, sectionId) : null;
     const imgToken = section ? sectionImageTokenOf(section) : null;
@@ -427,7 +411,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (popoverRef.current?.contains(target)) return;
-      if (canvasWrapRef.current?.contains(target)) return;
+      if (contentWrapRef.current?.contains(target)) return;
       closePopover();
     };
     document.addEventListener('mousedown', handler);
@@ -605,6 +589,130 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
 
   if (!department) return null;
 
+  const globalStyles = layoutSchema?.globalStyles || DEFAULT_GLOBAL_STYLES;
+
+  /** لایه‌های پس‌زمینهٔ سکشن — دقیقاً همان منطق PreviewModal/سایت عمومی (گرادیان یا رنگ زیر تصویر) */
+  const buildSectionBackgroundImage = (sec: SectionInstance): string | undefined => {
+    const layers: string[] = [];
+    if (sec.backgroundGradient) {
+      const g = applyBackgroundOpacity(sec.backgroundGradient, sec.backgroundOpacity);
+      if (g) layers.push(g);
+    } else if (sec.backgroundColor) {
+      const c = applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity) || sec.backgroundColor;
+      layers.push(`linear-gradient(135deg, ${c} 0%, ${c} 100%)`);
+    }
+    if (sec.backgroundImage) layers.push(`url("${sec.backgroundImage}")`);
+    return layers.length ? layers.join(', ') : undefined;
+  };
+
+  const resolvedInstructors = instructorPool.filter((p) => instructorIds.includes(p.id));
+
+  /** رندر یک ویجت — دقیقاً همان WidgetRenderer با isEditorPreview=false (خروجی واقعیِ سایت)،
+   *  فقط اگر واقعاً به فیلد/رابطهٔ واقعی گروه متصل باشد (isWidgetEditable) یک دکمهٔ آیکونی
+   *  کوچکِ ویرایش کنارش نشان داده می‌شود */
+  const renderDeptWidget = (widget: WidgetInstance): React.ReactNode => {
+    if (!widget.settings.visibility.desktop) return null;
+    const editable = isWidgetEditable(widget);
+    return (
+      <div key={widget.id} className="relative group/dept-widget">
+        {editable && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              lastClickPosRef.current = { x: e.clientX, y: e.clientY };
+              handleSelectWidget(widget.id);
+            }}
+            className="absolute top-1/2 -translate-y-1/2 right-1.5 z-20 p-1.5 rounded-full bg-emerald-600 text-white shadow-md opacity-0 group-hover/dept-widget:opacity-100 transition-opacity cursor-pointer"
+            title="ویرایش این بخش"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <WidgetRenderer
+          widget={widget}
+          currentUserRole="all"
+          isEditorPreview={false}
+          pageId={null}
+          pageSlug={department.slug}
+          variables={variables}
+          departmentFields={fieldsList}
+          departmentInstructors={resolvedInstructors}
+          departmentInfoFiles={filesList}
+          departmentNewsCategoryId={newsCategoryId}
+        />
+      </div>
+    );
+  };
+
+  /** رندر بازگشتیِ سکشن‌ها — همان چیدمان/استایل PreviewModal (خروجی واقعی صفحه)؛ فقط اگر
+   *  تصویر پس‌زمینهٔ این سکشن به یک فیلد واقعی متصل باشد (isSectionEditable)، یک دکمهٔ آیکونی
+   *  کوچک برای تغییرش نشان داده می‌شود */
+  const renderDeptSection = (sec: SectionInstance, depth = 0): React.ReactNode => {
+    if (depth >= 6) return null;
+    if (!sec.visibility.desktop) return null;
+    const sectionEditable = isSectionEditable(sec);
+
+    return (
+      <div
+        key={sec.id}
+        className="relative group/dept-section"
+        style={{
+          position: sec.position || undefined,
+          zIndex: sec.zIndex || undefined,
+          backgroundColor:
+            sec.backgroundImage || sec.backgroundGradient
+              ? undefined
+              : sec.backgroundColor
+                ? applyBackgroundOpacity(sec.backgroundColor, sec.backgroundOpacity)
+                : undefined,
+          backgroundImage: buildSectionBackgroundImage(sec),
+          backgroundPosition: sec.backgroundImage ? sec.backgroundPosition || 'center' : undefined,
+          backgroundSize: sec.backgroundImage ? sec.backgroundSize || 'cover' : undefined,
+          backgroundRepeat: sec.backgroundImage ? sec.backgroundRepeat || 'no-repeat' : undefined,
+          marginTop: sec.marginTop !== undefined ? `${sec.marginTop}px` : undefined,
+          marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined,
+          boxShadow: resolveBoxShadow(sec.boxShadow),
+          paddingTop: `${sec.paddingTop}px`,
+          paddingBottom: `${sec.paddingBottom}px`,
+          paddingLeft: sec.paddingLeft !== undefined ? `${sec.paddingLeft}px` : undefined,
+          paddingRight: sec.paddingRight !== undefined ? `${sec.paddingRight}px` : undefined,
+          borderRadius: sec.borderRadius
+            ? [sec.borderRadius.topLeft, sec.borderRadius.topRight, sec.borderRadius.bottomRight, sec.borderRadius.bottomLeft]
+                .map((v) => (v ? `${v}px` : '0px'))
+                .join(' ')
+            : undefined
+        }}
+      >
+        {sectionEditable && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleEditSectionBackground(sec.id); }}
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-emerald-600 text-white shadow-md opacity-0 group-hover/dept-section:opacity-100 transition-opacity cursor-pointer"
+            title="تغییر تصویر پس‌زمینه"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <div className={sec.layout === 'boxed' ? 'max-w-[1200px] mx-auto px-4 md:px-6' : 'w-full px-4'}>
+          <div className="grid grid-cols-12 gap-4 md:gap-6">
+            {sec.columns.map((col) => (
+              <div
+                key={col.id}
+                style={{ gridColumn: `span ${getColumnWidth(col, 'desktop')} / span ${getColumnWidth(col, 'desktop')}` }}
+                className="space-y-4"
+              >
+                {getColumnBlocks(col).map((block) =>
+                  block.kind === 'section' ? renderDeptSection(block.section, depth + 1) : renderDeptWidget(block.widget)
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const inputCls = 'w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500';
   const dialogShellCls = 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4';
   const dialogCardCls = 'w-[480px] max-w-full max-h-[85vh] bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-2xl overflow-hidden text-right flex flex-col';
@@ -719,37 +827,15 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
         </div>
       ) : (
         <div
-          ref={canvasWrapRef}
-          className="flex-1 min-h-0 overflow-hidden"
-          onClickCapture={(e) => { lastClickPosRef.current = { x: e.clientX, y: e.clientY }; }}
+          ref={contentWrapRef}
+          className="flex-1 min-h-0 overflow-y-auto"
+          style={{
+            fontFamily: globalStyles.fontFamily,
+            color: globalStyles.textColor,
+            backgroundColor: globalStyles.backgroundColor || undefined
+          }}
         >
-          <Canvas
-            pageSchema={layoutSchema}
-            pageId={null}
-            pageSlug={department.slug}
-            activeBreakpoint="desktop"
-            selectedSectionId={selectedSectionId}
-            selectedColumnId={selectedColumnId}
-            selectedWidgetId={selectedWidgetId}
-            currentUserRole="all"
-            onSelectSection={setSelectedSectionId}
-            onSelectColumn={handleSelectColumn}
-            onSelectWidget={handleSelectWidget}
-            onAddWidget={() => {}}
-            onAddSection={() => {}}
-            onDeleteSection={() => {}}
-            onDeleteWidget={() => {}}
-            onMoveWidget={() => {}}
-            restrictedMode
-            isWidgetEditable={isWidgetEditable}
-            isSectionEditable={isSectionEditable}
-            onEditSectionBackground={handleEditSectionBackground}
-            variables={variables}
-            departmentFields={fieldsList}
-            departmentInstructors={instructorPool.filter((p) => instructorIds.includes(p.id))}
-            departmentInfoFiles={filesList}
-            departmentNewsCategoryName={selectedNewsCategoryName}
-          />
+          {layoutSchema.sections.map((sec) => renderDeptSection(sec, 0))}
         </div>
       )}
 

@@ -127,6 +127,9 @@ interface WidgetRendererProps {
   /** نام دستهٔ خبریِ متصل به گروه (برای نمایش placeholder قابل‌کلیک به‌جای null، وقتی ویجت
    *  news-feed با categoryFilter=current-department در بومِ ویرایشگر بصری گروه پیش‌نمایش می‌شود) */
   departmentNewsCategoryName?: string | null;
+  /** شناسهٔ واقعیِ دستهٔ خبری گروه — برای رندر واقعیِ ویجت news-feed (isEditorPreview=false،
+   *  مثلاً در محیط پیش‌نمایش ویرایشگر بصری گروه) وقتی categoryFilter برابر current-department است */
+  departmentNewsCategoryId?: number | null;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -567,11 +570,15 @@ const NewsFeedWidget: React.FC<{
   widget: WidgetInstance;
   binding: WidgetDataBinding;
   containerStyle: React.CSSProperties;
-}> = ({ widget, binding, containerStyle }) => {
+  /** وقتی categoryFilter برابر current-department است، شناسهٔ واقعی دستهٔ خبری گروه از اینجا خوانده می‌شود */
+  departmentNewsCategoryId?: number | null;
+}> = ({ widget, binding, containerStyle, departmentNewsCategoryId }) => {
   const categoryId =
-    binding.categoryFilter && binding.categoryFilter !== 'all'
-      ? Number(binding.categoryFilter) || null
-      : null;
+    binding.categoryFilter === 'current-department'
+      ? departmentNewsCategoryId ?? null
+      : binding.categoryFilter && binding.categoryFilter !== 'all'
+        ? Number(binding.categoryFilter) || null
+        : null;
 
   const { data, error, retry } = useSmartData<NewsItem>(() =>
     fetchDataSourceNews({
@@ -4309,7 +4316,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   departmentFields,
   departmentInstructors,
   departmentInfoFiles,
-  departmentNewsCategoryName
+  departmentNewsCategoryName,
+  departmentNewsCategoryId
 }) => {
   // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
   // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
@@ -4793,7 +4801,14 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
           </div>
         );
       }
-      return isEditorPreview ? null : <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+      return isEditorPreview ? null : (
+        <NewsFeedWidget
+          widget={widget}
+          binding={binding}
+          containerStyle={containerStyle}
+          departmentNewsCategoryId={binding.categoryFilter === 'current-department' ? departmentNewsCategoryId : undefined}
+        />
+      );
 
     case 'image-gallery':
       return isEditorPreview ? null : <ImageGalleryWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
