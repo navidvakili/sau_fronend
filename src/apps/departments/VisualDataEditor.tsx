@@ -621,34 +621,51 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const renderDeptWidget = (widget: WidgetInstance): React.ReactNode => {
     if (!widget.settings.visibility.desktop) return null;
     const editable = isWidgetEditable(widget);
+    // وقتی بلوک «اخبار گروه» به هیچ دسته‌ای وصل نیست، WidgetRenderer چیزی رندر نمی‌کند (null) —
+    // یعنی هیچ ناحیه‌ای برای هاور و دیدنِ دکمهٔ مدادِ ویرایش باقی نمی‌ماند و امکان اتصال دسته از
+    // بین می‌رود. برای همین در همین حالت، به‌جای خروجی واقعی (خالی)، یک جای‌گیرِ همیشه‌دیده و
+    // مستقیماً قابل‌کلیک نمایش داده می‌شود.
+    const isEmptyDeptNews = isDeptNewsWidget(widget) && !newsCategoryId;
+    const openDialog = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      lastClickPosRef.current = { x: e.clientX, y: e.clientY };
+      handleSelectWidget(widget.id);
+    };
     return (
       <div key={widget.id} className="relative group/dept-widget">
-        {editable && (
+        {editable && !isEmptyDeptNews && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              lastClickPosRef.current = { x: e.clientX, y: e.clientY };
-              handleSelectWidget(widget.id);
-            }}
+            onClick={openDialog}
             className="absolute top-1/2 -translate-y-1/2 right-1.5 z-20 p-1.5 rounded-full bg-emerald-600 text-white shadow-md opacity-0 group-hover/dept-widget:opacity-100 transition-opacity cursor-pointer"
             title="ویرایش این بخش"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
         )}
-        <WidgetRenderer
-          widget={widget}
-          currentUserRole="all"
-          isEditorPreview={false}
-          pageId={null}
-          pageSlug={department.slug}
-          variables={variables}
-          departmentFields={fieldsList}
-          departmentInstructors={resolvedInstructors}
-          departmentInfoFiles={filesList}
-          departmentNewsCategoryId={newsCategoryId}
-        />
+        {isEmptyDeptNews ? (
+          <button
+            type="button"
+            onClick={openDialog}
+            className="w-full flex items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed border-emerald-400/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500/5 transition-colors cursor-pointer"
+          >
+            <Newspaper className="w-4 h-4" />
+            بدون دستهٔ خبری متصل — برای اتصال کلیک کنید
+          </button>
+        ) : (
+          <WidgetRenderer
+            widget={widget}
+            currentUserRole="all"
+            isEditorPreview={false}
+            pageId={null}
+            pageSlug={department.slug}
+            variables={variables}
+            departmentFields={fieldsList}
+            departmentInstructors={resolvedInstructors}
+            departmentInfoFiles={filesList}
+            departmentNewsCategoryId={newsCategoryId}
+          />
+        )}
       </div>
     );
   };
