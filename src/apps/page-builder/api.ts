@@ -25,6 +25,12 @@ export interface SmartPageDto {
   /** انواع صفحهٔ اختصاصی‌ای که این صفحه به‌عنوان لایوت مشترکشان متصل است (یک صفحه می‌تواند هم‌زمان لایوتِ چند نوع باشد) */
   dedicated_page_types?: string[];
   status: 'published' | 'draft';
+  /** قفل ویرایش — فقط کاربر support می‌تواند این صفحه را ویرایش یا این قفل را باز کند */
+  locked_edit?: boolean;
+  /** قفل حذف — فقط کاربر support می‌تواند این صفحه را حذف یا این قفل را باز کند */
+  locked_delete?: boolean;
+  /** قفل نمایش در فهرست — فقط کاربر support این صفحه را در فهرست صفحه‌ساز می‌بیند */
+  locked_hidden?: boolean;
   seo?: {
     title?: string;
     description?: string;
@@ -146,6 +152,14 @@ export const updateSmartPage = async (
 /** Delete a smart page */
 export const deleteSmartPage = async (id: number): Promise<{ message: string }> => {
   return API(`smart-pages/${id}`, {}, 'DELETE');
+};
+
+/** تغییر قفل‌های ویرایش/حذف/نمایش-در-فهرست یک صفحه — فقط کاربر support مجاز است (سرور هم همین را بررسی می‌کند) */
+export const updateSmartPageLocks = async (
+  id: number,
+  locks: Partial<Pick<SmartPageDto, 'locked_edit' | 'locked_delete' | 'locked_hidden'>>
+): Promise<{ message: string; data: SmartPageDto }> => {
+  return API(`smart-pages/${id}/lock`, locks, 'PATCH');
 };
 
 /** Duplicate a page into another language (copies the layout/content as a translation starting point) */

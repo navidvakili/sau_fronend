@@ -124,6 +124,9 @@ interface WidgetRendererProps {
   departmentFields?: AcademicFieldItem[];
   departmentInstructors?: PersonItem[];
   departmentInfoFiles?: InfoFileItem[];
+  /** نام دستهٔ خبریِ متصل به گروه (برای نمایش placeholder قابل‌کلیک به‌جای null، وقتی ویجت
+   *  news-feed با categoryFilter=current-department در بومِ ویرایشگر بصری گروه پیش‌نمایش می‌شود) */
+  departmentNewsCategoryName?: string | null;
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -4305,7 +4308,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   dedicatedPageId,
   departmentFields,
   departmentInstructors,
-  departmentInfoFiles
+  departmentInfoFiles,
+  departmentNewsCategoryName
 }) => {
   // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
   // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
@@ -4776,6 +4780,14 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       return isEditorPreview ? null : <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'news-feed':
+      if (isEditorPreview && binding.categoryFilter === 'current-department') {
+        return (
+          <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-500/5 text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center justify-between gap-2">
+            <span>اخبار گروه — دستهٔ خبری:</span>
+            <span className="font-black">{departmentNewsCategoryName || 'تعیین‌نشده'}</span>
+          </div>
+        );
+      }
       return isEditorPreview ? null : <NewsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'image-gallery':

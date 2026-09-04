@@ -14,10 +14,18 @@ import {
   FolderTree,
   Languages,
   Globe,
-  BarChart2
+  BarChart2,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import type { SmartPageDto } from './api';
 import type { Language } from '@/src/shared-types';
+import { loginApi } from '@/src/login/api';
+
+/** نوع قفل‌های قابل تغییر روی یک صفحه — فقط کاربر support مجاز به تغییر آن‌هاست */
+export type SmartPageLockField = 'locked_edit' | 'locked_delete' | 'locked_hidden';
 
 /** مسیر کامل صفحه شامل والدها — /page/parent/child */
 export const buildPagePath = (
@@ -57,6 +65,8 @@ interface PagesListProps {
   duplicateError?: string | null;
   /** رفتن به تب «آمار بازدیدکنندگان» صفحات هوشمند (اگر تعیین شود، دکمه نمایش داده می‌شود) */
   onOpenAnalytics?: () => void;
+  /** تغییر یکی از قفل‌های صفحه (ویرایش/حذف/نمایش در فهرست) — فقط برای کاربر support نمایش داده می‌شود */
+  onToggleLock?: (page: SmartPageDto, field: SmartPageLockField, value: boolean) => void;
 }
 
 /** وضعیت انتشار صفحه */
@@ -101,6 +111,27 @@ const PageMockup: React.FC = () => (
   </div>
 );
 
+/** دکمهٔ آیکونی تغییر یک قفل — آیکون اصلی همان چیزی است که قفل می‌شود (ویرایش/حذف/نمایش)
+ * و یک نشان کوچک قفل/باز روی گوشهٔ آن وضعیت فعلی را نشان می‌دهد. فقط برای support. */
+const LockToggleButton: React.FC<{
+  icon: React.ReactNode;
+  locked: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  lockedTitle: string;
+  unlockedTitle: string;
+}> = ({ icon, locked, onClick, lockedTitle, unlockedTitle }) => (
+  <button
+    onClick={onClick}
+    className={`relative p-2 rounded-xl text-white shadow-md cursor-pointer ${locked ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-500 hover:bg-slate-600'}`}
+    title={locked ? lockedTitle : unlockedTitle}
+  >
+    {icon}
+    <span className="absolute -bottom-1 -left-1 p-0.5 rounded-full bg-white dark:bg-slate-900 shadow">
+      {locked ? <Lock className="w-2.5 h-2.5 text-amber-600" /> : <Unlock className="w-2.5 h-2.5 text-slate-400" />}
+    </span>
+  </button>
+);
+
 /** کارت یک صفحه ساخته‌شده */
 const PageCard: React.FC<{
   page: SmartPageDto;
@@ -113,18 +144,29 @@ const PageCard: React.FC<{
   languages?: Language[];
   onDuplicatePage?: (page: SmartPageDto, targetLang: string) => void;
   isDuplicating?: boolean;
-}> = ({ page, path, childrenCount = 0, onEdit, onSettings, onPreview, onDelete, languages, onDuplicatePage, isDuplicating }) => {
+  isSupportUser: boolean;
+  onToggleLock?: (page: SmartPageDto, field: SmartPageLockField, value: boolean) => void;
+}> = ({ page, path, childrenCount = 0, onEdit, onSettings, onPreview, onDelete, languages, onDuplicatePage, isDuplicating, isSupportUser, onToggleLock }) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const updated = page.updated_at
     ? new Date(page.updated_at).toLocaleDateString('fa-IR')
     : '';
   const otherLanguages = (languages || []).filter((l) => l.code !== page.language);
 
+  // قفل‌های صفحه فقط توسط کاربر support قابل تغییرند؛ برای بقیهٔ کاربران دکمهٔ
+  // ویرایش/حذفِ قفل‌شده غیرفعال می‌شود تا اصلاً درخواستی که سرور رد می‌کند ارسال نشود.
+  const editLocked = !!page.locked_edit && !isSupportUser;
+  const deleteLocked = !!page.locked_delete && !isSupportUser;
+  const toggleLock = (field: SmartPageLockField, value: boolean) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleLock?.(page, field, value);
+  };
+
   return (
     <div
-      onClick={onEdit}
-      className="group relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-teal-500/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-64 select-none"
-      title={`ویرایش صفحه «${page.title}»`}
+      onClick={editLocked ? undefined : onEdit}
+      className={`group relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-teal-500/40 hover:-translate-y-1 transition-all duration-300 h-64 select-none ${editLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      title={editLocked ? 'ویرایش این صفحه توسط پشتیبان قفل شده است' : `ویرایش صفحه «${page.title}»`}
     >
       {/* Browser chrome */}
       <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
@@ -156,7 +198,28 @@ const PageCard: React.FC<{
             )}
             {page.title}
           </span>
-          <StatusBadge status={page.status} />
+          <span className="flex items-center gap-1 shrink-0">
+            {page.locked_hidden && (
+              <span
+                className="inline-flex items-center p-0.5 rounded-md bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20"
+                title="نمایش در فهرست برای بقیهٔ کاربران قفل شده — فقط support این صفحه را می‌بیند"
+              >
+                <EyeOff className="w-3 h-3" />
+              </span>
+            )}
+            {(page.locked_edit || page.locked_delete) && (
+              <span
+                className="inline-flex items-center p-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                title={[
+                  page.locked_edit && 'ویرایش قفل است',
+                  page.locked_delete && 'حذف قفل است'
+                ].filter(Boolean).join(' — ')}
+              >
+                <Lock className="w-3 h-3" />
+              </span>
+            )}
+            <StatusBadge status={page.status} />
+          </span>
         </div>
         <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
           <span className="flex items-center gap-2 min-w-0">
@@ -181,14 +244,15 @@ const PageCard: React.FC<{
       </div>
 
       {/* Hover actions */}
-      <div className="absolute top-12 inset-x-0 flex items-center justify-center gap-2 py-3 bg-gradient-to-b from-slate-900/70 to-slate-900/10 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-12 inset-x-0 flex items-center justify-center gap-2 py-3 bg-gradient-to-b from-slate-900/70 to-slate-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap px-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onEdit();
+            if (!editLocked) onEdit();
           }}
-          className="p-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md cursor-pointer"
-          title="ویرایش صفحه"
+          disabled={editLocked}
+          className="p-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
+          title={editLocked ? 'ویرایش این صفحه توسط پشتیبان قفل شده است' : 'ویرایش صفحه'}
         >
           <Pencil className="w-4 h-4" />
         </button>
@@ -207,10 +271,11 @@ const PageCard: React.FC<{
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onSettings();
+            if (!editLocked) onSettings();
           }}
-          className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer"
-          title="تنظیمات و سئو"
+          disabled={editLocked}
+          className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+          title={editLocked ? 'ویرایش این صفحه توسط پشتیبان قفل شده است' : 'تنظیمات و سئو'}
         >
           <Settings2 className="w-4 h-4" />
         </button>
@@ -255,13 +320,41 @@ const PageCard: React.FC<{
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            if (!deleteLocked) onDelete();
           }}
-          className="p-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md cursor-pointer"
-          title="حذف صفحه"
+          disabled={deleteLocked}
+          className="p-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-600"
+          title={deleteLocked ? 'حذف این صفحه توسط پشتیبان قفل شده است' : 'حذف صفحه'}
         >
           <Trash2 className="w-4 h-4" />
         </button>
+
+        {/* دکمه‌های قفل — فقط برای کاربر support، برای محافظت از صفحات ویژه در برابر بقیهٔ کاربران صفحه‌ساز */}
+        {isSupportUser && onToggleLock && (
+          <>
+            <LockToggleButton
+              icon={<Pencil className="w-4 h-4" />}
+              locked={!!page.locked_edit}
+              onClick={toggleLock('locked_edit', !page.locked_edit)}
+              lockedTitle="باز کردن قفل ویرایش"
+              unlockedTitle="قفل ویرایش (فقط support بتواند ویرایش کند)"
+            />
+            <LockToggleButton
+              icon={<Trash2 className="w-4 h-4" />}
+              locked={!!page.locked_delete}
+              onClick={toggleLock('locked_delete', !page.locked_delete)}
+              lockedTitle="باز کردن قفل حذف"
+              unlockedTitle="قفل حذف (فقط support بتواند حذف کند)"
+            />
+            <LockToggleButton
+              icon={page.locked_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              locked={!!page.locked_hidden}
+              onClick={toggleLock('locked_hidden', !page.locked_hidden)}
+              lockedTitle="نمایش دوباره در فهرست برای همه"
+              unlockedTitle="قفل نمایش در فهرست (فقط support ببیند)"
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -282,11 +375,14 @@ export const PagesList: React.FC<PagesListProps> = ({
   onDuplicatePage,
   duplicatingPageId,
   duplicateError,
-  onOpenAnalytics
+  onOpenAnalytics,
+  onToggleLock
 }) => {
   // فقط صفحات ریشه (بدون والد) در فهرست نمایش داده می‌شوند؛ زیرصفحه‌ها از داخل
   // استودیوی صفحهٔ والد مدیریت می‌شوند و نیازی به فهرست شدن اینجا ندارند.
   const topLevelPages = pages.filter((p) => !p.parent_id);
+  // دکمه‌های قفل فقط برای کاربر support نمایش داده می‌شوند — سرور هم مستقل از این، همین محدودیت را اعمال می‌کند.
+  const isSupportUser = loginApi.isSupportUser();
   const childCountOf = (id: number | undefined) =>
     id == null ? 0 : pages.filter((p) => p.parent_id === id).length;
 
@@ -385,6 +481,8 @@ export const PagesList: React.FC<PagesListProps> = ({
                   languages={languages}
                   onDuplicatePage={onDuplicatePage}
                   isDuplicating={duplicatingPageId === page.id}
+                  isSupportUser={isSupportUser}
+                  onToggleLock={onToggleLock}
                 />
               ))
             )}

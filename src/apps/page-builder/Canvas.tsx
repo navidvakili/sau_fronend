@@ -65,6 +65,8 @@ interface CanvasProps {
   departmentFields?: AcademicFieldItem[];
   departmentInstructors?: PersonItem[];
   departmentInfoFiles?: InfoFileItem[];
+  /** نام دستهٔ خبریِ متصل به گروه — برای پیش‌نمایش ویجت news-feed(current-department) در بوم */
+  departmentNewsCategoryName?: string | null;
   /** فقط در restrictedMode مصرف می‌شود — مشخص می‌کند کدام ویجت واقعاً به یک فیلد/رابطهٔ واقعیِ
    *  Entity متصل است (طبق TOKEN_FIELD_MAP یا نوع dept-*). بقیهٔ ویجت‌ها (مثل متن‌های تزئینی یا
    *  هر بخشی که به گروه آموزشی مربوط نیست) کاملاً غیرقابل‌کلیک/بدون حالت هاور رندر می‌شوند تا
@@ -106,6 +108,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   departmentFields,
   departmentInstructors,
   departmentInfoFiles,
+  departmentNewsCategoryName,
   isWidgetEditable
 }) => {
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
@@ -210,11 +213,13 @@ export const Canvas: React.FC<CanvasProps> = ({
           marginBottom: sec.marginBottom !== undefined ? `${sec.marginBottom}px` : undefined
         }}
         className={`relative group transition-all border-2 ${
-          isSecSelected
-            ? 'border-teal-500 shadow-lg'
-            : depth > 0
-              ? 'border-teal-500/25 hover:border-teal-500/50'
-              : 'border-transparent hover:border-teal-500/40'
+          restrictedMode
+            ? 'border-transparent'
+            : isSecSelected
+              ? 'border-teal-500 shadow-lg'
+              : depth > 0
+                ? 'border-teal-500/25 hover:border-teal-500/50'
+                : 'border-transparent hover:border-teal-500/40'
         }`}
       >
         {/* Section Label & Quick Toolbar on Hover/Select — در حالت محدود کاملاً مخفی است
@@ -408,9 +413,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                     setDragInsertIndex(null);
                   }}
                   className={`min-h-[100px] min-w-0 p-3 rounded-2xl border-2 transition-all flex flex-col justify-between relative group/col ${
-                    isColSelected
-                      ? 'border-indigo-500 bg-indigo-500/5'
-                      : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'
+                    restrictedMode
+                      ? 'border-transparent'
+                      : isColSelected
+                        ? 'border-indigo-500 bg-indigo-500/5'
+                        : 'border-dashed border-gray-300 dark:border-slate-800 hover:border-indigo-400'
                   } ${
                     dragOverColumnId === col.id
                       ? 'border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/30'
@@ -561,7 +568,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 }
                               }}
                               className={`relative group/widget rounded-xl transition-all border-2 ${
-                                widgetLocked
+                                widgetLocked || restrictedMode
                                   ? 'border-transparent'
                                   : isWidgetSel
                                     ? 'border-amber-500 ring-2 ring-amber-500/20'
@@ -569,9 +576,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                               } ${
                                 widgetLocked
                                   ? 'cursor-default'
-                                  : dragWidgetId === widget.id
-                                    ? 'opacity-40 cursor-grabbing'
-                                    : 'cursor-grab'
+                                  : restrictedMode
+                                    ? 'cursor-pointer'
+                                    : dragWidgetId === widget.id
+                                      ? 'opacity-40 cursor-grabbing'
+                                      : 'cursor-grab'
                               }`}
                             >
                               {/* نشانگر درج — قبل از این ویجت */}
@@ -579,6 +588,24 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 <div className="absolute -top-[9px] right-2 left-2 h-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_2px_rgba(20,184,166,0.45)] z-40 pointer-events-none" />
                               )}
                               {!widgetLocked && (
+                                restrictedMode ? (
+                                  /* ویرایشگر بصری — بدون کادر/برچسب نوع/دستگیرهٔ جابه‌جایی (شبیه خروجی واقعی
+                                     سایت)؛ فقط یک آیکون ویرایش کوچک کنار بخش‌های قابل‌ویرایش */
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onSelectSection(sec.id);
+                                      onSelectColumn(col.id);
+                                      onSelectWidget(widget.id);
+                                    }}
+                                    className={`absolute top-1.5 left-1.5 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
+                                      isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
+                                    }`}
+                                    title="ویرایش این بخش"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                ) : (
                               <>
                               {/* برچسب نوع ویجت — همیشه نمایان تا نوع هر ویجت قابل‌تشخیص باشد */}
                               <div
@@ -620,8 +647,6 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
-                                {!restrictedMode && (
-                                <>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -654,10 +679,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                                </>
-                                )}
                               </div>
                               </>
+                                )
                               )}
 
                               {/* Render Widget */}
@@ -671,6 +695,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 departmentFields={departmentFields}
                                 departmentInstructors={departmentInstructors}
                                 departmentInfoFiles={departmentInfoFiles}
+                                departmentNewsCategoryName={departmentNewsCategoryName}
                               />
                             </div>
                           );

@@ -39,9 +39,11 @@ import {
   updateSmartPage,
   deleteSmartPage,
   duplicateSmartPage,
+  updateSmartPageLocks,
   SmartPageDto,
   SmartPageTreeNode
 } from './api';
+import type { SmartPageLockField } from './PagesList';
 import { fetchDedicatedPages } from '../dedicated_pages/api';
 import { getPageVariableValues } from '../dedicated_pages/PageContentVariables';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
@@ -311,6 +313,19 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       setDuplicateError(err instanceof Error ? err.message : 'خطا در ایجاد نسخهٔ زبان دیگر');
     } finally {
       setDuplicatingPageId(null);
+    }
+  };
+
+  // تغییر یکی از قفل‌های صفحه (ویرایش/حذف/نمایش در فهرست) — فقط کاربر support این دکمه‌ها را می‌بیند؛
+  // به‌روزرسانی خوش‌بینانه (optimistic) با بازگردانی در صورت خطا.
+  const handleToggleLock = async (page: SmartPageDto, field: SmartPageLockField, value: boolean) => {
+    if (!page.id) return;
+    const previous = pages;
+    setPages(pages.map((p) => (p.id === page.id ? { ...p, [field]: value } : p)));
+    try {
+      await updateSmartPageLocks(page.id, { [field]: value });
+    } catch {
+      setPages(previous);
     }
   };
 
@@ -1639,6 +1654,7 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
           duplicatingPageId={duplicatingPageId}
           duplicateError={duplicateError}
           onOpenAnalytics={() => setViewMode('analytics')}
+          onToggleLock={handleToggleLock}
         />
       ) : viewMode === 'analytics' ? (
         <div className="h-[calc(100dvh_-_13rem)] min-h-[480px] w-full bg-slate-100 dark:bg-slate-950 overflow-y-auto rtl text-right transition-colors">
