@@ -77,7 +77,6 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   'achievements-visitor-analytics': { view: 'analytics.view' },
   people:           { view: 'people.view',           create: 'people.create',           edit: 'people.edit',           delete: 'people.delete',           approve: 'people.approve' },
   departments:      { view: 'departments.view',      create: 'departments.create',      edit: 'departments.edit',      delete: 'departments.delete',      approve: 'departments.approve' },
-  fields:           { view: 'fields.view',           create: 'fields.create',           edit: 'fields.edit',           delete: 'fields.delete',           approve: 'fields.approve' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
   'home-intro': { view: 'home-intro.view', edit: 'home-intro.edit' },

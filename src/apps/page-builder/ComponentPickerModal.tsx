@@ -42,7 +42,8 @@ import {
   BookOpen,
   FileSpreadsheet,
   Navigation,
-  ClipboardList
+  ClipboardList,
+  GraduationCap
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -62,12 +63,12 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
   targetInsertIndex,
   targetColumnId
 }) => {
-  const [activeCategory, setActiveCategory] = useState<'all' | 'widgets' | 'smart' | 'dedicated-page' | 'sections'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'widgets' | 'smart' | 'dedicated-page' | 'academic-department' | 'sections'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
 
-  const widgetItems: { type: WidgetType; category: 'basic' | 'smart' | 'dedicated-page'; name: string; desc: string; icon: any; badge?: string }[] = [
+  const widgetItems: { type: WidgetType; category: 'basic' | 'smart' | 'dedicated-page' | 'academic-department'; name: string; desc: string; icon: any; badge?: string }[] = [
     { type: 'heading', category: 'basic', name: 'عنوان تیتر (Heading)', desc: 'تیتر اصلی با تایپوگرافی برجسته و سایزهای متنوع', icon: Type },
     { type: 'text', category: 'basic', name: 'بلوک متنی (Text Block)', desc: 'پاراگراف‌ها و توضیحات متنی غنی', icon: Layout },
     { type: 'image', category: 'basic', name: 'تصویر (Image Banner)', desc: 'تصویر تک یا بنر با نسبت تصویر دلخواه', icon: ImageIcon },
@@ -118,7 +119,13 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'dp-articles', category: 'dedicated-page', name: 'فهرست مقالات', desc: 'مقالات منتشرشدهٔ همین صفحهٔ اختصاصی', icon: FileText, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-gallery', category: 'dedicated-page', name: 'گالری تصاویر صفحهٔ اختصاصی', desc: 'گالری تصاویر همین صفحهٔ اختصاصی به‌همراه دسته‌بندی', icon: Images, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-events', category: 'dedicated-page', name: 'رویدادهای صفحهٔ اختصاصی', desc: 'فهرست رویدادهای همین صفحهٔ اختصاصی', icon: CalendarDays, badge: 'صفحهٔ اختصاصی' },
-    { type: 'dp-members', category: 'dedicated-page', name: 'اعضای شورا و کادر اجرایی', desc: 'اعضای شورای مرکزی/کادر اجرایی همین صفحهٔ اختصاصی', icon: UsersRound, badge: 'صفحهٔ اختصاصی' }
+    { type: 'dp-members', category: 'dedicated-page', name: 'اعضای شورا و کادر اجرایی', desc: 'اعضای شورای مرکزی/کادر اجرایی همین صفحهٔ اختصاصی', icon: UsersRound, badge: 'صفحهٔ اختصاصی' },
+
+    // Academic Department blocks — این بلوک‌ها همیشه دادهٔ همان گروه آموزشی‌ای را نمایش می‌دهند
+    // که این قالب پویا برایش رندر می‌شود — بدون نیاز به انتخاب دستی گروه
+    { type: 'dept-fields', category: 'academic-department', name: 'رشته‌های تحصیلی گروه', desc: 'فهرست رشته‌های زیرمجموعهٔ همین گروه به‌همراه مدیر هر رشته', icon: GraduationCap, badge: 'گروه آموزشی' },
+    { type: 'dept-instructors', category: 'academic-department', name: 'اساتید مدعو شاخص گروه', desc: 'فهرست مدرسان همین گروه آموزشی', icon: Users, badge: 'گروه آموزشی' },
+    { type: 'dept-files', category: 'academic-department', name: 'فایل‌های اطلاعاتی گروه', desc: 'فایل‌ها و اسناد همین گروه آموزشی', icon: FileText, badge: 'گروه آموزشی' }
   ];
 
   const sectionPresets: { preset: '1col' | '2col' | '3col' | '4col' | '7-5' | '8-4'; name: string; desc: string; columns: string }[] = [
@@ -136,6 +143,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     if (activeCategory === 'widgets') return w.category === 'basic';
     if (activeCategory === 'smart') return w.category === 'smart';
     if (activeCategory === 'dedicated-page') return w.category === 'dedicated-page';
+    if (activeCategory === 'academic-department') return w.category === 'academic-department';
     if (activeCategory === 'sections') return false;
     return true;
   });
@@ -224,6 +232,16 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
               }`}
             >
               بلوک‌های صفحات اختصاصی
+            </button>
+            <button
+              onClick={() => setActiveCategory('academic-department')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
+                activeCategory === 'academic-department'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              بلوک‌های گروه آموزشی
             </button>
             <button
               onClick={() => setActiveCategory('sections')}
@@ -402,6 +420,59 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <span className="text-xs font-black text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 truncate">
+                            {item.name}
+                          </span>
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-bold border border-teal-500/20 shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2.6: Academic Department Blocks */}
+          {(activeCategory === 'all' || activeCategory === 'academic-department') && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-emerald-500" />
+                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">
+                    بلوک‌های گروه آموزشی (Academic Department Blocks)
+                  </h4>
+                </div>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md font-bold border border-emerald-500/20">
+                  اتصال خودکار به گروهِ صفحهٔ جاری
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {filteredWidgets.filter(w => w.category === 'academic-department').map((item) => {
+                  const IconComp = item.icon;
+                  return (
+                    <button
+                      key={item.type}
+                      onClick={() => {
+                        onSelectWidget(item.type);
+                        onClose();
+                      }}
+                      className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-white dark:to-slate-900 border border-emerald-500/20 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-lg transition-all text-right flex items-start gap-3 group cursor-pointer"
+                    >
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0 border border-emerald-500/20">
+                        <IconComp className="w-5 h-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-xs font-black text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
                             {item.name}
                           </span>
                           {item.badge && (

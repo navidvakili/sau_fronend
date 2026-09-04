@@ -12,15 +12,20 @@ import {
   Building2, Plus, Search, Edit3, Trash2, Image as ImageIcon,
   Send, Loader2, X, CheckCircle2, AlertCircle, Globe,
   GraduationCap, Phone, Mail, FileText, UserRound, BookOpen, Users,
+  ChevronRight, ChevronLeft, LayoutTemplate,
 } from 'lucide-react';
 import type {
   AcademicDepartmentItem, AcademicDepartmentPayload, InfoFileItem,
-  DepartmentInstructor, DepartmentField, PersonItem,
+  DepartmentInstructor, DepartmentField, PersonItem, NewsCategory,
 } from '@/src/shared-types';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import MediaManager from '@/src/shared-components/MediaManager';
 import { fetchDepartments, fetchDepartmentById, createDepartment, updateDepartment, deleteDepartment } from './api';
 import { fetchPeople } from '../people/api';
+import { fetchCategories } from '../news/api';
+import LinkLayoutDialog from '../dedicated_pages/LinkLayoutDialog';
+import QuickCreateDialog from './QuickCreateDialog';
+import VisualDataEditor from './VisualDataEditor';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
@@ -28,14 +33,14 @@ interface DepartmentsManagementProps {
   user?: any;
   activeTabId?: string;
   moduleId?: string;
-  onOpenTab?: (id: string, title: string, iconName: string) => void;
+  onOpenTab?: (id: string, title: string, iconName: string, forceNewInstance?: boolean, initialProps?: Record<string, any>) => void;
 }
 
-type SubTab = 'list' | 'editor';
+type SubTab = 'list' | 'editor' | 'visual';
 
 const inputCls = 'w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50';
 
-export default function DepartmentsManagement({ user }: DepartmentsManagementProps) {
+export default function DepartmentsManagement({ user, onOpenTab }: DepartmentsManagementProps) {
   const { can } = useAppPermissions();
   const { currentLang, getLanguage } = useLanguage();
   const activeLanguage = getLanguage(currentLang);
@@ -55,6 +60,8 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
   const [departments, setDepartments] = useState<AcademicDepartmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // ===== Filter state =====
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,10 +85,17 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('');
-  const [formInfoFiles, setFormInfoFiles] = useState<Array<{ title: string; url: string }>>([]);
+  const [formInfoFiles, setFormInfoFiles] = useState<Array<{ id?: number; title: string; url: string }>>([]);
+  const [formNewsCategoryId, setFormNewsCategoryId] = useState<string>('');
   const [formInstructorIds, setFormInstructorIds] = useState<number[]>([]);
   const [formStatus, setFormStatus] = useState<'published' | 'draft'>('published');
   const [formSubFields, setFormSubFields] = useState<DepartmentField[]>([]);
+
+  // ===== News categories (for "دستهٔ خبری گروه") =====
+  const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
+  useEffect(() => {
+    fetchCategories(currentLang).then(res => setNewsCategories(res.data || [])).catch(() => {});
+  }, [currentLang]);
 
   const [showMediaSelector, setShowMediaSelector] = useState(false);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -101,6 +115,13 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
   // ===== Delete Confirmation state =====
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // ===== Page Builder layout link dialog (قالب پویای صفحهٔ گروه آموزشی) =====
+  const [showLayoutDialog, setShowLayoutDialog] = useState(false);
+
+  // ===== دیالوگ ایجاد سریع + ویرایشگر بصری =====
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [visualDepartmentId, setVisualDepartmentId] = useState<number | null>(null);
+
   // ===== Metrics =====
   const publishedCount = departments.filter(d => d.status === 'published').length;
   const draftCount = departments.filter(d => d.status === 'draft').length;
@@ -109,28 +130,46 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
   const loadDepartments = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, any> = { per_page: 100, lang: currentLang };
+      const params: Record<string, any> = { page: currentPage, per_page: 15, lang: currentLang };
       if (searchQuery) params.search = searchQuery;
       if (statusFilter !== 'all') params.status = statusFilter;
       const data = await fetchDepartments(params);
       setDepartments(data.data);
       setTotal(data.total);
+      setTotalPages(data.last_page || 1);
     } catch (err: any) {
       console.error('Error loading departments:', err);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, statusFilter, currentLang]);
+  }, [currentPage, searchQuery, statusFilter, currentLang]);
 
   useEffect(() => {
     loadDepartments();
   }, [loadDepartments]);
+
+  // Reset to first page whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, currentLang]);
 
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => loadDepartments(), 400);
     return () => clearTimeout(timer);
   }, [searchQuery, statusFilter]);
+
+  const getPageNumbers = (current: number, total: number): (number | 'ellipsis')[] => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | 'ellipsis')[] = [1];
+    if (current > 3) pages.push('ellipsis');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push('ellipsis');
+    if (total > 1) pages.push(total);
+    return pages;
+  };
 
   // ===== Load instructor pool when the editor opens =====
   const loadInstructorPool = useCallback(async () => {
@@ -157,15 +196,14 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
   }, [currentLang]);
 
   // ===== Handlers =====
-  const handleStartEdit = async (item: AcademicDepartmentItem) => {
+  const openFlatFormForId = async (id: number) => {
     setFormMessage(null);
     setActiveTab('editor');
     setFormLoading(true);
     try {
-      const detail = await fetchDepartmentById(item.id);
+      const detail = await fetchDepartmentById(id);
       fillForm(detail);
     } catch (err: any) {
-      fillForm(item);
       showToast(err.message || 'خطا در بارگذاری جزئیات گروه آموزشی', 'error');
     } finally {
       setFormLoading(false);
@@ -190,7 +228,8 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
     setFormEmail(d.email || '');
     setFormPhone(d.phone || '');
     setFormImageUrl(d.image_url || '');
-    setFormInfoFiles((d.infoFiles || []).map(f => ({ title: f.title || '', url: f.url || '' })));
+    setFormInfoFiles((d.infoFiles || []).map(f => ({ id: f.id, title: f.title || '', url: f.url || '' })));
+    setFormNewsCategoryId(d.newsCategoryId ? String(d.newsCategoryId) : '');
     setFormInstructorIds((d.instructors || []).map(i => i.id));
     setFormStatus(d.status);
     setFormSubFields(d.fields || []);
@@ -203,7 +242,7 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
     setFormHeadName(''); setFormHeadTitle(''); setFormHeadPhone(''); setFormHeadInternal(''); setFormHeadEmail('');
     setFormExpertName(''); setFormExpertPhone(''); setFormExpertInternal(''); setFormExpertEmail('');
     setFormOffice(''); setFormEmail(''); setFormPhone(''); setFormImageUrl('');
-    setFormInfoFiles([]); setFormInstructorIds([]); setFormStatus('published'); setFormSubFields([]);
+    setFormInfoFiles([]); setFormNewsCategoryId(''); setFormInstructorIds([]); setFormStatus('published'); setFormSubFields([]);
     setFormMessage(null);
   };
 
@@ -211,23 +250,24 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
     return {
       name: formName,
       lang: currentLang,
-      faculty: formFaculty || undefined,
-      description: formDescription || undefined,
-      head_name: formHeadName || undefined,
-      head_title: formHeadTitle || undefined,
-      head_phone: formHeadPhone || undefined,
-      head_internal: formHeadInternal || undefined,
-      head_email: formHeadEmail || undefined,
-      expert_name: formExpertName || undefined,
-      expert_phone: formExpertPhone || undefined,
-      expert_internal: formExpertInternal || undefined,
-      expert_email: formExpertEmail || undefined,
-      office: formOffice || undefined,
-      email: formEmail || undefined,
-      phone: formPhone || undefined,
-      image_url: formImageUrl || undefined,
-      info_files: formInfoFiles.filter(f => f.title || f.url).map(f => ({ title: f.title, url: f.url })),
-      instructor_ids: formInstructorIds.length ? formInstructorIds : undefined,
+      faculty: formFaculty || null,
+      description: formDescription || null,
+      head_name: formHeadName || null,
+      head_title: formHeadTitle || null,
+      head_phone: formHeadPhone || null,
+      head_internal: formHeadInternal || null,
+      head_email: formHeadEmail || null,
+      expert_name: formExpertName || null,
+      expert_phone: formExpertPhone || null,
+      expert_internal: formExpertInternal || null,
+      expert_email: formExpertEmail || null,
+      office: formOffice || null,
+      email: formEmail || null,
+      phone: formPhone || null,
+      image_url: formImageUrl || null,
+      info_files: formInfoFiles.filter(f => f.title || f.url).map(f => ({ id: f.id, title: f.title, url: f.url })),
+      news_category_id: formNewsCategoryId ? Number(formNewsCategoryId) : null,
+      instructor_ids: formInstructorIds,
       status: formStatus,
     };
   };
@@ -317,7 +357,14 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
           {canEdit && (
             <div className="flex items-center gap-3 shrink-0">
               <button
-                onClick={() => { handleResetForm(); loadInstructorPool(); setActiveTab('editor'); }}
+                onClick={() => setShowLayoutDialog(true)}
+                className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs shadow-lg transition-all cursor-pointer flex items-center gap-2 active:scale-95 border border-white/20"
+              >
+                <LayoutTemplate className="w-4 h-4" />
+                <span>اتصال قالب Page Builder</span>
+              </button>
+              <button
+                onClick={() => setShowQuickCreate(true)}
                 className="px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95"
               >
                 <Plus className="w-4 h-4" />
@@ -407,7 +454,7 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
               <p className="text-sm text-gray-400 mb-6">برای شروع، اولین گروه آموزشی را ثبت کنید.</p>
               {canEdit && (
                 <button
-                  onClick={() => { handleResetForm(); loadInstructorPool(); setActiveTab('editor'); }}
+                  onClick={() => setShowQuickCreate(true)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-emerald-950 font-black text-xs hover:bg-emerald-400 transition-all cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -503,7 +550,7 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
                     <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-white/5">
                       {canEdit && (
                         <button
-                          onClick={() => handleStartEdit(item)}
+                          onClick={() => { setVisualDepartmentId(item.id); setActiveTab('visual'); }}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[11px] font-bold transition-colors cursor-pointer"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -525,7 +572,57 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
               ))}
             </div>
           )}
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="px-1.5 text-gray-400 dark:text-gray-500 text-xs font-bold">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[32px] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      page === currentPage
+                        ? 'bg-emerald-500 text-emerald-950 shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ===== Visual Data Editor ===== */}
+      {activeTab === 'visual' && visualDepartmentId && (
+        <VisualDataEditor
+          departmentId={visualDepartmentId}
+          onBack={() => { setVisualDepartmentId(null); setActiveTab('list'); loadDepartments(); }}
+          onSaved={() => loadDepartments()}
+          onUseFlatForm={() => openFlatFormForId(visualDepartmentId)}
+          onOpenTab={onOpenTab}
+        />
       )}
 
       {/* ===== Editor View ===== */}
@@ -763,6 +860,24 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
               ))}
             </div>
 
+            {/* ===== دستهٔ خبری گروه (برای ویجت «خبرهای گروه» در قالب پویا) ===== */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">دستهٔ خبری گروه</label>
+              <select
+                value={formNewsCategoryId}
+                onChange={(e) => setFormNewsCategoryId(e.target.value)}
+                className={`${inputCls} cursor-pointer`}
+              >
+                <option value="">بدون دستهٔ خبری</option>
+                {newsCategories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-400 mt-1">
+                اخبار همین دستهٔ خبری در بخش «خبرهای گروه» صفحهٔ عمومی این گروه نمایش داده می‌شود.
+              </p>
+            </div>
+
             {/* ===== مدرسان گروه (multi-select from people) ===== */}
             <div className="rounded-2xl border border-gray-100 dark:border-white/10 p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -952,6 +1067,32 @@ export default function DepartmentsManagement({ user }: DepartmentsManagementPro
           </div>
         )}
       </AnimatePresence>
+
+      {/* ===== دیالوگ ایجاد سریع ===== */}
+      {showQuickCreate && (
+        <QuickCreateDialog
+          onClose={() => setShowQuickCreate(false)}
+          onCreated={(dept) => {
+            setShowQuickCreate(false);
+            setVisualDepartmentId(dept.id);
+            setActiveTab('visual');
+            loadDepartments();
+          }}
+        />
+      )}
+
+      {/* ===== اتصال قالب پویای Page Builder برای صفحهٔ گروه‌های آموزشی ===== */}
+      {showLayoutDialog && (
+        <LinkLayoutDialog
+          pageType="academic_department"
+          pageTypeLabel="گروه آموزشی"
+          onClose={() => setShowLayoutDialog(false)}
+          onOpenBuilder={(smartPageId) => {
+            setShowLayoutDialog(false);
+            onOpenTab?.('page-builder', 'صفحه‌ساز هوشمند', 'LayoutTemplate', false, { initialPageId: smartPageId });
+          }}
+        />
+      )}
     </div>
   );
 }

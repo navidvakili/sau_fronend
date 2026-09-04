@@ -6,7 +6,8 @@ import {
   UserRoleCondition,
   WidgetDataBinding,
   SectionInstance,
-  getColumnBlocks
+  getColumnBlocks,
+  WIDGET_TYPE_LABELS
 } from './builderTypes';
 import {
   fetchDataSourceAnnouncements,
@@ -19,7 +20,7 @@ import {
   fetchDedicatedPageMembersForWidget
 } from './api';
 import type { SmartPageTreeNode, DedicatedPageContentItem, DedicatedPageMemberItem } from './api';
-import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem } from '@/src/shared-types';
+import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem, AcademicFieldItem, InfoFileItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import { fetchForm } from '../forms/api';
 import type { FormDefinition } from '../forms/types';
@@ -119,6 +120,10 @@ interface WidgetRendererProps {
   variables?: Record<string, string>;
   /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ در حال پیش‌نمایش — برای بلوک‌های dp-* (وقتی این لایوت به یک نوع صفحهٔ اختصاصی متصل است) */
   dedicatedPageId?: number | null;
+  /** دادهٔ گروه آموزشیِ در حال ویرایش — فقط در ویرایشگر بصری گروه (فاز ۴) ست می‌شود؛ برای رندر واقعی dept-fields/dept-instructors/dept-files */
+  departmentFields?: AcademicFieldItem[];
+  departmentInstructors?: PersonItem[];
+  departmentInfoFiles?: InfoFileItem[];
 }
 
 /** تبدیل تاریخ ISO به تاریخ شمسی کوتاه */
@@ -4297,7 +4302,10 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   pageId,
   pageSlug,
   variables,
-  dedicatedPageId
+  dedicatedPageId,
+  departmentFields,
+  departmentInstructors,
+  departmentInfoFiles
 }) => {
   // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
   // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
@@ -4821,6 +4829,101 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     case 'dp-members':
       return isEditorPreview ? null : (
         <DedicatedPageMembersWidget widget={widget} binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+
+    // بلوک‌های قالب گروه آموزشی — همیشه به گروهِ صفحهٔ جاری وصل‌اند (بدون binding دستی).
+    // در بومِ عمومیِ Page Builder (طراحی قالب مشترک) دادهٔ هیچ گروه خاصی موجود نیست → placeholder.
+    // در ویرایشگر بصریِ یک گروه مشخص (فاز ۴)، Canvas این props را با دادهٔ واقعی همان گروه پر می‌کند.
+    case 'dept-fields':
+      return departmentFields === undefined ? (
+        <div style={containerStyle} className="p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 text-center">
+          {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
+        </div>
+      ) : departmentFields.length === 0 ? (
+        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
+          هنوز رشته‌ای برای این گروه ثبت نشده است.
+        </div>
+      ) : (
+        <div style={containerStyle} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {departmentFields.map((field) => (
+            <div key={field.id} className="p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-xs font-black text-slate-900 dark:text-white truncate">{field.name}</span>
+                {field.degreeLevel && (
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">{field.degreeLevel}</span>
+                )}
+              </div>
+              {field.managerName && (
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                  <div>مدیر رشته: {field.managerName}</div>
+                  {(field.managerPhone || field.managerInternal) && (
+                    <div dir="ltr" className="text-slate-400 dark:text-slate-500">
+                      {[field.managerPhone, field.managerInternal ? `داخلی ${field.managerInternal}` : ''].filter(Boolean).join(' — ')}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+
+    case 'dept-instructors':
+      return departmentInstructors === undefined ? (
+        <div style={containerStyle} className="p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 text-center">
+          {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
+        </div>
+      ) : departmentInstructors.length === 0 ? (
+        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
+          هنوز استاد مدعویی برای این گروه انتخاب نشده است.
+        </div>
+      ) : (
+        <div style={containerStyle} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {departmentInstructors.map((person) => {
+            const fullName = [person.title, person.firstName, person.lastName].filter(Boolean).join(' ') || `#${person.id}`;
+            const img = person.image_url || person.image;
+            return (
+              <div key={person.id} className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5">
+                {img ? (
+                  <img src={img} alt={fullName} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-white flex items-center justify-center shrink-0">
+                    <span className="text-sm font-black">{(fullName || '؟').trim().charAt(0)}</span>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{fullName}</div>
+                  {(person.rank || person.specialization) && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{[person.rank, person.specialization].filter(Boolean).join(' — ')}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+
+    case 'dept-files':
+      return departmentInfoFiles === undefined ? (
+        <div style={containerStyle} className="p-6 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-500/5 text-xs text-emerald-700 dark:text-emerald-400 text-center">
+          {WIDGET_TYPE_LABELS[widget.type]} — این بلوک در صفحهٔ عمومی هر گروه آموزشی با دادهٔ همان گروه پر می‌شود
+        </div>
+      ) : departmentInfoFiles.length === 0 ? (
+        <div style={containerStyle} className="p-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-800 text-[11px] text-slate-400 text-center">
+          هنوز فایلی برای این گروه ثبت نشده است.
+        </div>
+      ) : (
+        <div style={containerStyle} className="space-y-2.5">
+          {departmentInfoFiles.map((file, idx) => (
+            <div key={file.id ?? idx} className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileText className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{file.title || 'فایل'}</span>
+              </div>
+              <Download className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
+            </div>
+          ))}
+        </div>
       );
 
     default:

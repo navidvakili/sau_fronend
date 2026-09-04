@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, LayoutTemplate, Search, Plus, Link2, Unlink, ExternalLink, Loader2, AlertCircle, Info } from 'lucide-react';
-import { PageType, DEDICATED_PAGE_TYPES } from './types';
+import { DEDICATED_PAGE_TYPES } from './types';
 import {
   fetchSmartPages,
   createSmartPage,
@@ -18,7 +18,8 @@ import {
 import { INITIAL_SMART_PAGE } from '../page-builder/mockData';
 
 interface LinkLayoutDialogProps {
-  pageType: PageType;
+  /** نوع صفحهٔ اختصاصی (از PageType) یا هر نوع دیگر «قالب پویا» مثل 'academic_department' */
+  pageType: string;
   pageTypeLabel: string;
   onClose: () => void;
   /** با انتخاب/ساخت لایوت، Page Builder را روی همان صفحه باز می‌کند */

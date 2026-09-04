@@ -369,6 +369,7 @@ export interface PersonPayload {
 // ============================================================
 
 export interface InfoFileItem {
+  id?: number;
   title: string;
   url: string;
 }
@@ -396,6 +397,9 @@ export interface DepartmentField {
   name: string;
   degreeLevel: string | null;
   code: string | null;
+  managerName: string | null;
+  managerPhone: string | null;
+  managerInternal: string | null;
   status: 'published' | 'draft';
 }
 
@@ -421,6 +425,7 @@ export interface AcademicDepartmentItem {
   image: string | null;
   image_url: string | null;
   infoFiles: InfoFileItem[];
+  newsCategoryId: number | null;
   fieldsCount: number;
   status: 'published' | 'draft';
   sortOrder: number;
@@ -429,6 +434,8 @@ export interface AcademicDepartmentItem {
   author_role?: string | null;
   instructors?: DepartmentInstructor[];
   fields?: DepartmentField[];
+  /** قالبِ پویای Page-Builder متصل به گروه‌های آموزشی (اگر منتشرشده باشد) — فقط در پاسخ جزئیات (show/publicShowBySlug) */
+  layout_page?: { id: number; title: string; slug: string; status: 'published' | 'draft'; schema: Record<string, unknown> } | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -454,6 +461,7 @@ export interface AcademicDepartmentPayload {
   phone?: string | null;
   image_url?: string | null;
   info_files?: InfoFileItem[] | null;
+  news_category_id?: number | null;
   instructor_ids?: number[] | null;
   status: 'published' | 'draft';
   sort_order?: number;
@@ -473,6 +481,9 @@ export interface AcademicFieldItem {
   degreeLevel: string | null;
   code: string | null;
   description: string | null;
+  managerName: string | null;
+  managerPhone: string | null;
+  managerInternal: string | null;
   image: string | null;
   image_url: string | null;
   status: 'published' | 'draft';
@@ -493,6 +504,9 @@ export interface AcademicFieldPayload {
   degree_level?: string | null;
   code?: string | null;
   description?: string | null;
+  manager_name?: string | null;
+  manager_phone?: string | null;
+  manager_internal?: string | null;
   image_url?: string | null;
   status: 'published' | 'draft';
   sort_order?: number;

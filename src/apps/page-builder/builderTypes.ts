@@ -83,7 +83,14 @@ export type DedicatedPageWidgetType =
   | 'dp-events'
   | 'dp-members';
 
-export type WidgetType = StaticWidgetType | SmartWidgetType | DedicatedPageWidgetType;
+/** بلوک‌های قالب پویای «گروه آموزشی» — به‌صورت خودکار به گروهِ صفحهٔ جاری وصل می‌شوند
+ *  (بدون انتخاب دستی رکورد در تنظیمات، چون این لایوت مشترکِ همهٔ گروه‌هاست) */
+export type AcademicDepartmentWidgetType =
+  | 'dept-fields'
+  | 'dept-instructors'
+  | 'dept-files';
+
+export type WidgetType = StaticWidgetType | SmartWidgetType | DedicatedPageWidgetType | AcademicDepartmentWidgetType;
 
 /** برچسب فارسی نوع ویجت — برای نمایش روی بوم و پنل تنظیمات تا نوع هر ویجت قابل‌تشخیص باشد */
 export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
@@ -134,7 +141,11 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'dp-articles': 'فهرست مقالات صفحهٔ اختصاصی',
   'dp-gallery': 'گالری تصاویر صفحهٔ اختصاصی',
   'dp-events': 'رویدادهای صفحهٔ اختصاصی',
-  'dp-members': 'اعضای شورا و کادر اجرایی'
+  'dp-members': 'اعضای شورا و کادر اجرایی',
+  // بلوک‌های قالب گروه آموزشی
+  'dept-fields': 'رشته‌های تحصیلی گروه',
+  'dept-instructors': 'اساتید مدعو شاخص گروه',
+  'dept-files': 'فایل‌های اطلاعاتی گروه'
 };
 
 /** برچسب فارسی نوع ویجت با فالبک به خودِ type */

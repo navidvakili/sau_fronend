@@ -44,3 +44,30 @@ export const updateDepartment = async (id: number, data: Partial<AcademicDepartm
 export const deleteDepartment = async (id: number) => {
   return API<{ message: string }>(`departments/${id}`, {}, 'DELETE');
 };
+
+// ===== فایل‌های اطلاعاتی گروه (academic_department_files) — طبق فاز ۲.۶؛ رکورد واقعی، نه JSON =====
+
+export interface DepartmentFileItem {
+  id: number;
+  departmentId: number;
+  title: string | null;
+  url: string;
+  sortOrder: number;
+}
+
+export const fetchDepartmentFiles = async (departmentId: number) => {
+  const res = await API<{ data: DepartmentFileItem[] }>(`department-files?department_id=${departmentId}`);
+  return res.data;
+};
+
+export const createDepartmentFile = async (data: { department_id: number; title?: string | null; url: string; sort_order?: number }) => {
+  return API<{ data: DepartmentFileItem; message?: string }>('department-files', data, 'POST');
+};
+
+export const updateDepartmentFile = async (id: number, data: { title?: string | null; url?: string; sort_order?: number }) => {
+  return API<{ data: DepartmentFileItem; message?: string }>(`department-files/${id}`, data, 'PUT');
+};
+
+export const deleteDepartmentFile = async (id: number) => {
+  return API<{ message: string }>(`department-files/${id}`, {}, 'DELETE');
+};

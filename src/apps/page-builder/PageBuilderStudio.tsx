@@ -861,6 +861,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dept-fields') {
+      title = 'رشته‌های تحصیلی گروه';
+      bindingDataSource = 'academic-department';
+    } else if (widgetType === 'dept-instructors') {
+      title = 'اساتید مدعو شاخص گروه';
+      bindingDataSource = 'academic-department';
+    } else if (widgetType === 'dept-files') {
+      title = 'فایل‌های اطلاعاتی گروه';
+      bindingDataSource = 'academic-department';
     } else if (widgetType === 'tabs') {
       title = 'تب‌های محتوا';
     } else if (widgetType === 'interactive-map') {
@@ -1075,6 +1084,15 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dept-fields') {
+      title = 'رشته‌های تحصیلی گروه';
+      bindingDataSource = 'academic-department';
+    } else if (widgetType === 'dept-instructors') {
+      title = 'اساتید مدعو شاخص گروه';
+      bindingDataSource = 'academic-department';
+    } else if (widgetType === 'dept-files') {
+      title = 'فایل‌های اطلاعاتی گروه';
+      bindingDataSource = 'academic-department';
     } else if (widgetType === 'tabs') {
       title = 'تب‌های محتوا';
     } else if (widgetType === 'interactive-map') {

@@ -271,6 +271,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
   const activeDataSource = selectedWidget?.settings.binding.dataSource;
   const isDedicatedPageWidget = !!selectedWidget && selectedWidget.type.startsWith('dp-');
+  const isAcademicDepartmentWidget = !!selectedWidget && selectedWidget.type.startsWith('dept-');
   const isFormWidget = !!selectedWidget && selectedWidget.type === 'form';
 
   // ── فهرست فرم‌های منتشرشده — فقط وقتی widget انتخاب‌شده از نوع 'form' است واکشی می‌شود ──
@@ -2412,8 +2413,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               )}
 
-              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS — بلوک‌های dp-* و form از بخش‌های جداگانهٔ زیر استفاده می‌کنند */}
-              {!isDedicatedPageWidget && !isFormWidget && (
+              {/* DATA BINDING CONTROLS FOR DYNAMIC WIDGETS — بلوک‌های dp-, dept-, form از بخش‌های جداگانهٔ زیر استفاده می‌کنند */}
+              {!isDedicatedPageWidget && !isAcademicDepartmentWidget && !isFormWidget && (
               <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
                   <Database className="w-3.5 h-3.5" />
@@ -2820,6 +2821,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* بلوک‌های گروه آموزشی — همیشه دادهٔ همان گروهی را نمایش می‌دهند که این قالب پویا برایش رندر می‌شود؛ چیزی برای تنظیم دستی نیست */}
+              {isAcademicDepartmentWidget && (
+                <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400">
+                    <Database className="w-3.5 h-3.5" />
+                    <span>اتصال خودکار به گروه آموزشی</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    این بلوک نیازی به تنظیم دستی ندارد — چون این صفحه قالبِ مشترکِ همهٔ گروه‌های آموزشی است،
+                    در سایت عمومی به‌ازای هر گروه با دادهٔ همان گروه (نه یک رکورد ثابت) پر می‌شود.
+                  </p>
                 </div>
               )}
 

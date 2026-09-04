@@ -21,7 +21,6 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   achievements: lazy(() => import('./achievements')),
   people: lazy(() => import('./people')),
   departments: lazy(() => import('./departments')),
-  fields: lazy(() => import('./fields')),
   'page-builder': lazy(() => import('./page-builder')),
   gallery: lazy(() => import('./gallery')),
   forms: lazy(() => import('./forms')),
@@ -81,8 +80,8 @@ export const moduleToAppMap: Record<string, string> = {
   // Academic Departments App (گروه‌های آموزشی)
   'departments': 'departments',
 
-  // Academic Fields App (رشته‌های تحصیلی)
-  'fields': 'fields',
+  // نکته: ماژول مستقل «رشته‌های تحصیلی» (fields) طبق فاز ۲.۵ حذف شد — مدیریت رشته از
+  // داخل ویرایشگر بصری گروه‌های آموزشی انجام می‌شود، نه یک منوی جدا.
 
   // Smart Page Builder App (صفحه ساز هوشمند)
   'page-builder': 'page-builder',

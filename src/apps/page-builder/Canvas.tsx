@@ -13,6 +13,7 @@ import {
   resolveBoxShadow
 } from './builderTypes';
 import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
+import type { AcademicFieldItem, PersonItem, InfoFileItem } from '@/src/shared-types';
 import {
   Plus,
   Trash2,
@@ -55,6 +56,15 @@ interface CanvasProps {
   onMoveSectionOut?: (sectionId: string) => void;
   onMoveSection?: (sectionId: string, direction: 'up' | 'down') => void;
   onAddSubSection?: (columnId: string) => void;
+  /** حالت محدود — برای ویرایشگر بصری داده‌های گروه آموزشی: چیدمان/ساختار قفل است (بدون
+   *  drag/افزودن/حذف/جابه‌جایی بلوک)، فقط انتخاب ویجت برای ویرایش محتوا در پنل کناری مجاز است */
+  restrictedMode?: boolean;
+  /** مقادیر متغیرِ {{token}} برای resolve زندهٔ توکن‌ها داخل بوم (فقط وقتی این prop ست شده باشد) */
+  variables?: Record<string, string>;
+  /** دادهٔ گروه آموزشیِ در حال ویرایش — برای رندر واقعی ویجت‌های dept-fields/dept-instructors/dept-files در بوم */
+  departmentFields?: AcademicFieldItem[];
+  departmentInstructors?: PersonItem[];
+  departmentInfoFiles?: InfoFileItem[];
 }
 
 /** حداکثر عمق تودرتو برای جلوگیری از رندر بینهایت */
@@ -84,7 +94,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   onMoveSectionToTop,
   onMoveSectionOut,
   onMoveSection,
-  onAddSubSection
+  onAddSubSection,
+  restrictedMode = false,
+  variables,
+  departmentFields,
+  departmentInstructors,
+  departmentInfoFiles
 }) => {
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
   const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
@@ -195,7 +210,9 @@ export const Canvas: React.FC<CanvasProps> = ({
               : 'border-transparent hover:border-teal-500/40'
         }`}
       >
-        {/* Section Label & Quick Toolbar on Hover/Select */}
+        {/* Section Label & Quick Toolbar on Hover/Select — در حالت محدود کاملاً مخفی است
+            (چیدمان قفل است، نیازی به جابه‌جایی/حذف/تکثیر بلوک نیست) */}
+        {!restrictedMode && (
         <div
           className={`absolute top-2 right-4 z-20 flex items-center gap-1.5 transition-opacity ${
             isSecSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -289,6 +306,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
+        )}
 
         {/* Section Content Container (Boxed or Full Width) — پس‌زمینه/سایه/گردی گوشه/پدینگ
             سکشن هم روی همین لایه اعمال می‌شود تا برای layout=boxed کل «کارت» باکس‌بندی شود،
@@ -396,7 +414,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                   <div className="space-y-4">
                     {getColumnBlocks(col).length === 0 ? (
                       <div className="p-6 text-center border-2 border-dashed border-gray-200 dark:border-slate-800/80 rounded-xl text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                        <span>ستون خالی است — بلوک یا کامپوننت را اینجا رها کنید</span>
+                        <span>{restrictedMode ? 'ستون خالی است' : 'ستون خالی است — بلوک یا کامپوننت را اینجا رها کنید'}</span>
+                        {!restrictedMode && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -411,6 +430,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                           <Plus className="w-3.5 h-3.5" />
                           <span>افزودن کامپوننت</span>
                         </button>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -476,8 +496,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                             <div
                               key={widget.id}
                               data-block-kind="widget"
-                              draggable
+                              draggable={!restrictedMode}
                               onDragStart={(e) => {
+                                if (restrictedMode) return;
                                 setDragWidgetId(widget.id);
                                 setDragSectionId(null);
                                 setDragInsertIndex(null);
@@ -580,6 +601,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
+                                {!restrictedMode && (
+                                <>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -612,6 +635,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
+                                </>
+                                )}
                               </div>
 
                               {/* Render Widget */}
@@ -621,6 +646,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 isEditorPreview={true}
                                 pageId={pageId}
                                 pageSlug={pageSlug}
+                                variables={variables}
+                                departmentFields={departmentFields}
+                                departmentInstructors={departmentInstructors}
+                                departmentInfoFiles={departmentInfoFiles}
                               />
                             </div>
                           );
@@ -634,7 +663,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                     )}
                   </div>
 
-                  {/* Column Add Widget / Add Sub-Block Trigger Button at bottom */}
+                  {/* Column Add Widget / Add Sub-Block Trigger Button at bottom — در حالت محدود مخفی است */}
+                  {!restrictedMode && (
                   <div className="pt-2 flex flex-col items-center gap-1.5 opacity-0 group-hover/col:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
@@ -662,6 +692,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                       <span>افزودن زیربلوک به این ستون</span>
                     </button>
                   </div>
+                  )}
                 </div>
               );
             })}
@@ -791,7 +822,8 @@ export const Canvas: React.FC<CanvasProps> = ({
           </div>
         ) : (
           <div className="space-y-0">
-            {/* Divider button before the first section */}
+            {/* Divider button before the first section — در حالت محدود مخفی است (چیدمان قفل است) */}
+            {!restrictedMode && (
             <div
               className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
                 dragOverDividerId === 'before'
@@ -850,6 +882,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                 <span>افزودن بلوک جدید به ابتدا</span>
               </button>
             </div>
+            )}
             {pageSchema.sections.map((sec, secIdx) => {
               // Check section visibility for active breakpoint
               if (!sec.visibility[activeBreakpoint]) {
@@ -866,7 +899,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                       <span className="text-[10px]">کلیک برای تنظیمات</span>
                     </div>
 
-                    {/* Divider line after hidden section */}
+                    {/* Divider line after hidden section — در حالت محدود مخفی است */}
+                    {!restrictedMode && (
                     <div
                       className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
                         dragOverDividerId === 'after:' + sec.id
@@ -930,6 +964,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                         <span>افزودن بلوک جدید در این مکان</span>
                       </button>
                     </div>
+                    )}
                   </div>
                 );
               }
@@ -938,7 +973,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                 <React.Fragment key={sec.id}>
                   {renderSectionBlock(sec, 0, secIdx, true, pageSchema.sections.length)}
 
-                  {/* Interactive Add Section Divider between blocks */}
+                  {/* Interactive Add Section Divider between blocks — در حالت محدود مخفی است */}
+                  {!restrictedMode && (
                   <div
                     className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
                       dragOverDividerId === 'after:' + sec.id
@@ -1002,6 +1038,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                       <span>افزودن بلوک جدید در این مکان</span>
                     </button>
                   </div>
+                  )}
                 </React.Fragment>
               );
             })}
