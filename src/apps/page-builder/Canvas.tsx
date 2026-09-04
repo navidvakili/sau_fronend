@@ -65,6 +65,12 @@ interface CanvasProps {
   departmentFields?: AcademicFieldItem[];
   departmentInstructors?: PersonItem[];
   departmentInfoFiles?: InfoFileItem[];
+  /** فقط در restrictedMode مصرف می‌شود — مشخص می‌کند کدام ویجت واقعاً به یک فیلد/رابطهٔ واقعیِ
+   *  Entity متصل است (طبق TOKEN_FIELD_MAP یا نوع dept-*). بقیهٔ ویجت‌ها (مثل متن‌های تزئینی یا
+   *  هر بخشی که به گروه آموزشی مربوط نیست) کاملاً غیرقابل‌کلیک/بدون حالت هاور رندر می‌شوند تا
+   *  در نگاه اول هم مشخص باشد کدام بخش‌ها قابل‌ویرایش نیستند. اگر پاس داده نشود، همهٔ ویجت‌ها
+   *  قابل‌انتخاب فرض می‌شوند (رفتار قبلی).*/
+  isWidgetEditable?: (widget: WidgetInstance) => boolean;
 }
 
 /** حداکثر عمق تودرتو برای جلوگیری از رندر بینهایت */
@@ -99,7 +105,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   variables,
   departmentFields,
   departmentInstructors,
-  departmentInfoFiles
+  departmentInfoFiles,
+  isWidgetEditable
 }) => {
   // Drag & Drop state — widget being dragged + column currently hovered (highlight)
   const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
@@ -492,6 +499,10 @@ export const Canvas: React.FC<CanvasProps> = ({
                           const widget = block.widget;
                           const wIdx = bIdx;
                           const isWidgetSel = selectedWidgetId === widget.id;
+                          // در حالت محدود، فقط ویجت‌هایی که واقعاً به یک فیلد/رابطهٔ واقعی متصل‌اند
+                          // (طبق isWidgetEditable) قابل‌کلیک/دارای حالت هاور می‌مانند — بقیه (مثل
+                          // متن‌های تزئینی یا هدر سایت) کاملاً بی‌اثر رندر می‌شوند
+                          const widgetLocked = restrictedMode && !!isWidgetEditable && !isWidgetEditable(widget);
                           return (
                             <div
                               key={widget.id}
@@ -545,22 +556,30 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 e.stopPropagation();
                                 onSelectSection(sec.id);
                                 onSelectColumn(col.id);
-                                onSelectWidget(widget.id);
+                                if (!widgetLocked) {
+                                  onSelectWidget(widget.id);
+                                }
                               }}
                               className={`relative group/widget rounded-xl transition-all border-2 ${
-                                isWidgetSel
-                                  ? 'border-amber-500 ring-2 ring-amber-500/20'
-                                  : 'border-transparent hover:border-amber-400/50'
+                                widgetLocked
+                                  ? 'border-transparent'
+                                  : isWidgetSel
+                                    ? 'border-amber-500 ring-2 ring-amber-500/20'
+                                    : 'border-transparent hover:border-amber-400/50'
                               } ${
-                                dragWidgetId === widget.id
-                                  ? 'opacity-40 cursor-grabbing'
-                                  : 'cursor-grab'
+                                widgetLocked
+                                  ? 'cursor-default'
+                                  : dragWidgetId === widget.id
+                                    ? 'opacity-40 cursor-grabbing'
+                                    : 'cursor-grab'
                               }`}
                             >
                               {/* نشانگر درج — قبل از این ویجت */}
                               {dragInsertIndex?.colId === col.id && dragInsertIndex.index === wIdx && (
                                 <div className="absolute -top-[9px] right-2 left-2 h-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_2px_rgba(20,184,166,0.45)] z-40 pointer-events-none" />
                               )}
+                              {!widgetLocked && (
+                              <>
                               {/* برچسب نوع ویجت — همیشه نمایان تا نوع هر ویجت قابل‌تشخیص باشد */}
                               <div
                                 className={`absolute -top-3 left-1/2 -translate-x-1/2 z-30 px-1.5 py-0.5 rounded-md bg-amber-500 text-white text-[9px] font-black shadow-md whitespace-nowrap pointer-events-none transition-opacity ${
@@ -638,6 +657,8 @@ export const Canvas: React.FC<CanvasProps> = ({
                                 </>
                                 )}
                               </div>
+                              </>
+                              )}
 
                               {/* Render Widget */}
                               <WidgetRenderer

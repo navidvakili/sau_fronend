@@ -440,6 +440,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
             onDeleteWidget={() => {}}
             onMoveWidget={() => {}}
             restrictedMode
+            isWidgetEditable={isWidgetEditable}
             variables={variables}
             departmentFields={fieldsList}
             departmentInstructors={instructorPool.filter((p) => instructorIds.includes(p.id))}
