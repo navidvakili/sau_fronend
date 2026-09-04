@@ -374,7 +374,7 @@ export default function MediaManager({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 z-[150] flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
@@ -770,7 +770,7 @@ export default function MediaManager({
       {/* Edit Metadata Dialog */}
       <AnimatePresence>
         {editFile && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -841,7 +841,7 @@ export default function MediaManager({
       {/* Delete Confirmation Dialog */}
       <AnimatePresence>
         {deleteFile && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
