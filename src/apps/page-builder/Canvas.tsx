@@ -346,7 +346,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               onSelectSection(sec.id);
               onEditSectionBackground?.(sec.id);
             }}
-            className={`absolute top-3 left-3 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
+            className={`absolute top-3 right-3 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
               isSecSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
             title="ویرایش تصویر پس‌زمینه"
@@ -635,7 +635,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                                       onSelectColumn(col.id);
                                       onSelectWidget(widget.id);
                                     }}
-                                    className={`absolute top-1/2 -translate-y-1/2 left-1.5 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
+                                    className={`absolute top-1/2 -translate-y-1/2 right-1.5 z-30 p-1.5 rounded-full bg-emerald-600 text-white shadow-md transition-opacity cursor-pointer ${
                                       isWidgetSel ? 'opacity-100' : 'opacity-0 group-hover/widget:opacity-100'
                                     }`}
                                     title="ویرایش این بخش"
@@ -814,7 +814,9 @@ export const Canvas: React.FC<CanvasProps> = ({
         }
       `}</style>
       <div
-        className="flex-1 min-h-0 h-full w-full bg-slate-100 dark:bg-slate-950 overflow-auto p-4 md:p-8 pb-56 flex flex-col items-center select-none rtl text-right transition-all"
+        className={`flex-1 min-h-0 h-full w-full overflow-auto flex flex-col items-center select-none rtl text-right transition-all ${
+          restrictedMode ? 'bg-white dark:bg-slate-900' : 'bg-slate-100 dark:bg-slate-950 p-4 md:p-8 pb-56'
+        }`}
       onDragOver={(e) => {
         // رهاسازی روی فضای خالی بوم (خارج از سکشن‌ها) مجاز باشد
         if (dragWidgetId || dragSectionId) {
@@ -842,7 +844,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     >
       {/* Canvas Frame Container — shrink-0 keeps natural height so the overflow-auto canvas scrolls (x & y) when sections exceed viewport */}
       <div
-        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden mb-32 shrink-0 pb-editor-canvas ${getCanvasWidthClass()}`}
+        className={`bg-white dark:bg-slate-900 transition-all duration-300 overflow-hidden shrink-0 pb-editor-canvas ${restrictedMode ? '' : 'mb-32'} ${getCanvasWidthClass()}`}
         style={{
           fontFamily: globalStyles.fontFamily,
           color: globalStyles.textColor,

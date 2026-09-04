@@ -178,6 +178,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const { currentLang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [department, setDepartment] = useState<AcademicDepartmentItem | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -576,6 +577,8 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
           ? { text: `اطلاعات گروه ذخیره شد. ${incompleteFiles.length} فایل بدون آدرس نادیده گرفته شد — برایشان از رسانه فایل انتخاب کنید یا حذفشان کنید.`, type: 'error' }
           : { text: 'اطلاعات گروه با موفقیت ذخیره شد.', type: 'success' }
       );
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
       onSaved();
     } catch (err: any) {
       setToast({ text: err.message || 'خطا در ذخیرهٔ اطلاعات', type: 'error' });
@@ -684,8 +687,22 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
             disabled={saving}
             className="px-5 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>ذخیره تغییرات</span>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>در حال ذخیره...</span>
+              </>
+            ) : saveSuccess ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>ذخیره شد</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>ذخیره تغییرات</span>
+              </>
+            )}
           </button>
         </div>
       </header>
