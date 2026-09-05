@@ -948,5 +948,100 @@
     "mtime": 1788519236.1594858,
     "ast_hash": "be361a7ad1df3eb3ba988b8c35bdbd85",
     "semantic_hash": "be361a7ad1df3eb3ba988b8c35bdbd85"
+  },
+  ".claude/settings.json": {
+    "mtime": 1788647342.3057635,
+    "ast_hash": "5ac5356c42e2e8dabc061ab321a2f6d1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/clone-page-layout/SKILL.md": {
+    "mtime": 1787381912.238187,
+    "ast_hash": "3d76cfeee996c27c7efa7a150041cdc3",
+    "semantic_hash": ""
+  },
+  ".claude/skills/clone-page-layout/reference/schema-reference.md": {
+    "mtime": 1787381912.2391994,
+    "ast_hash": "8467323736f3fb4164116378005fb6f1",
+    "semantic_hash": ""
+  },
+  ".claude/skills/clone-page-layout/reference/widget-catalog.md": {
+    "mtime": 1787381912.2401989,
+    "ast_hash": "989f691090eaea860f77bea9855e02fc",
+    "semantic_hash": ""
+  },
+  "docs/architecture.md": {
+    "mtime": 1787381912.2412014,
+    "ast_hash": "052307e3614bc308e541a09cd37a3ee2",
+    "semantic_hash": ""
+  },
+  "docs/feature-based-refactor-plan.md": {
+    "mtime": 1787381912.2423265,
+    "ast_hash": "e8e9f10ecb9a05dfd7dfac611467f36a",
+    "semantic_hash": ""
+  },
+  "docs/slider-studio-changes.md": {
+    "mtime": 1787381912.2423265,
+    "ast_hash": "16b5a354c11e2334246d6f28aca92069",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1787381912.2433426,
+    "ast_hash": "c19d1b48656c0da20bc0c77215f2570b",
+    "semantic_hash": ""
+  },
+  "src/apps/dedicated_pages/INTEGRATION.md": {
+    "mtime": 1787381912.2765656,
+    "ast_hash": "d890f8331e5db3b64c8673f387ae0522",
+    "semantic_hash": ""
+  },
+  "src/apps/dedicated_pages/PERMISSIONS.md": {
+    "mtime": 1787381912.2785366,
+    "ast_hash": "c327e33e72d1373579cc321eae4ebcb9",
+    "semantic_hash": ""
+  },
+  "src/apps/dedicated_pages/README.md": {
+    "mtime": 1787381912.2853158,
+    "ast_hash": "f464e8434ef66d020250db395a23d130",
+    "semantic_hash": ""
+  },
+  "public/assets/bg-einstein.jpg": {
+    "mtime": 1787381912.2476199,
+    "ast_hash": "a89bc9a187fa06d96547aadbede6e8b6",
+    "semantic_hash": ""
+  },
+  "public/assets/bg-owl.jpg": {
+    "mtime": 1787381912.2496183,
+    "ast_hash": "3e1329d349c00817210ba2b88fba04eb",
+    "semantic_hash": ""
+  },
+  "public/assets/layer-einstein-main.jpg": {
+    "mtime": 1787381912.25162,
+    "ast_hash": "2f7fc6cdc777af2052c505382933cf1d",
+    "semantic_hash": ""
+  },
+  "public/assets/layer-owl-bg.jpg": {
+    "mtime": 1787381912.254616,
+    "ast_hash": "5964375899c3d4199aa9373b69880aaf",
+    "semantic_hash": ""
+  },
+  "public/assets/layer-owl-middle.jpg": {
+    "mtime": 1787381912.2556238,
+    "ast_hash": "f0f9e36811ce0e078313a37463a87853",
+    "semantic_hash": ""
+  },
+  "public/default-avatar.svg": {
+    "mtime": 1787381912.2566257,
+    "ast_hash": "98406849e33ec6f6efbff704e9658c34",
+    "semantic_hash": ""
+  },
+  "public/logo_nima.png": {
+    "mtime": 1787381912.2576325,
+    "ast_hash": "d1860934a0b9a182198479a1eeb1a7cc",
+    "semantic_hash": ""
+  },
+  "public/placeholder-news.svg": {
+    "mtime": 1787381912.266623,
+    "ast_hash": "95f00cc75fa863d41990e5896367a5be",
+    "semantic_hash": ""
   }
 }
