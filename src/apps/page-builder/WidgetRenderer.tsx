@@ -2050,18 +2050,76 @@ const StaffDirectoryWidget: React.FC<{
   );
 };
 
-/** برچسب فارسی مقطع تحصیلی — برای نمایش روی کارت رشته در ویجت لیست رشته‌های تحصیلی */
+/** برچسب فارسی و لاتین مقطع تحصیلی + ترتیب نمایش — برای نمایش روی کارت/سربرگ گروه در ویجت لیست رشته‌های تحصیلی */
+const DEGREE_LEVEL_ORDER = ['phd', 'master', 'bachelor_continuous', 'bachelor_non_continuous', 'associate'] as const;
 const DEGREE_LEVEL_LABELS: Record<string, string> = {
-  phd: 'دکتری',
+  phd: 'دکتری تخصصی',
   master: 'کارشناسی ارشد',
   bachelor_continuous: 'کارشناسی پیوسته',
   bachelor_non_continuous: 'کارشناسی ناپیوسته',
   associate: 'کاردانی'
 };
+const DEGREE_LEVEL_BADGE_EN: Record<string, string> = {
+  phd: 'Phd',
+  master: 'Master',
+  bachelor_continuous: 'Bachelor',
+  bachelor_non_continuous: 'Non-Continuous',
+  associate: 'Associate'
+};
+
+/** فیلد description هر رشته حاصل ترکیب عنوان انگلیسی + شرایط پذیرش + توضیح + دانشکده است
+ *  (با «\n\n» جدا شده، هنگام مهاجرت داده ساخته شده) — این‌جا برای بازسازی سبک کارت قدیم
+ *  دوباره از هم جدا می‌شود. */
+const parseFieldDescription = (description?: string | null) => {
+  const paragraphs = (description || '').split('\n\n').map((p) => p.trim()).filter(Boolean);
+  let entitle: string | undefined;
+  let admission: string | undefined;
+  let campus: string | undefined;
+  const descParts: string[] = [];
+  paragraphs.forEach((p, idx) => {
+    if (p.startsWith('شرایط پذیرش:')) {
+      admission = p.replace('شرایط پذیرش:', '').trim();
+    } else if (p.startsWith('دانشکده:')) {
+      campus = p;
+    } else if (idx === 0 && /^[A-Za-z]/.test(p)) {
+      entitle = p;
+    } else {
+      descParts.push(p);
+    }
+  });
+  return { entitle, admission, desc: descParts.join(' '), campus };
+};
+
+/** کارت رشته به سبک همان کارت‌های استاتیک صفحهٔ قدیمی fields-study (رنگ/تایپوگرافی یکسان) */
+const AcademicFieldCard: React.FC<{ field: AcademicFieldItem }> = ({ field }) => {
+  const { entitle, admission, desc, campus } = parseFieldDescription(field.description);
+  return (
+    <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs space-y-1 h-full flex flex-col">
+      <div style={{ color: '#6b21a8', fontWeight: 900, fontSize: 11 }}>
+        {DEGREE_LEVEL_BADGE_EN[field.degreeLevel || ''] || field.degreeLevel}
+        {field.department?.name ? `   ·   ${field.department.name}` : ''}
+        {field.code ? `   ·   کد ${field.code}` : ''}
+      </div>
+      <div style={{ color: '#0f172a', fontSize: 17, fontWeight: 900 }}>{field.name}</div>
+      {entitle && <div style={{ color: '#94a3b8', fontSize: 11 }}>{entitle}</div>}
+      {admission && (
+        <span
+          className="inline-block w-fit"
+          style={{ color: '#7e22ce', backgroundColor: '#f3e8ff', borderRadius: 8, fontSize: 11, fontWeight: 700, padding: '4px 10px' }}
+        >
+          {admission}
+        </span>
+      )}
+      {desc && <p style={{ color: '#475569', fontSize: 12, lineHeight: 1.7 }} className="flex-1">{desc}</p>}
+      {campus && <div style={{ color: '#64748b', fontSize: 11 }}>{campus}</div>}
+    </div>
+  );
+};
 
 /** ویجت لیست رشته‌های تحصیلی — اتصال زنده به همهٔ رشته‌های همهٔ گروه‌های آموزشی، با فیلتر
- *  گروه (binding.categoryFilter) و مقطع (binding.degreeLevelFilter). لینک واقعی هر کارت به
- *  صفحهٔ گروه آموزشی والدش فقط در رندر عمومی (public) ساخته می‌شود؛ این‌جا فقط پیش‌نمایش است. */
+ *  گروه (binding.categoryFilter) و مقطع (binding.degreeLevelFilter — «همه» یا یک مقطع مشخص).
+ *  وقتی مقطع «همه» است، رشته‌ها مثل صفحهٔ قدیمی زیر سربرگ هر مقطع دسته‌بندی می‌شوند.
+ *  لینک واقعی هر کارت به صفحهٔ گروه آموزشی والدش فقط در رندر عمومی (public) ساخته می‌شود. */
 const AcademicFieldsFeedWidget: React.FC<{
   widget: WidgetInstance;
   binding: WidgetDataBinding;
@@ -2074,7 +2132,7 @@ const AcademicFieldsFeedWidget: React.FC<{
 
   const { data, error, retry } = useSmartData<AcademicFieldItem>(() =>
     fetchDataSourceAcademicFields({
-      per_page: binding.limit || 12,
+      per_page: binding.limit || 200,
       department_id: departmentId,
       degree_level: degreeLevel,
       status: 'published'
@@ -2091,29 +2149,37 @@ const AcademicFieldsFeedWidget: React.FC<{
         ? 'grid grid-cols-1 gap-3'
         : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
 
+  const groups = !degreeLevel
+    ? DEGREE_LEVEL_ORDER.map((level) => ({ level, items: fields.filter((f) => f.degreeLevel === level) })).filter(
+        (g) => g.items.length > 0
+      )
+    : null;
+
   return (
     <div style={containerStyle}>
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
       ) : !data ? (
         <SmartSkeleton variant="cards" count={binding.limit || 6} />
-      ) : fields.length === 0 ? null : (
+      ) : fields.length === 0 ? null : groups ? (
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <div key={g.level}>
+              <div style={{ color: '#7e22ce', fontWeight: 900, fontSize: 14 }} className="mb-3">
+                {DEGREE_LEVEL_LABELS[g.level]}
+              </div>
+              <div className={gridClass}>
+                {g.items.map((field) => (
+                  <AcademicFieldCard key={field.id} field={field} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
         <div className={gridClass}>
           {fields.map((field) => (
-            <div
-              key={field.id}
-              className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs space-y-1.5"
-            >
-              {field.degreeLevel && (
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                  {DEGREE_LEVEL_LABELS[field.degreeLevel] || field.degreeLevel}
-                </span>
-              )}
-              <div className="text-xs font-black text-slate-900 dark:text-white">{field.name}</div>
-              {field.department?.name && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{field.department.name}</div>
-              )}
-            </div>
+            <AcademicFieldCard key={field.id} field={field} />
           ))}
         </div>
       )}
