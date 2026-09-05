@@ -2051,6 +2051,15 @@ const StaffDirectoryWidget: React.FC<{
 };
 
 /** برچسب فارسی و لاتین مقطع تحصیلی + ترتیب نمایش — برای نمایش روی کارت/سربرگ گروه در ویجت لیست رشته‌های تحصیلی */
+/** «همهٔ کلمات» — مثلاً برای «مهندسی کامپیوتر» باید «کارشناسی ارشد مهندسی و علم کامپیوتر» هم
+ *  نتیجه بدهد، نه فقط رشته‌هایی که دقیقاً همین عبارت را پشت‌سرهم دارند. */
+const matchesAllWords = (haystack: string, query: string): boolean => {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const normalizedHaystack = haystack.toLowerCase();
+  return words.every((w) => normalizedHaystack.includes(w));
+};
+
 const DEGREE_LEVEL_ORDER = ['phd', 'master', 'bachelor_continuous', 'bachelor_non_continuous', 'associate'] as const;
 const DEGREE_LEVEL_LABELS: Record<string, string> = {
   phd: 'دکتری تخصصی',
@@ -2198,7 +2207,7 @@ const AcademicFieldsFeedWidget: React.FC<{
   const fields = allFields.filter((f) => {
     if (degreeFilter && f.degreeLevel !== degreeFilter) return false;
     if (facultyFilter && f.department?.faculty !== facultyFilter) return false;
-    if (q.trim() && !f.name.toLowerCase().includes(q.trim().toLowerCase())) return false;
+    if (q.trim() && !matchesAllWords(f.name, q)) return false;
     return true;
   });
 
