@@ -2116,10 +2116,56 @@ const AcademicFieldCard: React.FC<{ field: AcademicFieldItem }> = ({ field }) =>
   );
 };
 
-/** ویجت لیست رشته‌های تحصیلی — اتصال زنده به همهٔ رشته‌های همهٔ گروه‌های آموزشی، با فیلتر
- *  گروه (binding.categoryFilter) و مقطع (binding.degreeLevelFilter — «همه» یا یک مقطع مشخص).
- *  وقتی مقطع «همه» است، رشته‌ها مثل صفحهٔ قدیمی زیر سربرگ هر مقطع دسته‌بندی می‌شوند.
- *  لینک واقعی هر کارت به صفحهٔ گروه آموزشی والدش فقط در رندر عمومی (public) ساخته می‌شود. */
+/** نوار جستجو (عنوان) + فیلتر مقطع/دانشکده — نسخهٔ پیش‌نمایش ادمین، فقط با state محلی (بدون
+ *  اتصال به URL چون این‌جا بومِ ویرایشگر است؛ نسخهٔ واقعی متصل به URL در public/SmartPageView است) */
+const AcademicFieldsSearchBarPreview: React.FC<{
+  facultyOptions: string[];
+  q: string;
+  degree: string;
+  faculty: string;
+  onChange: (key: 'q' | 'degree' | 'faculty', value: string) => void;
+}> = ({ facultyOptions, q, degree, faculty, onChange }) => (
+  <div className="flex flex-wrap items-center gap-3 mb-6">
+    <div className="relative flex-1 min-w-[220px]">
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => onChange('q', e.target.value)}
+        placeholder="جستجو در رشته‌ها (نام فارسی یا انگلیسی)..."
+        className="w-full bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl ps-9 pe-3 py-2.5 text-xs focus:outline-none focus:border-indigo-500 transition"
+      />
+      <Search className="w-4 h-4 text-slate-400 absolute start-3 top-3" />
+    </div>
+    <select
+      value={degree}
+      onChange={(e) => onChange('degree', e.target.value)}
+      className="bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+    >
+      <option value="">همهٔ مقاطع</option>
+      {DEGREE_LEVEL_ORDER.map((level) => (
+        <option key={level} value={level}>{DEGREE_LEVEL_LABELS[level]}</option>
+      ))}
+    </select>
+    {facultyOptions.length > 0 && (
+      <select
+        value={faculty}
+        onChange={(e) => onChange('faculty', e.target.value)}
+        className="bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+      >
+        <option value="">همهٔ دانشکده‌ها</option>
+        {facultyOptions.map((f) => (
+          <option key={f} value={f}>{f}</option>
+        ))}
+      </select>
+    )}
+  </div>
+);
+
+/** ویجت لیست رشته‌های تحصیلی — اتصال زنده به همهٔ رشته‌های همهٔ گروه‌های آموزشی، با نوار
+ *  جستجوی متنی + فیلتر مقطع + فیلتر دانشکده، به‌علاوهٔ فیلتر ثابت گروه (binding.categoryFilter)
+ *  و مقطع (binding.degreeLevelFilter) از تنظیمات ادمین. وقتی مقطع «همه» است، رشته‌ها مثل
+ *  صفحهٔ قدیمی زیر سربرگ هر مقطع دسته‌بندی می‌شوند. لینک واقعی هر کارت به صفحهٔ گروه آموزشی
+ *  والدش فقط در رندر عمومی (public) ساخته می‌شود؛ این‌جا فقط پیش‌نمایش است. */
 const AcademicFieldsFeedWidget: React.FC<{
   widget: WidgetInstance;
   binding: WidgetDataBinding;
@@ -2127,20 +2173,36 @@ const AcademicFieldsFeedWidget: React.FC<{
 }> = ({ widget, binding, containerStyle }) => {
   const departmentId =
     binding.categoryFilter && binding.categoryFilter !== 'all' ? Number(binding.categoryFilter) || null : null;
-  const degreeLevel =
+  const boundDegreeLevel =
     binding.degreeLevelFilter && binding.degreeLevelFilter !== 'all' ? binding.degreeLevelFilter : null;
 
   const { data, error, retry } = useSmartData<AcademicFieldItem>(() =>
     fetchDataSourceAcademicFields({
       per_page: binding.limit || 200,
       department_id: departmentId,
-      degree_level: degreeLevel,
+      degree_level: boundDegreeLevel,
       status: 'published'
     }).then((res) => res.data),
-    [binding.limit, departmentId, degreeLevel]
+    [binding.limit, departmentId, boundDegreeLevel]
   );
 
-  const fields = data || [];
+  const [q, setQ] = useState('');
+  const [degreeFilter, setDegreeFilter] = useState('');
+  const [facultyFilter, setFacultyFilter] = useState('');
+
+  const allFields = data || [];
+  const facultyOptions = Array.from(
+    new Set(allFields.map((f) => f.department?.faculty).filter((f): f is string => !!f))
+  ).sort();
+
+  const fields = allFields.filter((f) => {
+    if (degreeFilter && f.degreeLevel !== degreeFilter) return false;
+    if (facultyFilter && f.department?.faculty !== facultyFilter) return false;
+    if (q.trim() && !f.name.toLowerCase().includes(q.trim().toLowerCase())) return false;
+    return true;
+  });
+
+  const effectiveDegreeLevel = boundDegreeLevel || degreeFilter || null;
   const cols = binding.columnsCount || 3;
   const gridClass =
     cols === 2
@@ -2149,7 +2211,7 @@ const AcademicFieldsFeedWidget: React.FC<{
         ? 'grid grid-cols-1 gap-3'
         : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
 
-  const groups = !degreeLevel
+  const groups = !effectiveDegreeLevel
     ? DEGREE_LEVEL_ORDER.map((level) => ({ level, items: fields.filter((f) => f.degreeLevel === level) })).filter(
         (g) => g.items.length > 0
       )
@@ -2157,11 +2219,26 @@ const AcademicFieldsFeedWidget: React.FC<{
 
   return (
     <div style={containerStyle}>
+      {!boundDegreeLevel && (
+        <AcademicFieldsSearchBarPreview
+          facultyOptions={facultyOptions}
+          q={q}
+          degree={degreeFilter}
+          faculty={facultyFilter}
+          onChange={(key, value) => {
+            if (key === 'q') setQ(value);
+            else if (key === 'degree') setDegreeFilter(value);
+            else setFacultyFilter(value);
+          }}
+        />
+      )}
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
       ) : !data ? (
         <SmartSkeleton variant="cards" count={binding.limit || 6} />
-      ) : fields.length === 0 ? null : groups ? (
+      ) : fields.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-10">رشته‌ای مطابق با جستجوی شما یافت نشد.</p>
+      ) : groups ? (
         <div className="space-y-8">
           {groups.map((g) => (
             <div key={g.level}>

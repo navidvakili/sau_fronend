@@ -483,7 +483,7 @@ export interface AcademicFieldItem {
   slug: string;
   name: string;
   departmentId: number | null;
-  department: { id: number; name: string; slug: string } | null;
+  department: { id: number; name: string; slug: string; faculty: string | null } | null;
   degreeLevel: string | null;
   code: string | null;
   description: string | null;
