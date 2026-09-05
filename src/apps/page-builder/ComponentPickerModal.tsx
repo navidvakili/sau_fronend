@@ -110,6 +110,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'image-gallery', category: 'smart', name: 'آلبوم و گالری تصاویری', desc: 'گالری شبکه‌ای رسانه‌ها و رویدادها', icon: ImageIcon, badge: 'گالری' },
     { type: 'file-manager', category: 'smart', name: 'مخزن اسناد و فرم‌ها', desc: 'لیست دانلود فایل‌ها و آیین‌نامه‌ها', icon: FileText, badge: 'مدیریت فایل' },
     { type: 'form', category: 'smart', name: 'جاسازی فرم (فرم‌ساز)', desc: 'نمایش و پرکردن یک فرم منتشرشده از فرم‌ساز، مستقیماً داخل این صفحه', icon: ClipboardList, badge: 'ماژول فرم‌ساز' },
+    { type: 'academic-fields-feed', category: 'smart', name: 'لیست رشته‌های تحصیلی', desc: 'اتصال زنده به همهٔ رشته‌های همهٔ گروه‌های آموزشی، با فیلتر مقطع/دانشکده/گروه', icon: GraduationCap, badge: 'ماژول رشته‌ها' },
 
     // Dedicated Pages blocks — این بلوک‌ها همیشه دادهٔ همان صفحهٔ اختصاصی‌ای را نمایش می‌دهند
     // که این لایوت به آن متصل است (انجمن علمی/کانون/تشکل/نشریه) — بدون نیاز به انتخاب دستی صفحه

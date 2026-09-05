@@ -6,6 +6,8 @@ import { API } from '@/src/shared-utils/functions';
 import type { MediaFile, MediaFolderDto } from '../gallery/types';
 import type {
   AchievementItem,
+  AcademicDepartmentItem,
+  AcademicFieldItem,
   AnnouncementCategory,
   AnnouncementItem,
   NewsCategory,
@@ -257,6 +259,38 @@ export const fetchDataSourcePeople = async (params: {
   if (params.lang) qs.set('lang', params.lang);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   return API<PaginatedResponse<PersonItem>>(`people${suffix}`);
+};
+
+/** رشته‌های تحصیلی همهٔ گروه‌ها — برای ویجت academic-fields-feed */
+export const fetchDataSourceAcademicFields = async (params: {
+  per_page?: number;
+  department_id?: number | null;
+  degree_level?: string | null;
+  status?: string;
+  lang?: string;
+} = {}) => {
+  const qs = new URLSearchParams();
+  if (params.per_page) qs.set('per_page', String(params.per_page));
+  if (params.department_id) qs.set('department_id', String(params.department_id));
+  if (params.degree_level) qs.set('degree_level', params.degree_level);
+  if (params.status) qs.set('status', params.status);
+  if (params.lang) qs.set('lang', params.lang);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return API<PaginatedResponse<AcademicFieldItem>>(`fields${suffix}`);
+};
+
+/** گروه‌های آموزشی — برای dropdown فیلتر گروه در تنظیمات ویجت academic-fields-feed */
+export const fetchDataSourceAcademicDepartments = async (params: {
+  per_page?: number;
+  status?: string;
+  lang?: string;
+} = {}) => {
+  const qs = new URLSearchParams();
+  if (params.per_page) qs.set('per_page', String(params.per_page));
+  if (params.status) qs.set('status', params.status);
+  if (params.lang) qs.set('lang', params.lang);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return API<PaginatedResponse<AcademicDepartmentItem>>(`departments${suffix}`);
 };
 
 /** رسانه — برای ویجت‌های image-gallery و file-manager */

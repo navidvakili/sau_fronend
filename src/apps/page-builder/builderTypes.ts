@@ -71,7 +71,8 @@ export type SmartWidgetType =
   | 'achievements-timeline'
   | 'staff-directory'
   | 'file-manager'
-  | 'form';
+  | 'form'
+  | 'academic-fields-feed';
 
 /** بلوک‌های متصل به یک صفحهٔ اختصاصی مشخص (انجمن علمی/کانون/تشکل/نشریه) — انتخاب صفحه در binding.dedicatedPageId */
 export type DedicatedPageWidgetType =
@@ -134,6 +135,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'staff-directory': 'کادر علمی و اساتید',
   'file-manager': 'مخزن اسناد',
   form: 'جاسازی فرم (فرم‌ساز)',
+  'academic-fields-feed': 'لیست رشته‌های تحصیلی',
   // بلوک‌های صفحات اختصاصی
   'dp-news': 'خبرهای صفحهٔ اختصاصی',
   'dp-announcements': 'اطلاعیه‌های صفحهٔ اختصاصی',
@@ -204,15 +206,20 @@ export interface WidgetStyle {
 }
 
 export interface WidgetDataBinding {
-  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'dedicated-page' | 'form' | 'none';
+  dataSource: 'announcements' | 'news' | 'gallery' | 'awards' | 'staff' | 'files' | 'dedicated-page' | 'form' | 'academic-fields' | 'none';
   /** شناسه و اسلاگ فرمِ منتخب از فرم‌ساز — فقط برای widget نوع 'form' */
   formId?: string;
   formSlug?: string;
+  /** برای 'academic-fields-feed': شناسهٔ گروه آموزشی منتخب (رشته) یا 'all' */
   categoryFilter?: string;
   priorityFilter?: 'all' | 'urgent' | 'standard';
   departmentFilter?: string;
   yearFilter?: string;
   folderFilter?: string;
+  /** مقطع تحصیلی برای 'academic-fields-feed': phd/master/bachelor_continuous/bachelor_non_continuous/associate یا 'all' */
+  degreeLevelFilter?: string;
+  /** نام دانشکده (ستون متنی department.faculty) برای 'academic-fields-feed'، یا 'all' */
+  facultyFilter?: string;
   limit?: number;
   sortBy?: 'date_desc' | 'date_asc' | 'views' | 'priority' | 'title';
   displayMode?:

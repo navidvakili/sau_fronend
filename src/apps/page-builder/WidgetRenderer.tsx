@@ -15,6 +15,7 @@ import {
   fetchDataSourceMedia,
   fetchDataSourceAchievements,
   fetchDataSourcePeople,
+  fetchDataSourceAcademicFields,
   fetchSmartPageChildrenTree,
   fetchDedicatedPageContentsForWidget,
   fetchDedicatedPageMembersForWidget
@@ -2041,6 +2042,77 @@ const StaffDirectoryWidget: React.FC<{
                 </div>
                 {st.email && <div className="text-[10px] text-slate-400 truncate">{st.email}</div>}
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** برچسب فارسی مقطع تحصیلی — برای نمایش روی کارت رشته در ویجت لیست رشته‌های تحصیلی */
+const DEGREE_LEVEL_LABELS: Record<string, string> = {
+  phd: 'دکتری',
+  master: 'کارشناسی ارشد',
+  bachelor_continuous: 'کارشناسی پیوسته',
+  bachelor_non_continuous: 'کارشناسی ناپیوسته',
+  associate: 'کاردانی'
+};
+
+/** ویجت لیست رشته‌های تحصیلی — اتصال زنده به همهٔ رشته‌های همهٔ گروه‌های آموزشی، با فیلتر
+ *  گروه (binding.categoryFilter) و مقطع (binding.degreeLevelFilter). لینک واقعی هر کارت به
+ *  صفحهٔ گروه آموزشی والدش فقط در رندر عمومی (public) ساخته می‌شود؛ این‌جا فقط پیش‌نمایش است. */
+const AcademicFieldsFeedWidget: React.FC<{
+  widget: WidgetInstance;
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+}> = ({ widget, binding, containerStyle }) => {
+  const departmentId =
+    binding.categoryFilter && binding.categoryFilter !== 'all' ? Number(binding.categoryFilter) || null : null;
+  const degreeLevel =
+    binding.degreeLevelFilter && binding.degreeLevelFilter !== 'all' ? binding.degreeLevelFilter : null;
+
+  const { data, error, retry } = useSmartData<AcademicFieldItem>(() =>
+    fetchDataSourceAcademicFields({
+      per_page: binding.limit || 12,
+      department_id: departmentId,
+      degree_level: degreeLevel,
+      status: 'published'
+    }).then((res) => res.data),
+    [binding.limit, departmentId, degreeLevel]
+  );
+
+  const fields = data || [];
+  const cols = binding.columnsCount || 3;
+  const gridClass =
+    cols === 2
+      ? 'grid grid-cols-1 sm:grid-cols-2 gap-3'
+      : cols === 1
+        ? 'grid grid-cols-1 gap-3'
+        : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
+
+  return (
+    <div style={containerStyle}>
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="cards" count={binding.limit || 6} />
+      ) : fields.length === 0 ? null : (
+        <div className={gridClass}>
+          {fields.map((field) => (
+            <div
+              key={field.id}
+              className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xs space-y-1.5"
+            >
+              {field.degreeLevel && (
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                  {DEGREE_LEVEL_LABELS[field.degreeLevel] || field.degreeLevel}
+                </span>
+              )}
+              <div className="text-xs font-black text-slate-900 dark:text-white">{field.name}</div>
+              {field.department?.name && (
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{field.department.name}</div>
+              )}
             </div>
           ))}
         </div>
@@ -4794,6 +4866,9 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     // -------------------------------------------------------------
     case 'announcements-feed':
       return isEditorPreview ? null : <AnnouncementsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
+
+    case 'academic-fields-feed':
+      return isEditorPreview ? null : <AcademicFieldsFeedWidget widget={widget} binding={binding} containerStyle={containerStyle} />;
 
     case 'news-feed':
       if (isEditorPreview && binding.categoryFilter === 'current-department') {

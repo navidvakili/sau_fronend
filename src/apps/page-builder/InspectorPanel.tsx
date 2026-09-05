@@ -15,6 +15,7 @@ import {
   fetchDataSourceNewsCategories,
   fetchDataSourceAnnouncementGroups,
   fetchDataSourceMediaFolders,
+  fetchDataSourceAcademicDepartments,
   fetchDedicatedPageTaxonomiesForWidget,
   type DedicatedPageTaxonomyOption
 } from './api';
@@ -23,7 +24,7 @@ import MediaManager from '@/src/shared-components/MediaManager';
 import WysiwygEditor, { type WysiwygEditorHandle } from '@/src/shared-components/WysiwygEditor';
 import IconPicker, { ICON_CHOICES } from './components/IconPicker';
 import { VariableInsertButton, insertAtCursor } from '@/src/shared-components/PageVariables';
-import type { NewsCategory } from '@/src/shared-types';
+import type { NewsCategory, AcademicDepartmentItem } from '@/src/shared-types';
 import type { MediaFolderDto } from '../gallery/types';
 import { fetchForms } from '../forms/api';
 import {
@@ -267,6 +268,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
   const [announcementGroups, setAnnouncementGroups] = useState<string[]>([]);
   const [mediaFolders, setMediaFolders] = useState<MediaFolderDto[]>([]);
+  const [academicDepartments, setAcademicDepartments] = useState<AcademicDepartmentItem[]>([]);
   const [dataSourceError, setDataSourceError] = useState<string | null>(null);
 
   const activeDataSource = selectedWidget?.settings.binding.dataSource;
@@ -314,6 +316,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       fetchDataSourceMediaFolders()
         .then((folders) => { if (!cancelled) setMediaFolders(folders); })
         .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت پوشه‌های رسانه'); });
+    } else if (activeDataSource === 'academic-fields') {
+      fetchDataSourceAcademicDepartments({ per_page: 200, status: 'published' })
+        .then((res) => { if (!cancelled) setAcademicDepartments(res.data); })
+        .catch(() => { if (!cancelled) setDataSourceError('خطا در دریافت گروه‌های آموزشی'); });
     }
 
     return () => { cancelled = true; };
@@ -2658,6 +2664,46 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             <option value="self">در صفحه جاری</option>
                             <option value="new">در صفحه جدید (تب جدید)</option>
                             <option value="modal">در پنجره modal</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {activeDataSource === 'academic-fields' && (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            گروه آموزشی (اختیاری)
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.categoryFilter || 'all'}
+                            onChange={(e) => handleBindingChange('categoryFilter', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="all">همهٔ گروه‌های آموزشی</option>
+                            {academicDepartments.map((d) => (
+                              <option key={d.id} value={String(d.id)}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            مقطع تحصیلی (اختیاری)
+                          </label>
+                          <select
+                            value={selectedWidget.settings.binding.degreeLevelFilter || 'all'}
+                            onChange={(e) => handleBindingChange('degreeLevelFilter', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="all">همهٔ مقاطع</option>
+                            <option value="phd">دکتری</option>
+                            <option value="master">کارشناسی ارشد</option>
+                            <option value="bachelor_continuous">کارشناسی پیوسته</option>
+                            <option value="bachelor_non_continuous">کارشناسی ناپیوسته</option>
+                            <option value="associate">کاردانی</option>
                           </select>
                         </div>
                       </>

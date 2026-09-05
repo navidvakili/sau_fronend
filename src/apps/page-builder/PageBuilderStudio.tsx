@@ -852,6 +852,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'academic-fields-feed') {
+      title = 'لیست رشته‌های تحصیلی';
+      bindingDataSource = 'academic-fields';
     } else if (widgetType === 'form') {
       title = 'فرم پیوست‌شده از فرم‌ساز';
       bindingDataSource = 'form';
@@ -1075,6 +1078,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'file-manager') {
       title = 'مخزن اسناد و فرم‌ها';
       bindingDataSource = 'files';
+    } else if (widgetType === 'academic-fields-feed') {
+      title = 'لیست رشته‌های تحصیلی';
+      bindingDataSource = 'academic-fields';
     } else if (widgetType === 'form') {
       title = 'فرم پیوست‌شده از فرم‌ساز';
       bindingDataSource = 'form';
