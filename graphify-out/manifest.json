@@ -455,9 +455,9 @@
     "semantic_hash": "9ff479bbe4c9e4be1501bd1601c39e09"
   },
   "src/apps/page-builder/ComponentPickerModal.tsx": {
-    "mtime": 1788639271.1392946,
-    "ast_hash": "8588b65fe15683a64bbad745869bb0a5",
-    "semantic_hash": "8588b65fe15683a64bbad745869bb0a5"
+    "mtime": 1788692610.9300783,
+    "ast_hash": "e8b4497c6fe2da6632bd1a5dbde29f88",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/ExportModal.tsx": {
     "mtime": 1787381912.3266656,
@@ -475,9 +475,9 @@
     "semantic_hash": "d21100b1cfc0f831889ed577b804416e"
   },
   "src/apps/page-builder/PageBuilderStudio.tsx": {
-    "mtime": 1788639582.9665234,
-    "ast_hash": "6605c42bba3b612cb8541063ea93da98",
-    "semantic_hash": "6605c42bba3b612cb8541063ea93da98"
+    "mtime": 1788692549.1086843,
+    "ast_hash": "d8a4211a50afa6d9745b84be4ae91bef",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/PageSettingsModal.tsx": {
     "mtime": 1787657790.14383,
@@ -505,19 +505,19 @@
     "semantic_hash": "b30e8204badadd1784736b2e2de78445"
   },
   "src/apps/page-builder/WidgetRenderer.tsx": {
-    "mtime": 1788644474.4072258,
-    "ast_hash": "1475ec96979308d71fa177a980189acc",
-    "semantic_hash": "1475ec96979308d71fa177a980189acc"
+    "mtime": 1788693318.1854575,
+    "ast_hash": "efe68eaea05e2c091c2817cbffa5a073",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/api.ts": {
-    "mtime": 1788639405.6273582,
-    "ast_hash": "ae81309b909c626029ad0d977ef6512c",
-    "semantic_hash": "ae81309b909c626029ad0d977ef6512c"
+    "mtime": 1788692989.964466,
+    "ast_hash": "feac4fc0ccaa9e32ad11830197a08c1e",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/builderTypes.ts": {
-    "mtime": 1788639366.6339805,
-    "ast_hash": "64938b4ccf6b00e8f0e44321998da7f4",
-    "semantic_hash": "64938b4ccf6b00e8f0e44321998da7f4"
+    "mtime": 1788692661.096777,
+    "ast_hash": "38ceade49b2f4c68dc9a7cb00d80a21e",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/components/BrandIcons.tsx": {
     "mtime": 1787381912.3362114,
@@ -875,8 +875,8 @@
     "semantic_hash": "8a6a7c477b97528d25c5e617268cd323"
   },
   "src/shared-types/index.ts": {
-    "mtime": 1788684672.4744887,
-    "ast_hash": "1e3f10b840db50c9992b7638924ae91a",
+    "mtime": 1788691079.6123838,
+    "ast_hash": "2dde64e3790bdd9d727bd1d980dc2b2f",
     "semantic_hash": ""
   },
   "src/shared-types/slider-studio.ts": {
