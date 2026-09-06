@@ -254,18 +254,18 @@ export default function PageWizardModal({
       setSlug('');
       setShortDescription('');
       setFullDescription('');
-      setLogo('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=200&q=80');
-      setFeaturedImage('https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80');
+      setLogo('');
+      setFeaturedImage('');
       setAccentColor('#0284c7');
 
       // User defaults
       setOwnerName('');
       setOwnerUsername('');
-      setOwnerPassword('Elm@2026!');
+      setOwnerPassword('');
       setOwnerPhone('');
       setOwnerEmail('');
-      setOwnerRoleTitle('مسئول صفحه');
-      setSelectedProfId('p1');
+      setOwnerRoleTitle('');
+      setSelectedProfId('');
 
       setIsChangingPassword(false);
       setNewPassword('');
@@ -294,11 +294,7 @@ export default function PageWizardModal({
         hasSurvey: false,
         hasUsefulLinks: true
       });
-      setTaxonomies([
-        { id: 'tax_d1', title: 'اطلاعیه‌های رسمی', slug: 'official-notices', color: '#0284c7', itemCount: 0 },
-        { id: 'tax_d2', title: 'کارگاه‌ها و دوره‌ها', slug: 'workshops', color: '#059669', itemCount: 0 },
-        { id: 'tax_d3', title: 'فایل‌ها و مستندات', slug: 'files', color: '#7c3aed', itemCount: 0 }
-      ]);
+      setTaxonomies([]);
       setCustomFields({});
       setCurrentStep(1);
     }
@@ -319,7 +315,7 @@ export default function PageWizardModal({
         setHeaderStyle('profile_card');
         setLayoutType('two_column_sidebar_right');
         setFeatures(f => ({ ...f, hasResearchArticles: true, hasBoardMembers: false }));
-        const prof = universityProfessors.find(p => p.professorId === selectedProfId) || universityProfessors[0];
+        const prof = universityProfessors.find(p => p.professorId === selectedProfId);
         if (prof) {
           setTitle(`صفحه اختصاصی ${prof.fullName}`);
           setShortTitle(prof.fullName);
@@ -386,8 +382,13 @@ export default function PageWizardModal({
       return;
     }
 
+    if (pageType === 'faculty_member' && !selectedProfId) {
+      onNotify?.('برای صفحه اختصاصی عضو هیئت علمی، انتخاب استاد الزامی است.', 'error');
+      return;
+    }
+
     const profObj = pageType === 'faculty_member'
-      ? universityProfessors.find(p => p.professorId === selectedProfId) || universityProfessors[0]
+      ? universityProfessors.find(p => p.professorId === selectedProfId)
       : undefined;
 
     const userObjId = initialPage?.owner?.id || `usr_${Date.now()}`;
