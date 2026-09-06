@@ -48,7 +48,7 @@ import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import Pagination from '@/src/shared-components/Pagination';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
-import { getDedicatedPagePublicUrl } from './utils';
+import { getDedicatedPagePublicUrl, getApiErrorMessage } from './utils';
 import type { DedicatedPagesStats } from './types';
 
 const PER_PAGE = 12;
@@ -220,7 +220,7 @@ export default function DedicatedPagesStudio({ onOpenTab, moduleId }: DedicatedP
       return result;
     } catch (e) {
       console.error('Error saving page:', e);
-      showToast('خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.', 'error');
+      showToast(getApiErrorMessage(e, 'خطا در ذخیره‌سازی صفحه. لطفاً دوباره تلاش کنید.'), 'error');
       return null;
     }
   };
@@ -271,7 +271,7 @@ export default function DedicatedPagesStudio({ onOpenTab, moduleId }: DedicatedP
       );
     } catch (e) {
       console.error('Error toggling status:', e);
-      alert('خطا در تغییر وضعیت. لطفاً دوباره تلاش کنید.');
+      showToast(getApiErrorMessage(e, 'خطا در تغییر وضعیت. لطفاً دوباره تلاش کنید.'), 'error');
     }
   };
 

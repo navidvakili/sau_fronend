@@ -12,7 +12,7 @@ import {
   Users, Plus, Search, Edit3, Trash2, Image as ImageIcon,
   Send, Loader2, X, CheckCircle2, AlertCircle, Globe,
   GraduationCap, Briefcase, BookOpen, Upload, FileSpreadsheet,
-  Download, Mail, Phone, MapPin, UserRound,
+  Download, Mail, Phone, MapPin, UserRound, FileText, ExternalLink,
 } from 'lucide-react';
 import type { PersonItem, PersonPayload, PersonType, User } from '@/src/shared-types';
 import ToastNotification from '@/src/shared-components/ToastNotification';
@@ -22,6 +22,10 @@ import {
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
+import PageWizardModal from '../dedicated_pages/PageWizardModal';
+import { createDedicatedPage } from '../dedicated_pages/api';
+import type { DedicatedPage } from '../dedicated_pages/types';
+import { getDedicatedPagePublicUrl, getApiErrorMessage } from '../dedicated_pages/utils';
 
 interface PeopleManagementProps {
   user?: User | null;
@@ -169,6 +173,21 @@ export default function PeopleManagement({ user }: PeopleManagementProps) {
 
   // ===== Delete Confirmation state =====
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // ===== Dedicated Page (صفحه اختصاصی) wizard — برای اتصال یک استاد به صفحه اختصاصی خودش =====
+  const [dedicatedPageTarget, setDedicatedPageTarget] = useState<PersonItem | null>(null);
+  const handleSaveDedicatedPage = async (page: DedicatedPage): Promise<DedicatedPage | null> => {
+    try {
+      const result = await createDedicatedPage(page);
+      showToast('صفحه اختصاصی این استاد با موفقیت ایجاد شد.', 'success');
+      setDedicatedPageTarget(null);
+      await loadPeople();
+      return result;
+    } catch (e) {
+      showToast(getApiErrorMessage(e, 'خطا در ایجاد صفحه اختصاصی'), 'error');
+      return null;
+    }
+  };
 
   // ===== Import state =====
   const [importOpen, setImportOpen] = useState(false);
@@ -712,6 +731,29 @@ export default function PeopleManagement({ user }: PeopleManagementProps) {
                         </button>
                       )}
                     </div>
+
+                    {/* Dedicated Page link (فقط اعضای هیات علمی) */}
+                    {item.type === 'faculty_member' && (
+                      item.dedicatedPage ? (
+                        <a
+                          href={getDedicatedPagePublicUrl('faculty_member', item.dedicatedPage.slug || '')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          مشاهده صفحه اختصاصی
+                        </a>
+                      ) : canEdit ? (
+                        <button
+                          onClick={() => setDedicatedPageTarget(item)}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 text-[11px] font-bold transition-colors cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          ایجاد صفحه اختصاصی
+                        </button>
+                      ) : null
+                    )}
                   </div>
                 </div>
               ))}
@@ -719,6 +761,16 @@ export default function PeopleManagement({ user }: PeopleManagementProps) {
           )}
         </div>
       )}
+
+      {/* ===== Dedicated Page Wizard — ایجاد صفحه اختصاصی برای یک استاد از همین ماژول ===== */}
+      <PageWizardModal
+        isOpen={!!dedicatedPageTarget}
+        onClose={() => setDedicatedPageTarget(null)}
+        onSavePage={handleSaveDedicatedPage}
+        initialPage={null}
+        onNotify={showToast}
+        presetFacultyPerson={dedicatedPageTarget}
+      />
 
       {/* ===== Editor View ===== */}
       {activeTab === 'editor' && (

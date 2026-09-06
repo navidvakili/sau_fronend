@@ -7,6 +7,18 @@ import { PUBLIC_SITE_URL } from '@/src/shared-constants';
 import type { DedicatedPage, AuthorizedUser, AccessLevel, PageType } from './types';
 
 /**
+ * استخراج پیام قابل‌فهم از خطای برگشتی API (شامل `error.errors` که پیام‌های
+ * اعتبارسنجی فیلد به فیلد Laravel — مثل «فیلد اسلاگ قبلاً انتخاب شده است» —
+ * را نگه می‌دارد). بدون این تابع، خطاهای واقعی (اعتبارسنجی، انقضای نشست و...)
+ * پشت یک پیام عمومی «خطا در ذخیره‌سازی» گم می‌شدند و کاربر متوجه علت نمی‌شد.
+ */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { message?: string; errors?: Record<string, string[]> } | undefined;
+  const firstFieldError = err?.errors ? Object.values(err.errors)[0]?.[0] : undefined;
+  return firstFieldError || err?.message || fallback;
+}
+
+/**
  * پیشوند مسیر عمومی هر نوع صفحه اختصاصی در سایت عمومی (Next.js).
  * این مقادیر باید همواره با مسیرهای واقعی زیر public/src/app هم‌راستا بمانند:
  * associations/[slug]، clubs/[slug]، unions/[slug]، journals/[slug]، professors/[slug]

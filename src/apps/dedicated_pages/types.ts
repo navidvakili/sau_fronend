@@ -238,6 +238,8 @@ export interface PageDisplaySettings {
 
 export interface DedicatedPage {
   id: string;
+  /** لینک این صفحه به رکورد واقعیِ عضو هیئت علمی در ماژول «اعضای دانشگاه» (people.id) */
+  personId?: string | null;
   pageType: PageType;
   title: string;
   shortTitle: string;

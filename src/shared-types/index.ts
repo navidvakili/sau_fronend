@@ -335,6 +335,8 @@ export interface PersonItem {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** صفحه اختصاصی این عضو در ماژول «صفحات اختصاصی» (در صورت وجود) */
+  dedicatedPage?: { id: string; title: string | null; slug: string | null; status: string } | null;
 }
 
 export interface PersonPayload {

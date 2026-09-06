@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -50,7 +50,7 @@ import {
 } from './types';
 import { getOwnerAccount, setOwnerAccount } from './api';
 import { fetchForms } from '../forms/api';
-import { fetchPeople } from '../people/api';
+import { fetchPeople, fetchPersonById } from '../people/api';
 import type { PersonItem } from '@/src/shared-types';
 import { getDedicatedPagePublicUrl } from './utils';
 import PageStorageUsageChart from './PageStorageUsageChart';
@@ -98,6 +98,12 @@ interface PageWizardModalProps {
   initialPage?: DedicatedPage | null;
   /** نمایش پیغام (Toast) در سطح کامپوننت والد — چون بستن این دیالوگ نباید پیغام را هم مخفی کند */
   onNotify?: (text: string, type: 'success' | 'error' | 'info') => void;
+  /**
+   * وقتی ویزارد از ماژول «اعضای دانشگاه» برای یک استاد مشخص باز می‌شود (نه از
+   * لیست عمومی صفحات اختصاصی)، این استاد از قبل انتخاب‌شده است — نوع صفحه
+   * روی «عضو هیئت علمی» قفل می‌شود و انتخاب استاد از مرحله ۳ پیش‌فرض پر می‌شود.
+   */
+  presetFacultyPerson?: PersonItem | null;
 }
 
 const WIZARD_STEPS = [
@@ -112,7 +118,8 @@ export default function PageWizardModal({
   onClose,
   onSavePage,
   initialPage,
-  onNotify
+  onNotify,
+  presetFacultyPerson
 }: PageWizardModalProps) {
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
@@ -158,6 +165,16 @@ export default function PageWizardModal({
   const [facultySearching, setFacultySearching] = useState(false);
   const [facultyDropdownOpen, setFacultyDropdownOpen] = useState(false);
   const [selectedProfessor, setSelectedProfessor] = useState<PersonItem | null>(null);
+  /** نام استادِ از قبل متصل به این صفحه (ویرایش صفحه‌ای که قبلاً ساخته شده) — فقط برای نمایش، از روی personId واکشی می‌شود */
+  const [existingProfessorName, setExistingProfessorName] = useState<string | null>(null);
+  /**
+   * کدام فیلدهای مرحله ۲ (عنوان/عنوان کوتاه/اسلاگ/توضیحات) را اپراتور خودش
+   * دستی ویرایش کرده — انتخاب یا تعویض استاد در مرحله ۳ فقط فیلدهایی را که
+   * اینجا true نشده‌اند خودکار پر می‌کند، تا مقدار دستیِ اپراتور بی‌اطلاع
+   * رونویسی نشود. با استفاده از ref (نه state) تا حتی در همان چرخهٔ ریست
+   * (پیش از نشستن state های خالی) هم قابل اتکا باشد.
+   */
+  const manualEditRef = useRef({ title: false, shortTitle: false, slug: false, shortDescription: false, fullDescription: false });
 
   useEffect(() => {
     if (!isOpen || pageType !== 'faculty_member') return;
@@ -239,6 +256,9 @@ export default function PageWizardModal({
 
   // Initialize / Reset Form
   useEffect(() => {
+    // مبنای تشخیص «فیلد دستی ویرایش شده یا نه» با هر بار باز شدن ویزارد از نو شروع می‌شود
+    manualEditRef.current = { title: false, shortTitle: false, slug: false, shortDescription: false, fullDescription: false };
+
     if (initialPage) {
       setPageType(initialPage.pageType);
       setTitle(initialPage.title || '');
@@ -246,6 +266,15 @@ export default function PageWizardModal({
       setSlug(initialPage.slug || '');
       setShortDescription(initialPage.shortDescription || '');
       setFullDescription(initialPage.fullDescription || '');
+      // این صفحه از قبل عنوان/اسلاگ/توضیحات واقعی دارد — تعویض استاد در مرحله ۳
+      // نباید آن‌ها را بی‌اطلاع بازنویسی کند، مگر اینکه اپراتور خودش خالی‌شان کند
+      manualEditRef.current = {
+        title: !!initialPage.title,
+        shortTitle: !!initialPage.shortTitle,
+        slug: !!initialPage.slug,
+        shortDescription: !!initialPage.shortDescription,
+        fullDescription: !!initialPage.fullDescription
+      };
       setLogo(initialPage.logo || '');
       setFeaturedImage(initialPage.featuredImage || '');
       setAccentColor(initialPage.layoutConfig?.accentColor || '#0284c7');
@@ -282,6 +311,15 @@ export default function PageWizardModal({
       setFacultySearch('');
       setFacultyResults([]);
 
+      // این صفحه از قبل به یک استاد واقعی متصل است (personId) — فقط نامش را برای
+      // نمایش «استاد فعلی» واکشی می‌کنیم، بدون اجبار به انتخاب دوباره برای ذخیره
+      setExistingProfessorName(null);
+      if (initialPage.pageType === 'faculty_member' && initialPage.personId) {
+        fetchPersonById(Number(initialPage.personId))
+          .then(person => setExistingProfessorName(getPersonFullName(person)))
+          .catch(e => console.error('Error loading linked faculty member:', e));
+      }
+
       setStatus(initialPage.status);
       setPublishStatus(initialPage.publishStatus);
       setShowInNavigation(initialPage.displaySettings?.showInNavigation ?? true);
@@ -308,7 +346,7 @@ export default function PageWizardModal({
       setCurrentStep(1);
     } else {
       // Reset defaults for new page
-      setPageType('scientific_association');
+      setPageType(presetFacultyPerson ? 'faculty_member' : 'scientific_association');
       setTitle('');
       setShortTitle('');
       setSlug('');
@@ -326,6 +364,7 @@ export default function PageWizardModal({
       setOwnerEmail('');
       setOwnerRoleTitle('');
       setSelectedProfessor(null);
+      setExistingProfessorName(null);
       setFacultySearch('');
       setFacultyResults([]);
 
@@ -358,9 +397,20 @@ export default function PageWizardModal({
       });
       setTaxonomies([]);
       setCustomFields({});
-      setCurrentStep(1);
+
+      if (presetFacultyPerson) {
+        // از ماژول «اعضای دانشگاه» برای همین استاد باز شده — نوع صفحه از قبل مشخص است
+        setAccentColor('#0d9488');
+        setHeaderStyle('profile_card');
+        setLayoutType('two_column_sidebar_right');
+        setFeatures(f => ({ ...f, hasResearchArticles: true, hasBoardMembers: false }));
+        handleSelectProfessor(presetFacultyPerson);
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(1);
+      }
     }
-  }, [initialPage, isOpen]);
+  }, [initialPage, isOpen, presetFacultyPerson]);
 
   // When Page Type Changes
   const handleSelectPageType = (typeId: PageType) => {
@@ -397,17 +447,29 @@ export default function PageWizardModal({
     setFacultyDropdownOpen(false);
     const fullName = getPersonFullName(person);
     setFacultySearch(fullName);
-    setTitle(`صفحه اختصاصی ${fullName}`);
-    setShortTitle(fullName);
+
     const slugBase = person.lastName || fullName;
-    setSlug(`dr-${slugBase}`.replace(/\s+/g, '-').toLowerCase());
+    const auto = {
+      title: `صفحه اختصاصی ${fullName}`,
+      shortTitle: fullName,
+      slug: `dr-${slugBase}`.replace(/\s+/g, '-').toLowerCase(),
+      shortDescription: [person.rank, person.department].filter(Boolean).join(' '),
+      fullDescription: `صفحه رسمی دانشگاهی ${fullName} شامل اطلاعات درسی، مقالات و ساعات مشاوره.`
+    };
+
+    // فیلدهای مرحله ۲ فقط وقتی با انتخاب/تعویض استاد به‌روز می‌شوند که اپراتور
+    // خودش دستی تغییرشان نداده باشد — در غیر این صورت مقدار دستیِ او دست‌نخورده می‌ماند.
+    if (!manualEditRef.current.title) setTitle(auto.title);
+    if (!manualEditRef.current.shortTitle) setShortTitle(auto.shortTitle);
+    if (!manualEditRef.current.slug) setSlug(auto.slug);
+    if (!manualEditRef.current.shortDescription) setShortDescription(auto.shortDescription);
+    if (!manualEditRef.current.fullDescription) setFullDescription(auto.fullDescription);
+
     setOwnerName(fullName);
     setOwnerUsername(suggestUsernameFromPerson(person));
     setOwnerEmail(person.email || '');
     setOwnerPhone(person.phone || '۰۹۱۳۰۰۰۰۰۰۰');
     setOwnerRoleTitle([person.rank, person.department].filter(Boolean).join(' - '));
-    setShortDescription([person.rank, person.department].filter(Boolean).join(' '));
-    setFullDescription(`صفحه رسمی دانشگاهی ${fullName} شامل اطلاعات درسی، مقالات و ساعات مشاوره.`);
   };
 
   // Calculate Final URL (full, absolute — matches the real public site routes)
@@ -431,13 +493,13 @@ export default function PageWizardModal({
       return;
     }
 
-    if (pageType === 'faculty_member' && !selectedProfessor && !initialPage?.professorData) {
+    if (pageType === 'faculty_member' && !selectedProfessor && !initialPage?.personId) {
       onNotify?.('برای صفحه اختصاصی عضو هیئت علمی، انتخاب استاد الزامی است.', 'error');
       return;
     }
 
-    const profObj = pageType === 'faculty_member'
-      ? (selectedProfessor ? mapPersonToProfessorProfile(selectedProfessor) : initialPage?.professorData)
+    const profObj = pageType === 'faculty_member' && selectedProfessor
+      ? mapPersonToProfessorProfile(selectedProfessor)
       : undefined;
 
     const userObjId = initialPage?.owner?.id || `usr_${Date.now()}`;
@@ -460,6 +522,9 @@ export default function PageWizardModal({
 
     const newDedicatedPage: DedicatedPage = {
       id: initialPage?.id || `page_${Date.now()}`,
+      personId: pageType === 'faculty_member'
+        ? (selectedProfessor ? String(selectedProfessor.id) : initialPage?.personId ?? null)
+        : null,
       pageType,
       title: title || 'صفحه اختصاصی جدید',
       shortTitle: shortTitle || title,
@@ -730,7 +795,7 @@ export default function PageWizardModal({
                   <input
                     type="text"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    onChange={e => { manualEditRef.current.title = true; setTitle(e.target.value); }}
                     placeholder="مثال: انجمن علمی مهندسی کامپیوتر"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 text-xs"
                   />
@@ -743,7 +808,7 @@ export default function PageWizardModal({
                   <input
                     type="text"
                     value={shortTitle}
-                    onChange={e => setShortTitle(e.target.value)}
+                    onChange={e => { manualEditRef.current.shortTitle = true; setShortTitle(e.target.value); }}
                     placeholder="مثال: انجمن کامپیوتر"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 text-xs"
                   />
@@ -758,7 +823,7 @@ export default function PageWizardModal({
                 <input
                   type="text"
                   value={shortDescription}
-                  onChange={e => setShortDescription(e.target.value)}
+                  onChange={e => { manualEditRef.current.shortDescription = true; setShortDescription(e.target.value); }}
                   placeholder="مرجع رسمی فعالیت‌های علمی، بوت‌کمپ‌ها و مسابقات برنامه‌نویسی..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 text-xs"
                 />
@@ -771,7 +836,7 @@ export default function PageWizardModal({
                 <textarea
                   rows={3}
                   value={fullDescription}
-                  onChange={e => setFullDescription(e.target.value)}
+                  onChange={e => { manualEditRef.current.fullDescription = true; setFullDescription(e.target.value); }}
                   placeholder="معرفی جامع، تاریخچه تاسیس، اهداف، آیین‌نامه و بیانیه ماموریت این واحد یا صفحه..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 text-xs"
                 />
@@ -791,7 +856,7 @@ export default function PageWizardModal({
                   <input
                     type="text"
                     value={slug}
-                    onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
+                    onChange={e => { manualEditRef.current.slug = true; setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '')); }}
                     placeholder="computer-society"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs dir-ltr focus:ring-2 focus:ring-blue-500"
                   />
@@ -1044,9 +1109,9 @@ export default function PageWizardModal({
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  ) : isEditMode && initialPage?.professorData ? (
+                  ) : isEditMode && initialPage?.personId ? (
                     <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500">
-                      استاد فعلی: <span className="font-bold text-slate-700 dark:text-slate-300">{initialPage.professorData.fullName}</span> — برای تغییر، از جستجوی بالا استفاده کنید.
+                      استاد فعلی: <span className="font-bold text-slate-700 dark:text-slate-300">{existingProfessorName || '...'}</span> — برای تغییر، از جستجوی بالا استفاده کنید.
                     </div>
                   ) : null}
                 </div>
@@ -1391,7 +1456,14 @@ export default function PageWizardModal({
                     <button
                       key={st.id}
                       type="button"
-                      onClick={() => setStatus(st.id as any)}
+                      onClick={() => {
+                        setStatus(st.id as any);
+                        // این ویزارد کنترل جداگانه‌ای برای publishStatus ندارد — نمایش عمومی صفحه هم‌زمان
+                        // به status==='active' و publishStatus==='published' نیاز دارد، پس این دو همیشه
+                        // با هم هماهنگ نگه داشته می‌شوند تا صفحه هرگز در حالت نیمه‌منتشر (فعال ولی
+                        // پیش‌نویس) گیر نکند و در سایت عمومی با خطای ۴۰۴ روبه‌رو نشود.
+                        setPublishStatus(st.id === 'active' ? 'published' : 'draft');
+                      }}
                       className={`p-3.5 rounded-2xl border text-right transition-all ${
                         status === st.id
                           ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold shadow-sm'
