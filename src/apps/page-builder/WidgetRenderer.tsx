@@ -18,9 +18,21 @@ import {
   fetchDataSourceAcademicFields,
   fetchSmartPageChildrenTree,
   fetchDedicatedPageContentsForWidget,
-  fetchDedicatedPageMembersForWidget
+  fetchDedicatedPageMembersForWidget,
+  fetchDedicatedPageTaxonomiesForWidget,
+  fetchDedicatedPageProfessorProfileForWidget,
+  fetchDedicatedPageWeeklyScheduleForWidget,
+  fetchDedicatedPageContactInfoForWidget
 } from './api';
-import type { SmartPageTreeNode, DedicatedPageContentItem, DedicatedPageMemberItem } from './api';
+import type {
+  SmartPageTreeNode,
+  DedicatedPageContentItem,
+  DedicatedPageMemberItem,
+  DedicatedPageTaxonomyOption,
+  DedicatedPageProfessorProfile,
+  DedicatedPageScheduleSlot,
+  DedicatedPageContactInfo
+} from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem, AcademicFieldItem, InfoFileItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
 import { fetchForm } from '../forms/api';
@@ -83,6 +95,9 @@ import {
   Youtube,
   X,
   CalendarDays,
+  CalendarClock,
+  FlaskConical,
+  KeyRound,
   Megaphone,
   Plus,
   Loader2,
@@ -2765,6 +2780,493 @@ const DedicatedPageMembersWidget: React.FC<{
   );
 };
 
+// ==============================================================
+// بلوک‌های اختصاصیِ صفحهٔ استاد (هیئت علمی) — تماس/تحصیلات/علایق پژوهشی/
+// دروس/برنامه هفتگی/مقالات/کتب/پروژه‌ها/فایل‌ها. همگی به یک DedicatedPage
+// مشخص وصل می‌شوند (dedicatedPageId)، مطابق همان الگوی بلوک‌های dp-* بالا.
+// ==============================================================
+
+/** ویجت اطلاعات تماس استاد — نسخهٔ زندهٔ بلوک استاتیک contact-info، از تنظیمات واقعی صفحه */
+const DedicatedPageContactInfoWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const [info, setInfo] = useState<DedicatedPageContactInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dedicatedPageId) return;
+    let cancelled = false;
+    setInfo(null);
+    setError(null);
+    fetchDedicatedPageContactInfoForWidget(dedicatedPageId)
+      .then((res) => { if (!cancelled) setInfo(res); })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'خطا در دریافت اطلاعات تماس'); });
+    return () => { cancelled = true; };
+  }, [dedicatedPageId]);
+
+  if (!dedicatedPageId) {
+    return (
+      <div style={containerStyle}>
+        <DedicatedPageNotConfigured />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={containerStyle}>
+        <SmartEmpty error={error} />
+      </div>
+    );
+  }
+
+  if (!info) {
+    return (
+      <div style={containerStyle}>
+        <SmartSkeleton variant="list" count={3} />
+      </div>
+    );
+  }
+
+  const rows = [
+    { icon: Mail, label: 'ایمیل', value: info.email },
+    { icon: Phone, label: 'تلفن', value: info.phone },
+    { icon: Phone, label: 'داخلی', value: info.extension },
+    { icon: MapPin, label: 'آدرس دفتر', value: info.location }
+  ].filter((r) => r.value);
+
+  if (rows.length === 0) {
+    return (
+      <div style={containerStyle}>
+        <SmartEmpty error="هنوز اطلاعات تماسی برای این صفحه ثبت نشده است" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-3">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+            <r.icon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[10px] text-slate-400">{r.label}</div>
+            <div className="text-xs font-bold text-slate-800 dark:text-white truncate" dir={r.label === 'آدرس دفتر' ? 'rtl' : 'ltr'}>{r.value}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/** فچرِ مشترکِ پروفایل علمی — برای چهار ویجت تحصیلات/علایق پژوهشی/مقالات/کتب، هرکدام فقط یک فیلد را نمایش می‌دهند */
+function useDedicatedPageProfileField<T>(dedicatedPageId: number | string | null | undefined, pick: (p: DedicatedPageProfessorProfile) => T[]) {
+  return useSmartData<T>(
+    () =>
+      dedicatedPageId
+        ? fetchDedicatedPageProfessorProfileForWidget(dedicatedPageId).then((profile) => (profile ? pick(profile) : []))
+        : Promise.resolve([]),
+    [dedicatedPageId]
+  );
+}
+
+/** ویجت تحصیلات — از رکورد Person متصل به صفحه (ماژول اعضای دانشگاه) */
+const DedicatedPageEducationWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.education);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle} className="space-y-2.5">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={3} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز سابقهٔ تحصیلی برای این استاد ثبت نشده است" />
+      ) : (
+        data.map((edu, i) => (
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+              <GraduationCap className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900 dark:text-white">{edu.degree}{edu.field ? ` — ${edu.field}` : ''}</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                {[edu.institution, edu.year].filter(Boolean).join(' · ')}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+/** ویجت علایق پژوهشی — نمایش تگی/پیلی از رکورد Person */
+const DedicatedPageResearchInterestsWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.researchInterests);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle}>
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={2} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز علاقهٔ پژوهشی‌ای برای این استاد ثبت نشده است" />
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {data.map((interest, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[11px] font-bold border border-violet-500/20"
+            >
+              <Sparkles className="w-3 h-3" />
+              {interest}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت مقالات منتشرشده — از رکورد Person (publications) */
+const DedicatedPagePublicationsWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.publications);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle} className="space-y-2.5">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={3} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز مقاله‌ای برای این استاد ثبت نشده است" />
+      ) : (
+        data.map((pub, i) => (
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-black text-slate-900 dark:text-white">{pub.title}</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2">
+                {pub.journal && <span>{pub.journal}</span>}
+                {pub.year && <span>· {pub.year}</span>}
+                {typeof pub.citations === 'number' && <span>· {pub.citations} استناد</span>}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+/** ویجت کتب تألیف‌شده — از رکورد Person (books) */
+const DedicatedPageBooksWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.books);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle} className="space-y-2.5">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={3} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز کتابی برای این استاد ثبت نشده است" />
+      ) : (
+        data.map((book, i) => (
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-black text-slate-900 dark:text-white">{book.title}</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2">
+                {book.publisher && <span>{book.publisher}</span>}
+                {book.year && <span>· {book.year}</span>}
+                {book.isbn && <span dir="ltr">· ISBN {book.isbn}</span>}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+/** ویجت تایم‌لاین دروس ارائه‌شده — از page_contents نوع course (metadata: term/year/code) */
+const DedicatedPageCoursesTimelineWidget: React.FC<{
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ binding, containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
+    () => (dedicatedPageId ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'course', binding.limit || 50, 'desc') : Promise.resolve([])),
+    [dedicatedPageId, binding.limit]
+  );
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  const items = (data || []).slice().sort((a, b) => {
+    const ay = Number(a.metadata?.year) || 0;
+    const by = Number(b.metadata?.year) || 0;
+    return by - ay;
+  });
+
+  return (
+    <div style={containerStyle}>
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={4} />
+      ) : items.length === 0 ? (
+        <SmartEmpty error="هنوز درسی برای این استاد ثبت نشده است" />
+      ) : (
+        <div className="relative pr-6 space-y-6 before:content-[''] before:absolute before:right-[7px] before:top-1 before:bottom-1 before:w-0.5 before:bg-violet-500/20">
+          {items.map((item) => (
+            <div key={item.id} className="relative">
+              <span className="absolute right-[-24px] top-1 w-3.5 h-3.5 rounded-full bg-violet-600 ring-4 ring-violet-500/15" />
+              <div className="text-[10px] font-bold text-violet-600 dark:text-violet-400">
+                {[item.metadata?.term, item.metadata?.year].filter(Boolean).join(' — ')}
+              </div>
+              <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{item.title}</div>
+              {item.metadata?.code && <div className="text-[11px] text-slate-400">کد درس: {item.metadata.code}</div>}
+              {item.summary && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{item.summary}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت پروژه‌های تحقیقاتی — از page_contents نوع research_project (metadata: funder/status/startYear/endYear) */
+const DedicatedPageProjectsWidget: React.FC<{
+  binding: WidgetDataBinding;
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ binding, containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
+    () => (dedicatedPageId ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'research_project', binding.limit || 20, 'desc') : Promise.resolve([])),
+    [dedicatedPageId, binding.limit]
+  );
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle}>
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="cards" count={2} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز پروژهٔ تحقیقاتی‌ای برای این استاد ثبت نشده است" />
+      ) : (
+        <div className={`grid ${dpGridColsClass(binding.columnsCount, 2)} gap-3`}>
+          {data.map((item) => (
+            <div key={item.id} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                  <FlaskConical className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-black text-slate-900 dark:text-white">{item.title}</div>
+              </div>
+              {item.summary && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{item.summary}</p>}
+              <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
+                {item.metadata?.funder && <span>حامی مالی: {item.metadata.funder}</span>}
+                {item.metadata?.status && <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold">{item.metadata.status}</span>}
+                {(item.metadata?.startYear || item.metadata?.endYear) && (
+                  <span>{[item.metadata?.startYear, item.metadata?.endYear].filter(Boolean).join(' تا ')}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WEEKLY_SCHEDULE_DAYS = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+
+/** ویجت برنامه هفتگی ترم جاری — گرید ساده روز×بازهٔ زمانی، از ستون weekly_schedule خودِ صفحه */
+const DedicatedPageWeeklyScheduleWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useSmartData<DedicatedPageScheduleSlot>(
+    () => (dedicatedPageId ? fetchDedicatedPageWeeklyScheduleForWidget(dedicatedPageId) : Promise.resolve([])),
+    [dedicatedPageId]
+  );
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  const byDay = new Map<string, DedicatedPageScheduleSlot[]>();
+  (data || []).forEach((slot) => {
+    const list = byDay.get(slot.day) || [];
+    list.push(slot);
+    byDay.set(slot.day, list);
+  });
+
+  const daysWithSlots = WEEKLY_SCHEDULE_DAYS.filter((d) => (byDay.get(d) || []).length > 0);
+
+  return (
+    <div style={containerStyle}>
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="table" count={5} />
+      ) : daysWithSlots.length === 0 ? (
+        <SmartEmpty error="هنوز برنامهٔ هفتگی‌ای برای این ترم ثبت نشده است" />
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-800">
+          <table className="w-full text-xs">
+            <tbody>
+              {daysWithSlots.map((day) => (
+                <tr key={day} className="border-b last:border-b-0 border-gray-100 dark:border-slate-800">
+                  <td className="p-3 font-black text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-800/60 whitespace-nowrap align-top w-24">{day}</td>
+                  <td className="p-3">
+                    <div className="flex flex-col gap-2">
+                      {(byDay.get(day) || []).map((slot, i) => (
+                        <div key={i} className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono dir-ltr px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-700 dark:text-violet-300">
+                            <CalendarClock className="w-3 h-3" />
+                            {slot.startTime}–{slot.endTime}
+                          </span>
+                          <span className="font-bold text-slate-800 dark:text-white">{slot.courseTitle}</span>
+                          {slot.location && <span className="text-[10px] text-slate-400">({slot.location})</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** ویجت فایل‌های درس — عمومیِ دسته‌بندی‌شده + خصوصیِ رمزدار (هر دسته پسورد جداگانه) */
+const DedicatedPageDocumentsWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data: taxonomies, error: taxError, retry: retryTax } = useSmartData<DedicatedPageTaxonomyOption>(
+    () => (dedicatedPageId ? fetchDedicatedPageTaxonomiesForWidget(dedicatedPageId) : Promise.resolve([])),
+    [dedicatedPageId]
+  );
+  const { data: docs, error: docError, retry: retryDocs } = useSmartData<DedicatedPageContentItem>(
+    () => (dedicatedPageId ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'document', 200, 'desc') : Promise.resolve([])),
+    [dedicatedPageId]
+  );
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  const error = taxError || docError;
+  if (error) {
+    return <div style={containerStyle}><SmartEmpty error={error} onRetry={() => { retryTax(); retryDocs(); }} /></div>;
+  }
+  if (!taxonomies || !docs) {
+    return <div style={containerStyle}><SmartSkeleton variant="list" count={3} /></div>;
+  }
+
+  const byCategory = new Map<string, DedicatedPageContentItem[]>();
+  docs.forEach((d) => {
+    const key = d.category_slug || '';
+    const list = byCategory.get(key) || [];
+    list.push(d);
+    byCategory.set(key, list);
+  });
+
+  const categories = taxonomies.filter((t) => (byCategory.get(t.slug) || []).length > 0);
+  const uncategorized = byCategory.get('') || [];
+
+  if (categories.length === 0 && uncategorized.length === 0) {
+    return <div style={containerStyle}><SmartEmpty error="هنوز فایلی برای این صفحه ثبت نشده است" /></div>;
+  }
+
+  const renderFileRow = (file: DedicatedPageContentItem) => (
+    <a
+      key={file.id}
+      href={file.file_url || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+    >
+      <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate flex-1">{file.title}</span>
+      {file.file_size && <span className="text-[10px] text-slate-400 shrink-0">{file.file_size}</span>}
+    </a>
+  );
+
+  return (
+    <div style={containerStyle} className="space-y-4">
+      {categories.map((cat) => (
+        <div key={cat.id} className="rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
+          <div className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60">
+            {cat.is_private ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <FileText className="w-3.5 h-3.5 text-slate-400" />}
+            <span className="text-xs font-black text-slate-800 dark:text-white">{cat.title}</span>
+            {cat.is_private && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">خصوصی</span>
+            )}
+          </div>
+          <div className="p-1.5">
+            {(byCategory.get(cat.slug) || []).map(renderFileRow)}
+          </div>
+        </div>
+      ))}
+      {uncategorized.length > 0 && (
+        <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-1.5">
+          {uncategorized.map(renderFileRow)}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** ویجت مخزن اسناد و فایل‌ها — اتصال به وب‌سرویس رسانه */
 const FileManagerWidget: React.FC<{
   widget: WidgetInstance;
@@ -5096,6 +5598,44 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     case 'dp-members':
       return isEditorPreview ? null : (
         <DedicatedPageMembersWidget widget={widget} binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+
+    // بلوک‌های اختصاصیِ صفحهٔ استاد (هیئت علمی) — تحصیلات/تماس/دروس/فایل‌ها و...
+    case 'dp-contact-info':
+      return isEditorPreview ? null : (
+        <DedicatedPageContactInfoWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-education':
+      return isEditorPreview ? null : (
+        <DedicatedPageEducationWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-research-interests':
+      return isEditorPreview ? null : (
+        <DedicatedPageResearchInterestsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-publications':
+      return isEditorPreview ? null : (
+        <DedicatedPagePublicationsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-books':
+      return isEditorPreview ? null : (
+        <DedicatedPageBooksWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-courses-timeline':
+      return isEditorPreview ? null : (
+        <DedicatedPageCoursesTimelineWidget binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-projects':
+      return isEditorPreview ? null : (
+        <DedicatedPageProjectsWidget binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-weekly-schedule':
+      return isEditorPreview ? null : (
+        <DedicatedPageWeeklyScheduleWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-documents':
+      return isEditorPreview ? null : (
+        <DedicatedPageDocumentsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
       );
 
     // بلوک‌های قالب گروه آموزشی — همیشه به گروهِ صفحهٔ جاری وصل‌اند (بدون binding دستی).

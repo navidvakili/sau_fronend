@@ -371,13 +371,63 @@ export interface DedicatedPageTaxonomyOption {
   id: number;
   slug: string;
   title: string;
+  color?: string;
+  description?: string | null;
+  item_count?: number;
+  is_private?: boolean;
 }
 
-/** دسته‌بندی‌های یک صفحهٔ اختصاصی — برای فیلتر دسته در تنظیمات بلوک گالری */
+/** دسته‌بندی‌های یک صفحهٔ اختصاصی — برای فیلتر دسته در تنظیمات بلوک گالری، و برای گروه‌بندی بلوک اسناد */
 export const fetchDedicatedPageTaxonomiesForWidget = async (
   pageId: number | string
 ): Promise<DedicatedPageTaxonomyOption[]> => {
   const res = await API<{ data: DedicatedPageTaxonomyOption[] }>(`dedicated-pages/${pageId}/taxonomies`);
+  return res.data;
+};
+
+/** اطلاعات تماس زندهٔ یک صفحهٔ اختصاصی — برای بلوک «اطلاعات تماس استاد» */
+export interface DedicatedPageContactInfo {
+  email: string | null;
+  phone: string | null;
+  extension: string | null;
+  location: string | null;
+}
+
+export const fetchDedicatedPageContactInfoForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageContactInfo> => {
+  const res = await API<{ data: { contactInfo: DedicatedPageContactInfo } }>(`dedicated-pages/${pageId}`);
+  return res.data.contactInfo;
+};
+
+/** پروفایل علمی زندهٔ استاد (تحصیلات/علایق پژوهشی/مقالات/کتب) — از رکورد Person متصل به صفحه */
+export interface DedicatedPageProfessorProfile {
+  education: Array<{ degree?: string; field?: string; institution?: string; year?: string }>;
+  researchInterests: string[];
+  publications: Array<{ title?: string; journal?: string; year?: string; citations?: number }>;
+  books: Array<{ title?: string; publisher?: string; year?: string; isbn?: string }>;
+}
+
+export const fetchDedicatedPageProfessorProfileForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageProfessorProfile | null> => {
+  const res = await API<{ data: { professorProfile: DedicatedPageProfessorProfile | null } }>(`dedicated-pages/${pageId}`);
+  return res.data.professorProfile;
+};
+
+/** برنامه هفتگی ترم جاری یک صفحهٔ اختصاصی استاد */
+export interface DedicatedPageScheduleSlot {
+  day: string;
+  startTime: string;
+  endTime: string;
+  courseTitle: string;
+  location?: string;
+}
+
+export const fetchDedicatedPageWeeklyScheduleForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageScheduleSlot[]> => {
+  const res = await API<{ data: DedicatedPageScheduleSlot[] }>(`dedicated-pages/${pageId}/weekly-schedule`);
   return res.data;
 };
 

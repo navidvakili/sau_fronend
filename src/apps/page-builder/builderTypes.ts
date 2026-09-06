@@ -82,7 +82,16 @@ export type DedicatedPageWidgetType =
   | 'dp-articles'
   | 'dp-gallery'
   | 'dp-events'
-  | 'dp-members';
+  | 'dp-members'
+  | 'dp-contact-info'
+  | 'dp-education'
+  | 'dp-research-interests'
+  | 'dp-courses-timeline'
+  | 'dp-weekly-schedule'
+  | 'dp-publications'
+  | 'dp-books'
+  | 'dp-projects'
+  | 'dp-documents';
 
 /** بلوک‌های قالب پویای «گروه آموزشی» — به‌صورت خودکار به گروهِ صفحهٔ جاری وصل می‌شوند
  *  (بدون انتخاب دستی رکورد در تنظیمات، چون این لایوت مشترکِ همهٔ گروه‌هاست) */
@@ -144,6 +153,16 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'dp-gallery': 'گالری تصاویر صفحهٔ اختصاصی',
   'dp-events': 'رویدادهای صفحهٔ اختصاصی',
   'dp-members': 'اعضای شورا و کادر اجرایی',
+  // بلوک‌های اختصاصی صفحهٔ استاد
+  'dp-contact-info': 'اطلاعات تماس استاد',
+  'dp-education': 'تحصیلات',
+  'dp-research-interests': 'علایق پژوهشی',
+  'dp-courses-timeline': 'تایم‌لاین دروس ارائه‌شده',
+  'dp-weekly-schedule': 'برنامه هفتگی ترم جاری',
+  'dp-publications': 'مقالات منتشرشده',
+  'dp-books': 'کتب تألیف‌شده',
+  'dp-projects': 'پروژه‌های تحقیقاتی',
+  'dp-documents': 'فایل‌های درس',
   // بلوک‌های قالب گروه آموزشی
   'dept-fields': 'رشته‌های تحصیلی گروه',
   'dept-instructors': 'اساتید مدعو شاخص گروه',

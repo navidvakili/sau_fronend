@@ -299,6 +299,13 @@ export interface AwardItem {
   year?: string;
 }
 
+export interface BookItem {
+  title: string;
+  publisher?: string;
+  year?: string;
+  isbn?: string;
+}
+
 export interface PersonItem {
   id: number;
   type: PersonType;
@@ -321,6 +328,7 @@ export interface PersonItem {
   education: EducationItem[];
   researchInterests: string[];
   publications: PublicationItem[];
+  books: BookItem[];
   courses: string[];
   awards: AwardItem[];
   lectureNotes: Array<{ title: string }>;
@@ -359,6 +367,7 @@ export interface PersonPayload {
   education?: EducationItem[] | null;
   research_interests?: string[] | null;
   publications?: PublicationItem[] | null;
+  books?: BookItem[] | null;
   courses?: string[] | null;
   awards?: AwardItem[] | null;
   lecture_notes?: Array<{ title: string }> | null;

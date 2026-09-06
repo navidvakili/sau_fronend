@@ -43,7 +43,12 @@ import {
   FileSpreadsheet,
   Navigation,
   ClipboardList,
-  GraduationCap
+  GraduationCap,
+  Mail,
+  History,
+  CalendarClock,
+  FlaskConical,
+  Lock
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -121,6 +126,17 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'dp-gallery', category: 'dedicated-page', name: 'گالری تصاویر صفحهٔ اختصاصی', desc: 'گالری تصاویر همین صفحهٔ اختصاصی به‌همراه دسته‌بندی', icon: Images, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-events', category: 'dedicated-page', name: 'رویدادهای صفحهٔ اختصاصی', desc: 'فهرست رویدادهای همین صفحهٔ اختصاصی', icon: CalendarDays, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-members', category: 'dedicated-page', name: 'اعضای شورا و کادر اجرایی', desc: 'اعضای شورای مرکزی/کادر اجرایی همین صفحهٔ اختصاصی', icon: UsersRound, badge: 'صفحهٔ اختصاصی' },
+
+    // Faculty Member blocks — مخصوص صفحات اختصاصی اساتید، بر پایهٔ رکورد واقعی Person و محتوای صفحه
+    { type: 'dp-contact-info', category: 'dedicated-page', name: 'اطلاعات تماس استاد', desc: 'ایمیل، تلفن، داخلی و آدرس دفتر — به‌صورت زنده از تنظیمات صفحه', icon: Mail, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-education', category: 'dedicated-page', name: 'تحصیلات', desc: 'سوابق تحصیلی استاد، از سامانهٔ اعضای دانشگاه', icon: GraduationCap, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-research-interests', category: 'dedicated-page', name: 'علایق پژوهشی', desc: 'زمینه‌های پژوهشی مورد علاقهٔ استاد', icon: Sparkles, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-courses-timeline', category: 'dedicated-page', name: 'تایم‌لاین دروس ارائه‌شده', desc: 'دروسی که استاد در نیمسال‌های مختلف ارائه کرده، به‌ترتیب زمانی', icon: History, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-weekly-schedule', category: 'dedicated-page', name: 'برنامه هفتگی ترم جاری', desc: 'جدول برنامهٔ هفتگی کلاس‌های استاد در نیمسال جاری', icon: CalendarClock, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-publications', category: 'dedicated-page', name: 'مقالات منتشرشده', desc: 'فهرست مقالات علمی استاد', icon: FileText, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-books', category: 'dedicated-page', name: 'کتب تألیف‌شده', desc: 'فهرست کتاب‌های تألیف‌شده توسط استاد', icon: BookOpen, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-projects', category: 'dedicated-page', name: 'پروژه‌های تحقیقاتی', desc: 'پروژه‌های تحقیقاتی جاری و پیشین استاد', icon: FlaskConical, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-documents', category: 'dedicated-page', name: 'فایل‌های درس', desc: 'فایل‌های عمومی دسته‌بندی‌شده و فایل‌های خصوصیِ رمزدار', icon: Lock, badge: 'صفحهٔ اختصاصی' },
 
     // Academic Department blocks — این بلوک‌ها همیشه دادهٔ همان گروه آموزشی‌ای را نمایش می‌دهند
     // که این قالب پویا برایش رندر می‌شود — بدون نیاز به انتخاب دستی گروه

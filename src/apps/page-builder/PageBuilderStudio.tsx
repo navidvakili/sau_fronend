@@ -879,6 +879,33 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-contact-info') {
+      title = 'اطلاعات تماس صفحه';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-education') {
+      title = 'تحصیلات';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-research-interests') {
+      title = 'علایق پژوهشی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-courses-timeline') {
+      title = 'تایم‌لاین دروس ارائه‌شده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-weekly-schedule') {
+      title = 'برنامه هفتگی ترم جاری';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-publications') {
+      title = 'مقالات منتشرشده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-books') {
+      title = 'کتب تألیف‌شده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-projects') {
+      title = 'پروژه‌های تحقیقاتی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-documents') {
+      title = 'فایل‌های درس';
+      bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dept-fields') {
       title = 'رشته‌های تحصیلی گروه';
       bindingDataSource = 'academic-department';
@@ -1104,6 +1131,33 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-contact-info') {
+      title = 'اطلاعات تماس صفحه';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-education') {
+      title = 'تحصیلات';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-research-interests') {
+      title = 'علایق پژوهشی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-courses-timeline') {
+      title = 'تایم‌لاین دروس ارائه‌شده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-weekly-schedule') {
+      title = 'برنامه هفتگی ترم جاری';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-publications') {
+      title = 'مقالات منتشرشده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-books') {
+      title = 'کتب تألیف‌شده';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-projects') {
+      title = 'پروژه‌های تحقیقاتی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-documents') {
+      title = 'فایل‌های درس';
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dept-fields') {
       title = 'رشته‌های تحصیلی گروه';
