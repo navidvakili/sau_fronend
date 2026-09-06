@@ -22,7 +22,8 @@ import {
   fetchDedicatedPageTaxonomiesForWidget,
   fetchDedicatedPageProfessorProfileForWidget,
   fetchDedicatedPageWeeklyScheduleForWidget,
-  fetchDedicatedPageContactInfoForWidget
+  fetchDedicatedPageContactInfoForWidget,
+  fetchDedicatedPageHeroForWidget
 } from './api';
 import type {
   SmartPageTreeNode,
@@ -31,7 +32,8 @@ import type {
   DedicatedPageTaxonomyOption,
   DedicatedPageProfessorProfile,
   DedicatedPageScheduleSlot,
-  DedicatedPageContactInfo
+  DedicatedPageContactInfo,
+  DedicatedPageHeroSummary
 } from './api';
 import type { NewsItem, AnnouncementItem, AchievementItem, PersonItem, AcademicFieldItem, InfoFileItem } from '@/src/shared-types';
 import type { MediaFile } from '../gallery/types';
@@ -106,7 +108,9 @@ import {
   Minimize2,
   ChevronLeft,
   ChevronRight,
-  Search
+  Search,
+  Copy,
+  Printer
 } from 'lucide-react';
 import {
   EitaaIcon,
@@ -2830,10 +2834,11 @@ const DedicatedPageContactInfoWidget: React.FC<{
   }
 
   const rows = [
-    { icon: Mail, label: 'ایمیل', value: info.email },
-    { icon: Phone, label: 'تلفن', value: info.phone },
-    { icon: Phone, label: 'داخلی', value: info.extension },
-    { icon: MapPin, label: 'آدرس دفتر', value: info.location }
+    { icon: Mail, label: 'ایمیل', value: info.email, copyable: true },
+    { icon: Phone, label: 'تلفن', value: info.phone, copyable: true },
+    { icon: Phone, label: 'داخلی', value: info.extension, copyable: false },
+    { icon: MapPin, label: 'آدرس دفتر', value: info.location, copyable: false },
+    { icon: Clock, label: 'ساعات مشاوره', value: info.officeHours, copyable: false }
   ].filter((r) => r.value);
 
   if (rows.length === 0) {
@@ -2847,16 +2852,149 @@ const DedicatedPageContactInfoWidget: React.FC<{
   return (
     <div style={containerStyle} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-3">
       {rows.map((r, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+        <div key={i} className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <r.icon className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-[10px] text-slate-400">{r.label}</div>
-            <div className="text-xs font-bold text-slate-800 dark:text-white truncate" dir={r.label === 'آدرس دفتر' ? 'rtl' : 'ltr'}>{r.value}</div>
+            <div className="text-xs font-bold text-slate-800 dark:text-white truncate" dir={r.label === 'آدرس دفتر' || r.label === 'ساعات مشاوره' ? 'rtl' : 'ltr'}>{r.value}</div>
           </div>
+          {r.copyable && (
+            <button
+              onClick={() => navigator.clipboard?.writeText(r.value || '')}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-500/10 shrink-0"
+              title="کپی"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       ))}
+    </div>
+  );
+};
+
+/** ویجت هدر غنیِ صفحهٔ استاد — آواتار/رتبه/گروه/دکمه‌های کپی‌لینک،چاپ،Google Scholar + گرید آمار + دکمهٔ ارتباط با استاد */
+const DedicatedPageFacultyHeroWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const [hero, setHero] = useState<DedicatedPageHeroSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!dedicatedPageId) return;
+    let cancelled = false;
+    setHero(null);
+    setError(null);
+    fetchDedicatedPageHeroForWidget(dedicatedPageId)
+      .then((res) => { if (!cancelled) setHero(res); })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'خطا در دریافت اطلاعات هدر صفحه'); });
+    return () => { cancelled = true; };
+  }, [dedicatedPageId]);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  if (error) {
+    return <div style={containerStyle}><SmartEmpty error={error} /></div>;
+  }
+
+  if (!hero) {
+    return (
+      <div style={containerStyle} className="p-6 rounded-2xl bg-emerald-950/90 space-y-3">
+        <SmartSkeleton variant="list" count={2} />
+      </div>
+    );
+  }
+
+  const profile = hero.professorProfile;
+  const stats = [
+    { icon: FileText, label: 'مقاله', value: profile?.publications?.length || 0 },
+    { icon: BookOpen, label: 'کتاب', value: profile?.books?.length || 0 },
+    { icon: FlaskConical, label: 'پروژهٔ پژوهشی', value: hero.projectsCount },
+    { icon: Calendar, label: 'درس', value: hero.coursesCount }
+  ];
+
+  const handleCopyLink = () => {
+    if (typeof window === 'undefined') return;
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <div style={containerStyle} className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-950 to-emerald-900 text-white">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden border-4 border-emerald-700/50 bg-emerald-800 shrink-0 flex items-center justify-center">
+          {profile?.avatarUrl ? (
+            <img src={profile.avatarUrl} alt={hero.owner.name} className="w-full h-full object-cover" />
+          ) : (
+            <User className="w-12 h-12 text-emerald-300" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 text-center md:text-right">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
+            {profile?.rank && (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-700/50 text-emerald-100 text-[11px] font-bold">{profile.rank}</span>
+            )}
+            {profile?.department && (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-700/50 text-emerald-100 text-[11px] font-bold">{profile.department}</span>
+            )}
+          </div>
+          <h2 className="text-xl md:text-2xl font-black">{hero.owner.name}</h2>
+          <p className="text-emerald-200 text-xs md:text-sm mt-1">{hero.owner.roleTitle}</p>
+
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-4">
+            <button
+              onClick={handleCopyLink}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>{copied ? 'کپی شد' : 'کپی لینک'}</span>
+            </button>
+            <button
+              onClick={() => window.print?.()}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>چاپ</span>
+            </button>
+            {profile?.scholarUrl && (
+              <a
+                href={profile.scholarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Google Scholar</span>
+              </a>
+            )}
+            <button
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>ارتباط با استاد</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        {stats.map((s, i) => (
+          <div key={i} className="rounded-xl bg-white/10 p-3 text-center">
+            <s.icon className="w-4 h-4 mx-auto mb-1 text-emerald-300" />
+            <div className="text-lg font-black">{s.value}</div>
+            <div className="text-[10px] text-emerald-200">{s.label}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -2894,7 +3032,7 @@ const DedicatedPageEducationWidget: React.FC<{
       ) : (
         data.map((edu, i) => (
           <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
               <GraduationCap className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -2970,7 +3108,7 @@ const DedicatedPageResearchInterestsWidget: React.FC<{
           {data.map((interest, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[11px] font-bold border border-violet-500/20"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 text-[11px] font-bold border border-purple-500/20"
             >
               <Sparkles className="w-3 h-3" />
               {interest}
@@ -3003,7 +3141,7 @@ const DedicatedPagePublicationsWidget: React.FC<{
         <SmartEmpty error="هنوز مقاله‌ای برای این استاد ثبت نشده است" />
       ) : (
         data.map((pub, i) => (
-          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 group">
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4" />
             </div>
@@ -3013,8 +3151,20 @@ const DedicatedPagePublicationsWidget: React.FC<{
                 {pub.journal && <span>{pub.journal}</span>}
                 {pub.year && <span>· {pub.year}</span>}
                 {typeof pub.citations === 'number' && <span>· {pub.citations} استناد</span>}
+                {pub.doi && <span dir="ltr">· DOI: {pub.doi}</span>}
               </div>
             </div>
+            {pub.link && (
+              <a
+                href={pub.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-500/10 shrink-0"
+                title="مشاهدهٔ مقاله"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         ))
       )}
@@ -3043,7 +3193,7 @@ const DedicatedPageBooksWidget: React.FC<{
         <SmartEmpty error="هنوز کتابی برای این استاد ثبت نشده است" />
       ) : (
         data.map((book, i) => (
-          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 group">
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
@@ -3052,9 +3202,19 @@ const DedicatedPageBooksWidget: React.FC<{
               <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2">
                 {book.publisher && <span>{book.publisher}</span>}
                 {book.year && <span>· {book.year}</span>}
+                {book.pages && <span>· {book.pages} صفحه</span>}
                 {book.isbn && <span dir="ltr">· ISBN {book.isbn}</span>}
               </div>
             </div>
+            {book.isbn && (
+              <button
+                onClick={() => navigator.clipboard?.writeText(book.isbn || '')}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-500/10 shrink-0"
+                title="کپی شابک"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ))
       )}
@@ -3092,14 +3252,22 @@ const DedicatedPageCoursesTimelineWidget: React.FC<{
       ) : items.length === 0 ? (
         <SmartEmpty error="هنوز درسی برای این استاد ثبت نشده است" />
       ) : (
-        <div className="relative pr-6 space-y-6 before:content-[''] before:absolute before:right-[7px] before:top-1 before:bottom-1 before:w-0.5 before:bg-violet-500/20">
+        <div className="relative pr-6 space-y-6 before:content-[''] before:absolute before:right-[7px] before:top-1 before:bottom-1 before:w-0.5 before:bg-purple-500/20">
           {items.map((item) => (
             <div key={item.id} className="relative">
-              <span className="absolute right-[-24px] top-1 w-3.5 h-3.5 rounded-full bg-violet-600 ring-4 ring-violet-500/15" />
-              <div className="text-[10px] font-bold text-violet-600 dark:text-violet-400">
+              <span className="absolute right-[-24px] top-1 w-3.5 h-3.5 rounded-full bg-purple-600 ring-4 ring-purple-500/15" />
+              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
                 {[item.metadata?.term, item.metadata?.year].filter(Boolean).join(' — ')}
               </div>
-              <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{item.title}</div>
+              <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5 flex items-center gap-2 flex-wrap">
+                <span>{item.title}</span>
+                {item.metadata?.level && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold">{item.metadata.level}</span>
+                )}
+                {item.metadata?.units && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 font-bold">{item.metadata.units} واحد</span>
+                )}
+              </div>
               {item.metadata?.code && <div className="text-[11px] text-slate-400">کد درس: {item.metadata.code}</div>}
               {item.summary && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{item.summary}</p>}
             </div>
@@ -3143,10 +3311,17 @@ const DedicatedPageProjectsWidget: React.FC<{
                 </div>
                 <div className="text-xs font-black text-slate-900 dark:text-white">{item.title}</div>
               </div>
+              {item.metadata?.role && <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">نقش: {item.metadata.role}</p>}
               {item.summary && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{item.summary}</p>}
               <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
                 {item.metadata?.funder && <span>حامی مالی: {item.metadata.funder}</span>}
-                {item.metadata?.status && <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold">{item.metadata.status}</span>}
+                {item.metadata?.status && (
+                  <span className={`px-2 py-0.5 rounded-full font-bold ${
+                    ['completed', 'پایان‌یافته', 'خاتمه‌یافته'].includes(item.metadata.status)
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  }`}>{item.metadata.status}</span>
+                )}
                 {(item.metadata?.startYear || item.metadata?.endYear) && (
                   <span>{[item.metadata?.startYear, item.metadata?.endYear].filter(Boolean).join(' تا ')}</span>
                 )}
@@ -5637,6 +5812,10 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
 
     // بلوک‌های اختصاصیِ صفحهٔ استاد (هیئت علمی) — تحصیلات/تماس/دروس/فایل‌ها و...
+    case 'dp-faculty-hero':
+      return isEditorPreview ? null : (
+        <DedicatedPageFacultyHeroWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
     case 'dp-contact-info':
       return isEditorPreview ? null : (
         <DedicatedPageContactInfoWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />

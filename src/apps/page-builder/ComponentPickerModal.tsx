@@ -48,7 +48,8 @@ import {
   History,
   CalendarClock,
   FlaskConical,
-  Lock
+  Lock,
+  UserCircle2
 } from 'lucide-react';
 
 interface ComponentPickerModalProps {
@@ -128,6 +129,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     { type: 'dp-members', category: 'dedicated-page', name: 'اعضای شورا و کادر اجرایی', desc: 'اعضای شورای مرکزی/کادر اجرایی همین صفحهٔ اختصاصی', icon: UsersRound, badge: 'صفحهٔ اختصاصی' },
 
     // Faculty Member blocks — مخصوص صفحات اختصاصی اساتید، بر پایهٔ رکورد واقعی Person و محتوای صفحه
+    { type: 'dp-faculty-hero', category: 'dedicated-page', name: 'هدر غنی صفحهٔ استاد', desc: 'آواتار، رتبهٔ علمی، گروه آموزشی، آمار و دکمهٔ ارتباط با استاد', icon: UserCircle2, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-contact-info', category: 'dedicated-page', name: 'اطلاعات تماس استاد', desc: 'ایمیل، تلفن، داخلی و آدرس دفتر — به‌صورت زنده از تنظیمات صفحه', icon: Mail, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-education', category: 'dedicated-page', name: 'تحصیلات', desc: 'سوابق تحصیلی استاد، از سامانهٔ اعضای دانشگاه', icon: GraduationCap, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-awards', category: 'dedicated-page', name: 'افتخارات و جوایز علمی', desc: 'جوایز و افتخارات علمی استاد، از سامانهٔ اعضای دانشگاه', icon: Award, badge: 'صفحهٔ اختصاصی' },

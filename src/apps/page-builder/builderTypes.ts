@@ -83,6 +83,7 @@ export type DedicatedPageWidgetType =
   | 'dp-gallery'
   | 'dp-events'
   | 'dp-members'
+  | 'dp-faculty-hero'
   | 'dp-contact-info'
   | 'dp-education'
   | 'dp-awards'
@@ -155,6 +156,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   'dp-events': 'رویدادهای صفحهٔ اختصاصی',
   'dp-members': 'اعضای شورا و کادر اجرایی',
   // بلوک‌های اختصاصی صفحهٔ استاد
+  'dp-faculty-hero': 'هدر غنی صفحهٔ استاد',
   'dp-contact-info': 'اطلاعات تماس استاد',
   'dp-education': 'تحصیلات',
   'dp-awards': 'افتخارات و جوایز علمی',

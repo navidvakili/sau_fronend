@@ -879,6 +879,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-faculty-hero') {
+      title = 'هدر غنی صفحهٔ استاد';
+      bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-contact-info') {
       title = 'اطلاعات تماس صفحه';
       bindingDataSource = 'dedicated-page';
@@ -1134,6 +1137,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-members') {
       title = 'اعضای شورا و کادر اجرایی';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-faculty-hero') {
+      title = 'هدر غنی صفحهٔ استاد';
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-contact-info') {
       title = 'اطلاعات تماس صفحه';

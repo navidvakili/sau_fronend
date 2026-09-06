@@ -390,6 +390,7 @@ export interface DedicatedPageContactInfo {
   email: string | null;
   phone: string | null;
   extension: string | null;
+  officeHours: string | null;
   location: string | null;
 }
 
@@ -404,10 +405,52 @@ export const fetchDedicatedPageContactInfoForWidget = async (
 export interface DedicatedPageProfessorProfile {
   education: Array<{ degree?: string; field?: string; institution?: string; year?: string }>;
   researchInterests: string[];
-  publications: Array<{ title?: string; journal?: string; year?: string; citations?: number }>;
-  books: Array<{ title?: string; publisher?: string; year?: string; isbn?: string }>;
+  publications: Array<{ title?: string; journal?: string; year?: string; citations?: number; doi?: string; link?: string }>;
+  books: Array<{ title?: string; publisher?: string; year?: string; isbn?: string; pages?: string }>;
   awards: Array<{ title?: string; year?: string }>;
+  scholarUrl?: string | null;
+  orcid?: string | null;
+  scopusId?: string | null;
+  avatarUrl?: string | null;
+  rank?: string | null;
+  department?: string | null;
 }
+
+/** خلاصهٔ صفحه — برای ویجت هدرِ غنیِ استاد (dp-faculty-hero) */
+export interface DedicatedPageHeroSummary {
+  title: string;
+  shortTitle: string | null;
+  logo: string | null;
+  owner: { name: string; roleTitle: string; phone: string; email: string };
+  professorProfile: DedicatedPageProfessorProfile | null;
+  coursesCount: number;
+  projectsCount: number;
+}
+
+export const fetchDedicatedPageHeroForWidget = async (
+  pageId: number | string
+): Promise<DedicatedPageHeroSummary> => {
+  const res = await API<{
+    data: {
+      title: string;
+      shortTitle: string | null;
+      logo: string | null;
+      owner: { name: string; roleTitle: string; phone: string; email: string };
+      professorProfile: DedicatedPageProfessorProfile | null;
+      contents?: Array<{ type: string }>;
+    };
+  }>(`dedicated-pages/${pageId}`);
+  const contents = res.data.contents || [];
+  return {
+    title: res.data.title,
+    shortTitle: res.data.shortTitle,
+    logo: res.data.logo,
+    owner: res.data.owner,
+    professorProfile: res.data.professorProfile,
+    coursesCount: contents.filter((c) => c.type === 'course').length,
+    projectsCount: contents.filter((c) => c.type === 'research_project').length,
+  };
+};
 
 export const fetchDedicatedPageProfessorProfileForWidget = async (
   pageId: number | string
