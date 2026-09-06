@@ -10,9 +10,9 @@
     "semantic_hash": "685a5474557153ea9525273ec73b43a9"
   },
   "src/App.tsx": {
-    "mtime": 1787980329.4393966,
-    "ast_hash": "0939282b01013d8af78cd2d3a282772b",
-    "semantic_hash": "0939282b01013d8af78cd2d3a282772b"
+    "mtime": 1788670988.492407,
+    "ast_hash": "56c55952b9b57153de15545efbb3b694",
+    "semantic_hash": ""
   },
   "src/apps/ModuleRenderer.tsx": {
     "mtime": 1787387521.7512782,
@@ -28,11 +28,6 @@
     "mtime": 1787381912.2696242,
     "ast_hash": "952ae3c30bfd55101e7ccbbb07bd7dec",
     "semantic_hash": "952ae3c30bfd55101e7ccbbb07bd7dec"
-  },
-  "src/apps/achievements/index.tsx": {
-    "mtime": 1787980329.4393966,
-    "ast_hash": "765d2c1561b843c1ad97dddb15fe6245",
-    "semantic_hash": "765d2c1561b843c1ad97dddb15fe6245"
   },
   "src/apps/analytics/AnalyticsDashboard.tsx": {
     "mtime": 1787985367.2395344,
@@ -55,9 +50,9 @@
     "semantic_hash": "66b8ffd87549aa4d4fa7e58d41f28153"
   },
   "src/apps/announcements/index.tsx": {
-    "mtime": 1787980329.4405377,
-    "ast_hash": "549980b6c0411b9e5b72c4cf847ee8ca",
-    "semantic_hash": "549980b6c0411b9e5b72c4cf847ee8ca"
+    "mtime": 1788673653.322613,
+    "ast_hash": "ac3f631ed45acddd56e4ecbc64bcc215",
+    "semantic_hash": ""
   },
   "src/apps/auth/index.tsx": {
     "mtime": 1787381912.2741015,
@@ -365,9 +360,9 @@
     "semantic_hash": "be45f639a09d8820f89bbcf57de90064"
   },
   "src/apps/index.tsx": {
-    "mtime": 1788515644.826619,
-    "ast_hash": "1dfe88342975fa76293000cac52e8e9a",
-    "semantic_hash": "1dfe88342975fa76293000cac52e8e9a"
+    "mtime": 1788670789.1531084,
+    "ast_hash": "d3ff03139f95d5a6325206318c04772c",
+    "semantic_hash": ""
   },
   "src/apps/navigation/ApiHeadlessPreviewModal.tsx": {
     "mtime": 1787381912.3156638,
@@ -445,9 +440,9 @@
     "semantic_hash": "af98243e38f9ba9da51430980d714c58"
   },
   "src/apps/news/index.tsx": {
-    "mtime": 1787980329.442049,
-    "ast_hash": "aa79d89c5bf1c22001a3bc9c7f978996",
-    "semantic_hash": "aa79d89c5bf1c22001a3bc9c7f978996"
+    "mtime": 1788673600.0182042,
+    "ast_hash": "c704c8a43c413154362ab9bcb58b857a",
+    "semantic_hash": ""
   },
   "src/apps/page-builder/Canvas.tsx": {
     "mtime": 1788533598.2989397,
@@ -880,9 +875,9 @@
     "semantic_hash": "8a6a7c477b97528d25c5e617268cd323"
   },
   "src/shared-types/index.ts": {
-    "mtime": 1788643862.8174171,
-    "ast_hash": "085d0aadd84b48bb9d749f9e6ec56dd4",
-    "semantic_hash": "085d0aadd84b48bb9d749f9e6ec56dd4"
+    "mtime": 1788671029.385533,
+    "ast_hash": "3b6213238ea2367ac8d23e74d67b6a43",
+    "semantic_hash": ""
   },
   "src/shared-types/slider-studio.ts": {
     "mtime": 1787381912.3951766,
@@ -920,9 +915,9 @@
     "semantic_hash": "b0ddde05576df27a31775cabf4101e77"
   },
   "src/shared-utils/permissions.ts": {
-    "mtime": 1788515915.008367,
-    "ast_hash": "681f6b5b4846d713ad8c98eaa6b9ff4d",
-    "semantic_hash": "681f6b5b4846d713ad8c98eaa6b9ff4d"
+    "mtime": 1788670795.912802,
+    "ast_hash": "ed0947f1dfe23c86ef7beeb92409a5d7",
+    "semantic_hash": ""
   },
   "src/shared-utils/storageUrl.ts": {
     "mtime": 1787381912.3994462,
