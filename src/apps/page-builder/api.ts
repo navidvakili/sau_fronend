@@ -401,6 +401,14 @@ export const fetchDedicatedPageContactInfoForWidget = async (
   return res.data.contactInfo;
 };
 
+/** رنگ سازمانی/تاکیدیِ صفحه (layoutConfig.accentColor) — برای رنگ‌بندی پویای بلوک‌های dp-* در پیش‌نمایش ادمین */
+export const fetchDedicatedPageAccentColorForWidget = async (
+  pageId: number | string
+): Promise<string | null> => {
+  const res = await API<{ data: { layoutConfig?: { accentColor?: string | null } } }>(`dedicated-pages/${pageId}`);
+  return res.data.layoutConfig?.accentColor || null;
+};
+
 /** پروفایل علمی زندهٔ استاد (تحصیلات/علایق پژوهشی/مقالات/کتب) — از رکورد Person متصل به صفحه */
 export interface DedicatedPageProfessorProfile {
   education: Array<{ degree?: string; field?: string; institution?: string; year?: string }>;

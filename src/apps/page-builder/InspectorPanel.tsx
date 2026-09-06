@@ -3480,6 +3480,20 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
                 />
               </div>
+
+              {/* Max height + vertical scroll */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">حداکثر ارتفاع محتوا (px) — خالی = بدون محدودیت</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={selectedWidget.settings.style.maxHeight || ''}
+                  onChange={(e) => handleStyleChange('maxHeight', e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="مثلاً 400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+                <p className="text-[10px] text-slate-400">در صورت تنظیم، وقتی محتوا از این ارتفاع بیشتر شود، به‌جای کش‌آمدن کارت، اسکرول عمودی می‌گیرد.</p>
+              </div>
             </div>
           )}
 

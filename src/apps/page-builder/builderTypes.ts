@@ -214,6 +214,8 @@ export interface WidgetStyle {
   /** انیمیشن زوم هنگام هاور روی تصویر — پیش‌فرض روشن */
   imageHoverZoom?: boolean;
   maxWidth?: number; // px — caps widget width
+  /** حداکثر ارتفاع محتوای ویجت (px) — وقتی تنظیم شود، محتوای بیشتر به‌جای کش‌آمدن، اسکرول عمودی می‌گیرد */
+  maxHeight?: number;
   fullWidth?: boolean; // button stretches to full column width
   /** 'full' (default) | 'auto' (fit-content) | 'center'/'left'/'right' (fit-content + aligned) */
   widthMode?: 'full' | 'auto' | 'center' | 'left' | 'right';

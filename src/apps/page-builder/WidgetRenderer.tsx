@@ -23,7 +23,8 @@ import {
   fetchDedicatedPageProfessorProfileForWidget,
   fetchDedicatedPageWeeklyScheduleForWidget,
   fetchDedicatedPageContactInfoForWidget,
-  fetchDedicatedPageHeroForWidget
+  fetchDedicatedPageHeroForWidget,
+  fetchDedicatedPageAccentColorForWidget
 } from './api';
 import type {
   SmartPageTreeNode,
@@ -2795,7 +2796,8 @@ const DedicatedPageMembersWidget: React.FC<{
 const DedicatedPageContactInfoWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const [info, setInfo] = useState<DedicatedPageContactInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -2861,7 +2863,7 @@ const DedicatedPageContactInfoWidget: React.FC<{
     <div style={containerStyle} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-3">
       {rows.map((r) => (
         <div key={r.key} className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>
             <r.icon className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
@@ -2871,10 +2873,10 @@ const DedicatedPageContactInfoWidget: React.FC<{
           {r.copyable && (
             <button
               onClick={() => handleCopy(r.key, r.value || '')}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-500/10 shrink-0"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
               title="کپی"
             >
-              {copiedField === r.key ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedField === r.key ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" style={{ color: accentColor }} />}
             </button>
           )}
         </div>
@@ -2887,7 +2889,8 @@ const DedicatedPageContactInfoWidget: React.FC<{
 const DedicatedPageFacultyHeroWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const [hero, setHero] = useState<DedicatedPageHeroSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -2912,11 +2915,7 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
   }
 
   if (!hero) {
-    return (
-      <div style={containerStyle} className="p-6 rounded-2xl bg-emerald-950/90 space-y-3">
-        <SmartSkeleton variant="list" count={2} />
-      </div>
-    );
+    return null;
   }
 
   const profile = hero.professorProfile;
@@ -2935,21 +2934,28 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
     });
   };
 
+  const heroBg = shadeAccentColor(accentColor, -55);
+  const heroPanelBg = shadeAccentColor(accentColor, -68);
+  const avatarBorder = shadeAccentColor(accentColor, -40);
+  const badgeBg = accentWithAlpha(shadeAccentColor(accentColor, -25), 'cc');
+  const ctaBg = accentColor;
+  const ctaHoverBg = shadeAccentColor(accentColor, 15);
+
   return (
-    <div style={containerStyle} className="w-full bg-emerald-900 text-white">
-      <div className="bg-emerald-950/70 py-6">
+    <div style={{ ...containerStyle, backgroundColor: heroBg }} className="w-full text-white">
+      <div className="py-6" style={{ backgroundColor: heroPanelBg }}>
         <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="relative shrink-0">
-              <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl overflow-hidden border-4 border-emerald-800 shadow-xl bg-slate-200 flex items-center justify-center">
+              <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl overflow-hidden border-4 shadow-xl bg-slate-200 flex items-center justify-center" style={{ borderColor: avatarBorder }}>
                 {profile?.avatarUrl ? (
                   <img src={profile.avatarUrl} alt={hero.owner.name} className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-slate-400" />
                 )}
               </div>
-              <div className="absolute -bottom-2 -left-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg border border-emerald-400 shadow flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+              <div className="absolute -bottom-2 -left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow flex items-center gap-1" style={{ backgroundColor: ctaBg, borderWidth: 1, borderStyle: 'solid', borderColor: avatarBorder }}>
+                <span className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
                 <span>عضو رسمی هیئت علمی</span>
               </div>
             </div>
@@ -2957,20 +2963,20 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
             <div className="flex-1 min-w-0 text-center md:text-right space-y-2.5">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 {profile?.rank && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-800/80 text-emerald-200 text-xs font-bold border border-emerald-700">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border" style={{ backgroundColor: badgeBg, color: '#fff', borderColor: avatarBorder }}>
                     <GraduationCap className="w-3.5 h-3.5" />
                     <span>{profile.rank}</span>
                   </span>
                 )}
                 {profile?.department && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white/10 text-emerald-100 text-xs font-medium border border-white/10">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white/10 text-white/90 text-xs font-medium border border-white/10">
                     <Building2 className="w-3.5 h-3.5" />
                     <span>{profile.department}</span>
                   </span>
                 )}
               </div>
               <h2 className="text-2xl md:text-3xl font-black tracking-tight">{hero.owner.name}</h2>
-              <p className="text-emerald-200 text-xs md:text-sm font-semibold">{hero.owner.roleTitle}</p>
+              <p className="text-xs md:text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{hero.owner.roleTitle}</p>
 
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-2">
                 <button
@@ -2992,27 +2998,32 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
                     href={profile.scholarUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-white/10 hover:bg-white/20 text-emerald-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/15 transition flex items-center gap-1.5"
+                    className="bg-white/10 hover:bg-white/20 text-white/90 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/15 transition flex items-center gap-1.5"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>پروفایل Google Scholar</span>
                   </a>
                 )}
-                <button className="bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                <button
+                  className="text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  style={{ backgroundColor: ctaBg }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = ctaHoverBg; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ctaBg; }}
+                >
                   <MessageCircle className="w-3.5 h-3.5" />
                   <span>ارتباط با استاد</span>
                 </button>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {stats.map((s, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
-                <span className="block text-lg font-black font-mono">{s.value}</span>
-                <span className="text-[11px] text-emerald-200">{s.label}</span>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 gap-2.5 shrink-0 w-full max-w-[220px] md:w-auto">
+              {stats.map((s, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                  <span className="block text-lg font-black font-mono">{s.value}</span>
+                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.75)' }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -3031,11 +3042,42 @@ function useDedicatedPageProfileField<T>(dedicatedPageId: number | string | null
   );
 }
 
+const DEFAULT_ACCENT_COLOR = '#7c3aed';
+
+/** رنگ سازمانی/تاکیدیِ صفحه (layoutConfig.accentColor) — برای رنگ‌بندی پویای هدر/آیکون‌های بلوک‌های dp-* */
+function useDedicatedPageAccentColor(dedicatedPageId: number | string | null | undefined): string {
+  const [accentColor, setAccentColor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!dedicatedPageId) return;
+    let cancelled = false;
+    fetchDedicatedPageAccentColorForWidget(dedicatedPageId).then((color) => { if (!cancelled) setAccentColor(color); });
+    return () => { cancelled = true; };
+  }, [dedicatedPageId]);
+  return accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : DEFAULT_ACCENT_COLOR;
+}
+
+const accentWithAlpha = (accentColor: string, alphaHex: string): string => `${accentColor}${alphaHex}`;
+
+const shadeAccentColor = (accentColor: string, percent: number): string => {
+  const hex = accentColor.replace('#', '');
+  const num = parseInt(hex, 16);
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent) / 100;
+  r = Math.round((t - r) * p) + r;
+  g = Math.round((t - g) * p) + g;
+  b = Math.round((t - b) * p) + b;
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+
 /** ویجت تحصیلات — از رکورد Person متصل به صفحه (ماژول اعضای دانشگاه) */
 const DedicatedPageEducationWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.education);
 
   if (!dedicatedPageId) {
@@ -3052,15 +3094,15 @@ const DedicatedPageEducationWidget: React.FC<{
         <SmartEmpty error="هنوز سابقهٔ تحصیلی برای این استاد ثبت نشده است" />
       ) : (
         data.map((edu, i) => (
-          <div key={i} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 hover:border-purple-200 hover:bg-purple-50/20 dark:hover:bg-slate-800/60 transition group">
-            <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <div key={i} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 transition group">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>
               <GraduationCap className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs font-bold text-slate-900 dark:text-white">{edu.degree}{edu.field ? ` — ${edu.field}` : ''}</div>
                 {edu.year && (
-                  <span className="text-[11px] font-mono font-bold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-500/10 px-2 py-0.5 rounded-md shrink-0">{edu.year}</span>
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md shrink-0" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>{edu.year}</span>
                 )}
               </div>
               {edu.institution && <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{edu.institution}</div>}
@@ -3112,7 +3154,8 @@ const DedicatedPageAwardsWidget: React.FC<{
 const DedicatedPageResearchInterestsWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.researchInterests);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -3130,20 +3173,24 @@ const DedicatedPageResearchInterestsWidget: React.FC<{
         <SmartEmpty error="هنوز علاقهٔ پژوهشی‌ای برای این استاد ثبت نشده است" />
       ) : (
         <div className="flex flex-wrap gap-2">
-          {data.map((interest, i) => (
-            <button
-              key={i}
-              onClick={() => setSelected(selected === interest ? null : interest)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                selected === interest
-                  ? 'bg-purple-700 text-white border-purple-700 shadow-sm'
-                  : 'bg-purple-50 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/20 hover:bg-purple-100 dark:hover:bg-purple-500/20'
-              }`}
-            >
-              <Tag className={`w-3 h-3 ${selected === interest ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-              <span>{interest}</span>
-            </button>
-          ))}
+          {data.map((interest, i) => {
+            const isSelected = selected === interest;
+            return (
+              <button
+                key={i}
+                onClick={() => setSelected(isSelected ? null : interest)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer"
+                style={
+                  isSelected
+                    ? { backgroundColor: accentColor, color: '#fff', borderColor: accentColor }
+                    : { backgroundColor: accentWithAlpha(accentColor, '0d'), color: accentColor, borderColor: accentWithAlpha(accentColor, '33') }
+                }
+              >
+                <Tag className="w-3 h-3" style={{ color: isSelected ? '#fff' : accentColor }} />
+                <span>{interest}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -3154,7 +3201,8 @@ const DedicatedPageResearchInterestsWidget: React.FC<{
 const DedicatedPagePublicationsWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const { data: profiles, error, retry } = useSmartData<DedicatedPageProfessorProfile>(
     () => (dedicatedPageId ? fetchDedicatedPageProfessorProfileForWidget(dedicatedPageId).then((p) => (p ? [p] : [])) : Promise.resolve([])),
     [dedicatedPageId]
@@ -3185,17 +3233,17 @@ const DedicatedPagePublicationsWidget: React.FC<{
       ) : (
         <>
           {data.map((pub, i) => (
-            <div key={i} className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 hover:border-purple-200 transition group flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+            <div key={i} className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 transition group flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>
                 <FileText className="w-4 h-4" />
               </div>
               <div className="min-w-0 flex-1 space-y-1.5">
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug group-hover:text-purple-800 dark:group-hover:text-purple-300 transition">{pub.title}</h4>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug transition">{pub.title}</h4>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
                   {pub.journal && <span className="font-semibold text-slate-700 dark:text-slate-300">{pub.journal}</span>}
                   {pub.year && <span className="font-mono bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{pub.year}</span>}
                   {typeof pub.citations === 'number' && (
-                    <span className="text-purple-700 dark:text-purple-300 font-bold bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-100 dark:border-purple-500/20">{pub.citations} استناد</span>
+                    <span className="font-bold px-2 py-0.5 rounded-full border" style={{ backgroundColor: accentWithAlpha(accentColor, '0d'), color: accentColor, borderColor: accentWithAlpha(accentColor, '33') }}>{pub.citations} استناد</span>
                   )}
                 </div>
                 {pub.doi && (
@@ -3203,7 +3251,8 @@ const DedicatedPagePublicationsWidget: React.FC<{
                     <span className="font-mono text-slate-400 truncate max-w-[200px]" dir="ltr">DOI: {pub.doi}</span>
                     <button
                       onClick={() => handleCopyDoi(pub.doi!, i)}
-                      className="text-purple-700 dark:text-purple-300 hover:text-purple-900 font-semibold flex items-center gap-1 transition cursor-pointer"
+                      className="font-semibold flex items-center gap-1 transition cursor-pointer"
+                      style={{ color: copiedId === i ? undefined : accentColor }}
                     >
                       {copiedId === i ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                       <span>{copiedId === i ? 'کپی شد' : 'کپی پیوند'}</span>
@@ -3220,7 +3269,8 @@ const DedicatedPagePublicationsWidget: React.FC<{
                 href={profile.scholarUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-700 dark:text-purple-300 hover:text-purple-900 font-bold flex items-center gap-1 transition"
+                className="font-bold flex items-center gap-1 transition"
+                style={{ color: accentColor }}
               >
                 <span>Google Scholar</span>
                 <ExternalLink className="w-3 h-3" />
@@ -3297,7 +3347,8 @@ const DedicatedPageCoursesTimelineWidget: React.FC<{
   binding: WidgetDataBinding;
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ binding, containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ binding, containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const { data, error, retry } = useSmartData<DedicatedPageContentItem>(
     () => (dedicatedPageId ? fetchDedicatedPageContentsForWidget(dedicatedPageId, 'course', binding.limit || 50, 'desc') : Promise.resolve([])),
     [dedicatedPageId, binding.limit]
@@ -3322,17 +3373,18 @@ const DedicatedPageCoursesTimelineWidget: React.FC<{
       ) : items.length === 0 ? (
         <SmartEmpty error="هنوز درسی برای این استاد ثبت نشده است" />
       ) : (
-        <div className="relative pr-6 space-y-6 before:content-[''] before:absolute before:right-[7px] before:top-1 before:bottom-1 before:w-0.5 before:bg-purple-500/20">
+        <div className="relative pr-6 space-y-6">
+          <div className="absolute right-[7px] top-1 bottom-1 w-0.5" style={{ backgroundColor: accentWithAlpha(accentColor, '33') }} />
           {items.map((item) => (
             <div key={item.id} className="relative">
-              <span className="absolute right-[-24px] top-1 w-3.5 h-3.5 rounded-full bg-purple-600 ring-4 ring-purple-500/15" />
-              <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+              <span className="absolute right-[-24px] top-1 w-3.5 h-3.5 rounded-full ring-4" style={{ backgroundColor: accentColor, boxShadow: `0 0 0 4px ${accentWithAlpha(accentColor, '26')}` }} />
+              <div className="text-[10px] font-bold" style={{ color: accentColor }}>
                 {[item.metadata?.term, item.metadata?.year].filter(Boolean).join(' — ')}
               </div>
               <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5 flex items-center gap-2 flex-wrap">
                 <span>{item.title}</span>
                 {item.metadata?.level && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold">{item.metadata.level}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>{item.metadata.level}</span>
                 )}
                 {item.metadata?.units && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 font-bold">{item.metadata.units} واحد</span>
@@ -3413,7 +3465,8 @@ const WEEKLY_SCHEDULE_DAYS = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'س
 const DedicatedPageWeeklyScheduleWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
-}> = ({ containerStyle, dedicatedPageId }) => {
+  accentColor?: string;
+}> = ({ containerStyle, dedicatedPageId, accentColor = DEFAULT_ACCENT_COLOR }) => {
   const { data, error, retry } = useSmartData<DedicatedPageScheduleSlot>(
     () => (dedicatedPageId ? fetchDedicatedPageWeeklyScheduleForWidget(dedicatedPageId) : Promise.resolve([])),
     [dedicatedPageId]
@@ -3451,7 +3504,7 @@ const DedicatedPageWeeklyScheduleWidget: React.FC<{
                     <div className="flex flex-col gap-2">
                       {(byDay.get(day) || []).map((slot, i) => (
                         <div key={i} className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-mono dir-ltr px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-700 dark:text-violet-300">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono dir-ltr px-2 py-0.5 rounded-md" style={{ backgroundColor: accentWithAlpha(accentColor, '1a'), color: accentColor }}>
                             <CalendarClock className="w-3 h-3" />
                             {slot.startTime}–{slot.endTime}
                           </span>
@@ -5337,6 +5390,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   departmentNewsCategoryName,
   departmentNewsCategoryId
 }) => {
+  const accentColor = useDedicatedPageAccentColor(dedicatedPageId);
+
   // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
   // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
   const [urlSearch, setUrlSearch] = useState<string>(() => (typeof window !== 'undefined' ? window.location.search : ''));
@@ -5409,7 +5464,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
 
   // Calculate container inline style (تنظیمات لایه — هم‌سطح slider-studio)
   const containerStyle: React.CSSProperties = {
-    color: style.textColor,
+    color: style.textColor === '{{accentColor}}' ? accentColor : style.textColor,
     backgroundColor: resolveBackgroundColor(style),
     backgroundImage: style.backgroundGradient ? style.backgroundGradient : undefined,
     fontFamily: style.fontFamily,
@@ -5434,6 +5489,8 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     boxShadow: resolveBoxShadow(style.shadow),
     opacity: style.opacity,
     maxWidth: style.maxWidth !== undefined ? `${style.maxWidth}px` : undefined,
+    maxHeight: style.maxHeight !== undefined ? `${style.maxHeight}px` : undefined,
+    overflowY: style.maxHeight !== undefined ? 'auto' : undefined,
     width: style.widthMode === 'auto' || style.widthMode === 'center' || style.widthMode === 'left' || style.widthMode === 'right' ? 'fit-content' : undefined
   };
 
@@ -5887,15 +5944,15 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     // بلوک‌های اختصاصیِ صفحهٔ استاد (هیئت علمی) — تحصیلات/تماس/دروس/فایل‌ها و...
     case 'dp-faculty-hero':
       return isEditorPreview ? null : (
-        <DedicatedPageFacultyHeroWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageFacultyHeroWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-contact-info':
       return isEditorPreview ? null : (
-        <DedicatedPageContactInfoWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageContactInfoWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-education':
       return isEditorPreview ? null : (
-        <DedicatedPageEducationWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageEducationWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-awards':
       return isEditorPreview ? null : (
@@ -5903,11 +5960,11 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
     case 'dp-research-interests':
       return isEditorPreview ? null : (
-        <DedicatedPageResearchInterestsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageResearchInterestsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-publications':
       return isEditorPreview ? null : (
-        <DedicatedPagePublicationsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPagePublicationsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-books':
       return isEditorPreview ? null : (
@@ -5915,7 +5972,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
     case 'dp-courses-timeline':
       return isEditorPreview ? null : (
-        <DedicatedPageCoursesTimelineWidget binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageCoursesTimelineWidget binding={binding} containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-projects':
       return isEditorPreview ? null : (
@@ -5923,7 +5980,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
       );
     case 'dp-weekly-schedule':
       return isEditorPreview ? null : (
-        <DedicatedPageWeeklyScheduleWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+        <DedicatedPageWeeklyScheduleWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} accentColor={accentColor} />
       );
     case 'dp-documents':
       return isEditorPreview ? null : (
