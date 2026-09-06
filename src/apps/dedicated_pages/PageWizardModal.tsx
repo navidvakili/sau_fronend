@@ -32,7 +32,9 @@ import {
   Key,
   CheckCircle2,
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  Search,
+  Loader2
 } from 'lucide-react';
 import MediaManager from '@/src/shared-components/MediaManager';
 import {
@@ -46,10 +48,48 @@ import {
   PageTypeDefinition,
   DEDICATED_PAGE_TYPES
 } from './types';
-import { fetchProfessors, getOwnerAccount, setOwnerAccount } from './api';
+import { getOwnerAccount, setOwnerAccount } from './api';
 import { fetchForms } from '../forms/api';
+import { fetchPeople } from '../people/api';
+import type { PersonItem } from '@/src/shared-types';
 import { getDedicatedPagePublicUrl } from './utils';
 import PageStorageUsageChart from './PageStorageUsageChart';
+
+/** نام کامل عضو هیئت علمی از رکورد سامانه اعضای دانشگاه (ماژول «اعضای دانشگاه») */
+function getPersonFullName(person: PersonItem): string {
+  return [person.title, person.firstName, person.lastName].filter(Boolean).join(' ').trim();
+}
+
+/**
+ * پیشنهاد نام‌کاربری انگلیسی برای مسئول صفحه — نام و نام‌خانوادگی اساتید فارسی است،
+ * پس به‌جای آن از قسمت پیش از @ ایمیل دانشگاهی (که همیشه انگلیسی است) استفاده می‌شود.
+ */
+function suggestUsernameFromPerson(person: PersonItem): string {
+  const emailLocalPart = (person.email || '').split('@')[0];
+  const cleaned = emailLocalPart.replace(/[^a-zA-Z0-9._-]/g, '');
+  return cleaned ? cleaned.toLowerCase() : `prof${person.id}`;
+}
+
+/** نگاشت رکورد واقعیِ عضو هیئت علمی (سامانه اعضای دانشگاه) به ساختار پروفایل استاد این ویزارد */
+function mapPersonToProfessorProfile(person: PersonItem): ProfessorProfileData {
+  return {
+    professorId: String(person.id),
+    fullName: getPersonFullName(person),
+    personnelId: '',
+    academicRank: (person.rank as ProfessorProfileData['academicRank']) || 'استادیار',
+    department: person.department || '',
+    faculty: person.department || '',
+    officeLocation: person.office || '',
+    internalPhone: person.phone || '',
+    officeHours: '',
+    email: person.email || '',
+    researchInterests: person.researchInterests || [],
+    taughtCourses: person.courses || [],
+    supervisedThesesCount: 0,
+    publishedPapersCount: (person.publications || []).length,
+    cvFileUrl: undefined
+  };
+}
 
 interface PageWizardModalProps {
   isOpen: boolean;
@@ -76,18 +116,11 @@ export default function PageWizardModal({
 }: PageWizardModalProps) {
   const isEditMode = !!initialPage;
   const [currentStep, setCurrentStep] = useState(1);
-  const [universityProfessors, setUniversityProfessors] = useState<ProfessorProfileData[]>([]);
   const [availableForms, setAvailableForms] = useState<{ id: string; title: string; status: string }[]>([]);
 
   // Load data from API on mount
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const professors = await fetchProfessors();
-        setUniversityProfessors(professors);
-      } catch (e) {
-        console.error('Error loading wizard data:', e);
-      }
       try {
         const forms = await fetchForms({ per_page: 500 });
         setAvailableForms(forms.data.map(f => ({ id: f.id, title: f.title, status: f.status })));
@@ -118,7 +151,33 @@ export default function PageWizardModal({
   const [ownerPhone, setOwnerPhone] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerRoleTitle, setOwnerRoleTitle] = useState('');
-  const [selectedProfId, setSelectedProfId] = useState<string>('p1');
+
+  // انتخاب استاد از سامانه اعضای هیئت علمی (ماژول «اعضای دانشگاه») — با جستجوی زنده
+  const [facultySearch, setFacultySearch] = useState('');
+  const [facultyResults, setFacultyResults] = useState<PersonItem[]>([]);
+  const [facultySearching, setFacultySearching] = useState(false);
+  const [facultyDropdownOpen, setFacultyDropdownOpen] = useState(false);
+  const [selectedProfessor, setSelectedProfessor] = useState<PersonItem | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || pageType !== 'faculty_member') return;
+    let cancelled = false;
+    setFacultySearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetchPeople({ type: 'faculty_member', search: facultySearch, per_page: 15 });
+        if (!cancelled) setFacultyResults(res.data || []);
+      } catch (e) {
+        console.error('Error searching faculty members:', e);
+      } finally {
+        if (!cancelled) setFacultySearching(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, pageType, facultySearch]);
 
   // New Creation mode credentials
   const [ownerUsername, setOwnerUsername] = useState('');
@@ -218,9 +277,10 @@ export default function PageWizardModal({
         })
         .catch(e => console.error('Error loading owner account:', e));
 
-      if (initialPage.professorData?.professorId) {
-        setSelectedProfId(initialPage.professorData.professorId);
-      }
+      // انتخاب جدید از سامانه اعضای هیئت علمی فقط وقتی لازم است که مدیر بخواهد استاد را تغییر دهد
+      setSelectedProfessor(null);
+      setFacultySearch('');
+      setFacultyResults([]);
 
       setStatus(initialPage.status);
       setPublishStatus(initialPage.publishStatus);
@@ -265,7 +325,9 @@ export default function PageWizardModal({
       setOwnerPhone('');
       setOwnerEmail('');
       setOwnerRoleTitle('');
-      setSelectedProfId('');
+      setSelectedProfessor(null);
+      setFacultySearch('');
+      setFacultyResults([]);
 
       setIsChangingPassword(false);
       setNewPassword('');
@@ -315,19 +377,6 @@ export default function PageWizardModal({
         setHeaderStyle('profile_card');
         setLayoutType('two_column_sidebar_right');
         setFeatures(f => ({ ...f, hasResearchArticles: true, hasBoardMembers: false }));
-        const prof = universityProfessors.find(p => p.professorId === selectedProfId);
-        if (prof) {
-          setTitle(`صفحه اختصاصی ${prof.fullName}`);
-          setShortTitle(prof.fullName);
-          setSlug(prof.fullName.replace(/\s+/g, '-').toLowerCase());
-          setOwnerName(prof.fullName);
-          setOwnerUsername(`dr.${prof.fullName.split(' ').pop() || 'prof'}`.toLowerCase());
-          setOwnerEmail(prof.email);
-          setOwnerPhone(prof.internalPhone || '۰۹۱۳۰۰۰۰۰۰۰');
-          setOwnerRoleTitle(`${prof.academicRank} ${prof.department}`);
-          setShortDescription(`${prof.academicRank} ${prof.department}، ${prof.faculty}`);
-          setFullDescription(`پرتال رسمی دانشگاهی ${prof.fullName}، ${prof.academicRank} ${prof.faculty} دانشگاه علم و هنر.`);
-        }
       } else if (typeId === 'student_journal') {
         setLayoutType('magazine_grid');
         setFeatures(f => ({ ...f, hasResearchArticles: true, hasGallery: true }));
@@ -342,23 +391,23 @@ export default function PageWizardModal({
     }
   };
 
-  // Sync professor selection for faculty_member
-  const handleSelectProfessor = (profId: string) => {
-    setSelectedProfId(profId);
-    const prof = universityProfessors.find(p => p.professorId === profId);
-    if (prof) {
-      setTitle(`صفحه اختصاصی ${prof.fullName}`);
-      setShortTitle(prof.fullName);
-      const cleanSlug = `dr-${prof.fullName.split(' ').pop() || 'prof'}`.toLowerCase();
-      setSlug(cleanSlug);
-      setOwnerName(prof.fullName);
-      setOwnerUsername(`dr.${prof.fullName.split(' ').pop() || 'prof'}`.toLowerCase());
-      setOwnerEmail(prof.email);
-      setOwnerPhone(prof.internalPhone || '۰۹۱۳۰۰۰۰۰۰۰');
-      setOwnerRoleTitle(`${prof.academicRank} - ${prof.department}`);
-      setShortDescription(`${prof.academicRank} ${prof.department}، ${prof.faculty}`);
-      setFullDescription(`صفحه رسمی دانشگاهی ${prof.fullName} شامل اطلاعات درسی، مقالات و ساعات مشاوره.`);
-    }
+  // Sync professor selection for faculty_member — از نتیجه جستجوی سامانه اعضای هیئت علمی
+  const handleSelectProfessor = (person: PersonItem) => {
+    setSelectedProfessor(person);
+    setFacultyDropdownOpen(false);
+    const fullName = getPersonFullName(person);
+    setFacultySearch(fullName);
+    setTitle(`صفحه اختصاصی ${fullName}`);
+    setShortTitle(fullName);
+    const slugBase = person.lastName || fullName;
+    setSlug(`dr-${slugBase}`.replace(/\s+/g, '-').toLowerCase());
+    setOwnerName(fullName);
+    setOwnerUsername(suggestUsernameFromPerson(person));
+    setOwnerEmail(person.email || '');
+    setOwnerPhone(person.phone || '۰۹۱۳۰۰۰۰۰۰۰');
+    setOwnerRoleTitle([person.rank, person.department].filter(Boolean).join(' - '));
+    setShortDescription([person.rank, person.department].filter(Boolean).join(' '));
+    setFullDescription(`صفحه رسمی دانشگاهی ${fullName} شامل اطلاعات درسی، مقالات و ساعات مشاوره.`);
   };
 
   // Calculate Final URL (full, absolute — matches the real public site routes)
@@ -382,13 +431,13 @@ export default function PageWizardModal({
       return;
     }
 
-    if (pageType === 'faculty_member' && !selectedProfId) {
+    if (pageType === 'faculty_member' && !selectedProfessor && !initialPage?.professorData) {
       onNotify?.('برای صفحه اختصاصی عضو هیئت علمی، انتخاب استاد الزامی است.', 'error');
       return;
     }
 
     const profObj = pageType === 'faculty_member'
-      ? universityProfessors.find(p => p.professorId === selectedProfId)
+      ? (selectedProfessor ? mapPersonToProfessorProfile(selectedProfessor) : initialPage?.professorData)
       : undefined;
 
     const userObjId = initialPage?.owner?.id || `usr_${Date.now()}`;
@@ -920,7 +969,7 @@ export default function PageWizardModal({
                 </p>
               </div>
 
-              {/* If Faculty Member Page: Professor Selection */}
+              {/* If Faculty Member Page: Professor Selection — جستجوی زنده در سامانه اعضای هیئت علمی */}
               {pageType === 'faculty_member' && (
                 <div className="space-y-3 p-4 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/40">
                   <div className="flex items-center gap-2 text-teal-900 dark:text-teal-200 text-xs font-bold">
@@ -928,35 +977,78 @@ export default function PageWizardModal({
                     انتخاب از سامانه اعضای هیئت علمی و اساتید دانشگاه:
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto p-1">
-                    {universityProfessors.map(prof => {
-                      const isSelected = selectedProfId === prof.professorId;
-                      return (
-                        <div
-                          key={prof.professorId}
-                          onClick={() => handleSelectProfessor(prof.professorId)}
-                          className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                            isSelected
-                              ? 'bg-teal-100/60 dark:bg-teal-900/50 border-teal-600 border-2 shadow-sm'
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 font-bold flex items-center justify-center text-xs">
-                              {prof.fullName.slice(0, 1)}
-                            </div>
-                            <div>
-                              <div className="font-bold text-xs text-slate-900 dark:text-white">{prof.fullName}</div>
-                              <div className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold">
-                                {prof.academicRank} - {prof.department}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={facultySearch}
+                      onChange={e => {
+                        setFacultySearch(e.target.value);
+                        setFacultyDropdownOpen(true);
+                        if (selectedProfessor) setSelectedProfessor(null);
+                      }}
+                      onFocus={() => setFacultyDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setFacultyDropdownOpen(false), 150)}
+                      placeholder="جستجوی نام، گروه آموزشی یا دانشکده..."
+                      className="w-full pr-9 pl-8 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    />
+                    {facultySearching && (
+                      <Loader2 className="w-3.5 h-3.5 text-teal-600 animate-spin absolute left-3 top-1/2 -translate-y-1/2" />
+                    )}
+
+                    {facultyDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
+                        {facultyResults.map(person => {
+                          const fullName = getPersonFullName(person);
+                          return (
+                            <div
+                              key={person.id}
+                              onMouseDown={() => handleSelectProfessor(person)}
+                              className="px-3 py-2 flex items-center gap-2.5 cursor-pointer hover:bg-teal-50 dark:hover:bg-teal-900/30 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 font-bold flex items-center justify-center text-[11px] flex-shrink-0">
+                                {fullName.slice(0, 1) || '؟'}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs text-slate-900 dark:text-white truncate">{fullName}</div>
+                                <div className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold truncate">
+                                  {[person.rank, person.department].filter(Boolean).join(' - ')}
+                                </div>
                               </div>
                             </div>
+                          );
+                        })}
+                        {!facultySearching && facultyResults.length === 0 && (
+                          <div className="px-3 py-3 text-[11px] text-slate-400 text-center">
+                            استادی با این مشخصات در سامانه اعضای دانشگاه یافت نشد.
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-teal-600 flex-shrink-0" />}
-                        </div>
-                      );
-                    })}
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {selectedProfessor ? (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-teal-100/60 dark:bg-teal-900/50 border border-teal-600/40">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Check className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{getPersonFullName(selectedProfessor)}</span>
+                        <span className="text-[10px] text-teal-700 dark:text-teal-400 truncate">
+                          {[selectedProfessor.rank, selectedProfessor.department].filter(Boolean).join(' - ')}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedProfessor(null); setFacultySearch(''); }}
+                        className="text-slate-400 hover:text-red-500 flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : isEditMode && initialPage?.professorData ? (
+                    <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500">
+                      استاد فعلی: <span className="font-bold text-slate-700 dark:text-slate-300">{initialPage.professorData.fullName}</span> — برای تغییر، از جستجوی بالا استفاده کنید.
+                    </div>
+                  ) : null}
                 </div>
               )}
 
