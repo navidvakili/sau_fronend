@@ -885,6 +885,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     } else if (widgetType === 'dp-education') {
       title = 'تحصیلات';
       bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-awards') {
+      title = 'افتخارات و جوایز علمی';
+      bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-research-interests') {
       title = 'علایق پژوهشی';
       bindingDataSource = 'dedicated-page';
@@ -1137,6 +1140,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-education') {
       title = 'تحصیلات';
+      bindingDataSource = 'dedicated-page';
+    } else if (widgetType === 'dp-awards') {
+      title = 'افتخارات و جوایز علمی';
       bindingDataSource = 'dedicated-page';
     } else if (widgetType === 'dp-research-interests') {
       title = 'علایق پژوهشی';

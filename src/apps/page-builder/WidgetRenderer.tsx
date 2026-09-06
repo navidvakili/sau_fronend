@@ -2910,6 +2910,42 @@ const DedicatedPageEducationWidget: React.FC<{
   );
 };
 
+/** ویجت افتخارات و جوایز علمی — از رکورد Person (awards) */
+const DedicatedPageAwardsWidget: React.FC<{
+  containerStyle: React.CSSProperties;
+  dedicatedPageId?: number | null;
+}> = ({ containerStyle, dedicatedPageId }) => {
+  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.awards);
+
+  if (!dedicatedPageId) {
+    return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
+  }
+
+  return (
+    <div style={containerStyle} className="space-y-2.5">
+      {error ? (
+        <SmartEmpty error={error} onRetry={retry} />
+      ) : !data ? (
+        <SmartSkeleton variant="list" count={3} />
+      ) : data.length === 0 ? (
+        <SmartEmpty error="هنوز افتخار یا جایزه‌ای برای این استاد ثبت نشده است" />
+      ) : (
+        data.map((award, i) => (
+          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Award className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-slate-900 dark:text-white">{award.title}</div>
+              {award.year && <div className="text-[11px] text-slate-500 dark:text-slate-400">{award.year}</div>}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
 /** ویجت علایق پژوهشی — نمایش تگی/پیلی از رکورد Person */
 const DedicatedPageResearchInterestsWidget: React.FC<{
   containerStyle: React.CSSProperties;
@@ -5608,6 +5644,10 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
     case 'dp-education':
       return isEditorPreview ? null : (
         <DedicatedPageEducationWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
+      );
+    case 'dp-awards':
+      return isEditorPreview ? null : (
+        <DedicatedPageAwardsWidget containerStyle={containerStyle} dedicatedPageId={dedicatedPageId} />
       );
     case 'dp-research-interests':
       return isEditorPreview ? null : (

@@ -85,6 +85,7 @@ export type DedicatedPageWidgetType =
   | 'dp-members'
   | 'dp-contact-info'
   | 'dp-education'
+  | 'dp-awards'
   | 'dp-research-interests'
   | 'dp-courses-timeline'
   | 'dp-weekly-schedule'
@@ -156,6 +157,7 @@ export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
   // بلوک‌های اختصاصی صفحهٔ استاد
   'dp-contact-info': 'اطلاعات تماس استاد',
   'dp-education': 'تحصیلات',
+  'dp-awards': 'افتخارات و جوایز علمی',
   'dp-research-interests': 'علایق پژوهشی',
   'dp-courses-timeline': 'تایم‌لاین دروس ارائه‌شده',
   'dp-weekly-schedule': 'برنامه هفتگی ترم جاری',

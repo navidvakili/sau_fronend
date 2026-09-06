@@ -406,6 +406,7 @@ export interface DedicatedPageProfessorProfile {
   researchInterests: string[];
   publications: Array<{ title?: string; journal?: string; year?: string; citations?: number }>;
   books: Array<{ title?: string; publisher?: string; year?: string; isbn?: string }>;
+  awards: Array<{ title?: string; year?: string }>;
 }
 
 export const fetchDedicatedPageProfessorProfileForWidget = async (

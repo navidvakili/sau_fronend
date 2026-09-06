@@ -130,6 +130,7 @@ export const ComponentPickerModal: React.FC<ComponentPickerModalProps> = ({
     // Faculty Member blocks — مخصوص صفحات اختصاصی اساتید، بر پایهٔ رکورد واقعی Person و محتوای صفحه
     { type: 'dp-contact-info', category: 'dedicated-page', name: 'اطلاعات تماس استاد', desc: 'ایمیل، تلفن، داخلی و آدرس دفتر — به‌صورت زنده از تنظیمات صفحه', icon: Mail, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-education', category: 'dedicated-page', name: 'تحصیلات', desc: 'سوابق تحصیلی استاد، از سامانهٔ اعضای دانشگاه', icon: GraduationCap, badge: 'صفحهٔ اختصاصی' },
+    { type: 'dp-awards', category: 'dedicated-page', name: 'افتخارات و جوایز علمی', desc: 'جوایز و افتخارات علمی استاد، از سامانهٔ اعضای دانشگاه', icon: Award, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-research-interests', category: 'dedicated-page', name: 'علایق پژوهشی', desc: 'زمینه‌های پژوهشی مورد علاقهٔ استاد', icon: Sparkles, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-courses-timeline', category: 'dedicated-page', name: 'تایم‌لاین دروس ارائه‌شده', desc: 'دروسی که استاد در نیمسال‌های مختلف ارائه کرده، به‌ترتیب زمانی', icon: History, badge: 'صفحهٔ اختصاصی' },
     { type: 'dp-weekly-schedule', category: 'dedicated-page', name: 'برنامه هفتگی ترم جاری', desc: 'جدول برنامهٔ هفتگی کلاس‌های استاد در نیمسال جاری', icon: CalendarClock, badge: 'صفحهٔ اختصاصی' },
