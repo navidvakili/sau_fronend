@@ -588,7 +588,6 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   // ===== Analytics metrics =====
   const publishedCount = newsList.filter(n => n.status === 'published').length;
-  const totalViews = newsList.reduce((sum, n) => sum + n.views_count, 0);
   const totalLikes = newsList.reduce((sum, n) => sum + n.likes_count, 0);
   const pinnedCount = newsList.filter(n => n.is_pinned).length;
 
@@ -672,82 +671,46 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   return (
     <div className="space-y-6 pb-12 font-sans text-right rtl">
-      {/* ===== Module Header Banner ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-900 via-slate-900 to-indigo-950 text-white p-6 sm:p-8 shadow-xl border border-teal-500/20">
-        <div className="absolute top-0 left-0 translate-x-[-10%] translate-y-[-20%] w-80 h-80 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold">
-              <Newspaper className="w-4 h-4" />
-              <span>سامانه خبررسانی و اطلاعیه‌های رسمی</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              پرتال مدیریت اخبار و اطلاعیه‌ها
-            </h1>
-            {activeLanguage && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-teal-200">
-                <Globe className="w-3.5 h-3.5 text-teal-300" />
-                {activeLanguage.code} • {activeLanguage.name}
-              </div>
-            )}
-            <p className="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed">
-              انتشار، آرشیو، دسته‌بندی و تحلیل بازخورد اطلاعیه‌های آموزشی، پژوهشی، فرهنگی و رویدادهای تخصصی
-            </p>
+      {/* ===== Module Header ===== */}
+      <header className="h-16 px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0 shadow-xs rounded-2xl">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 rounded-xl bg-gradient-to-tr from-teal-500 to-indigo-600 text-white shadow-md shrink-0">
+            <Newspaper className="w-5 h-5" />
           </div>
-
-          {canEdit && (
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => { handleResetForm(); setActiveTab('editor'); }}
-                className="px-5 py-3 rounded-2xl bg-teal-500 hover:bg-teal-400 text-teal-950 font-black text-xs shadow-lg shadow-teal-500/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>انتشار خبر جدید</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-teal-500/20 text-teal-300">
-              <Newspaper className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-lg font-black text-white">{totalNews}</div>
-              <div className="text-[11px] text-gray-300">کل اخبار ثبت‌شده</div>
-            </div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-lg font-black text-white">{publishedCount}</div>
-              <div className="text-[11px] text-gray-300">منتشر شده</div>
-            </div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-300">
-              <Eye className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-lg font-black text-white">{totalViews.toLocaleString('fa-IR')}</div>
-              <div className="text-[11px] text-gray-300">بازدید کاربران</div>
-            </div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300">
-              <Pin className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-lg font-black text-white">{pinnedCount}</div>
-              <div className="text-[11px] text-gray-300">اخبار ویژه</div>
+          <div className="min-w-0">
+            <h1 className="text-sm font-black text-slate-900 dark:text-white truncate">مدیریت اخبار و اطلاعیه‌ها</h1>
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap">
+              <span className="px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border border-teal-500/20">
+                {totalNews} خبر
+              </span>
+              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                {publishedCount} منتشر شده
+              </span>
+              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                {pinnedCount} ویژه
+              </span>
+              {activeLanguage && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-500/10 text-slate-500 dark:text-slate-400 font-bold border border-slate-500/20 uppercase">
+                  <Globe className="w-3 h-3" />
+                  {activeLanguage.code}
+                </span>
+              )}
             </div>
           </div>
         </div>
-      </div>
+
+        {canEdit && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { handleResetForm(); setActiveTab('editor'); }}
+              className="px-4 py-2 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white dark:text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>انتشار خبر جدید</span>
+            </button>
+          </div>
+        )}
+      </header>
 
       {/* ===== Sub-Navigation Bar ===== */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-900 p-2 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs">
