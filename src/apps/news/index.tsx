@@ -11,9 +11,10 @@ import {
   Share2, FileText, Download, MessageSquare, BarChart2, Layers,
   CheckCircle2, X, Send, SlidersHorizontal, LayoutGrid, List,
   Flame, AlertCircle, ExternalLink, Info, Loader2, Upload, Image,
-  ChevronRight, ChevronLeft, Globe,
+  ChevronRight, ChevronLeft, Globe, Trophy, Award, Star, Rocket,
+  BookOpen, Cpu, Palette,
 } from 'lucide-react';
-import type { NewsItem, NewsCategory, User, PhotoReportImage } from '@/src/shared-types';
+import type { NewsItem, NewsCategory, User, PhotoReportImage, AchievementItem } from '@/src/shared-types';
 import { decodeHtmlEntities } from '@/src/shared-utils';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
@@ -26,9 +27,34 @@ import {
   fetchCategories, createCategory, updateCategory, deleteCategory,
   fetchAnalytics, fetchComments, approveComment, deleteComment,
 } from './api';
+import {
+  fetchAchievementById, createAchievement, updateAchievement, deleteAchievement,
+} from '@/src/apps/achievements/api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
 import AnalyticsDashboard from '@/src/apps/analytics/AnalyticsDashboard';
+
+// Icon options for the "افتخار" content-type toggle — keys must match
+// ACHIEVEMENT_ICONS on the public site (previously defined in the now-removed
+// standalone achievements admin module).
+const ICON_OPTIONS: Array<{ key: string; label: string; icon: React.ReactNode }> = [
+  { key: 'trophy', label: 'جام قهرمانی', icon: <Trophy size={18} /> },
+  { key: 'award', label: 'نشان افتخار', icon: <Award size={18} /> },
+  { key: 'medal', label: 'مدال', icon: <Trophy size={18} /> },
+  { key: 'star', label: 'ستاره', icon: <Star size={18} /> },
+  { key: 'rocket', label: 'پیشرفت', icon: <Rocket size={18} /> },
+  { key: 'globe', label: 'بین‌الملل', icon: <Globe size={18} /> },
+  { key: 'book', label: 'کتاب و علم', icon: <BookOpen size={18} /> },
+  { key: 'file-text', label: 'سند و مقاله', icon: <FileText size={18} /> },
+  { key: 'cpu', label: 'فناوری', icon: <Cpu size={18} /> },
+  { key: 'palette', label: 'هنر', icon: <Palette size={18} /> },
+];
+
+function getAchievementIconNode(key: string | null | undefined, size: number = 18): React.ReactNode {
+  const found = ICON_OPTIONS.find((o) => o.key === key);
+  if (found) return found.icon;
+  return <Award size={size} />;
+}
 
 interface NewsManagementProps {
   user?: User | null;
@@ -52,6 +78,11 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
   const canApprove = can('news.approve') || isAdmin;
   const canEdit = roleCanEdit || permCanEdit;
   const canDelete = roleCanEdit || permCanDelete;
+  // Achievements are created/edited from this same form via a content-type
+  // toggle — gated by the achievements.* permissions (unchanged, still
+  // enforced server-side by AchievementController/routes/api/achievements.php).
+  const canEditAchievement = roleCanEdit || can('achievements.create') || can('achievements.edit');
+  const canApproveAchievement = can('achievements.approve') || isAdmin;
 
   // ===== Sub-tab state =====
   const [activeTab, setActiveTab] = useState<SubTab>(() => {
@@ -83,6 +114,9 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   // ===== Editor State =====
   const [editingNewsId, setEditingNewsId] = useState<number | null>(null);
+  const [editingContentType, setEditingContentType] = useState<'news' | 'achievement'>('news');
+  const [formIsAchievement, setFormIsAchievement] = useState(false);
+  const [formIcon, setFormIcon] = useState('award');
   const [formTitle, setFormTitle] = useState('');
   const [formSummary, setFormSummary] = useState('');
   const [formContent, setFormContent] = useState('');
@@ -113,7 +147,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
       setFormDirty(true);
       onDirtyChange?.(true);
     }
-  }, [formTitle, formSummary, formContent, formCategoryId, formStatus, formIsPinned, formImageUrl, formTags, formIsPhotoReport, formPhotoReportImages, onDirtyChange]);
+  }, [formTitle, formSummary, formContent, formCategoryId, formStatus, formIsPinned, formImageUrl, formTags, formIsPhotoReport, formPhotoReportImages, formIsAchievement, formIcon, onDirtyChange]);
 
   const requestListView = () => {
     if (activeTab === 'editor' && formDirty) {
@@ -143,6 +177,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   // ===== Delete Confirmation Modal state =====
   const [deleteNewsId, setDeleteNewsId] = useState<number | null>(null);
+  const [deleteItemType, setDeleteItemType] = useState<'news' | 'achievement'>('news');
   const [deleteCatId, setDeleteCatId] = useState<number | null>(null);
 
   // ===== Analytics state =====
@@ -210,6 +245,12 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   // ===== Handlers =====
   const handleOpenReader = async (item: NewsItem) => {
+    // Achievements don't have a reader modal (no comments/likes) — open the
+    // editor directly instead, same as clicking "ویرایش".
+    if (item.content_type === 'achievement') {
+      if (canEdit) handleStartEdit(item);
+      return;
+    }
     try {
       // Fetch full article detail (includes content)
       const detailRes = await fetchNewsById(item.id);
@@ -239,16 +280,32 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   const confirmDeleteNews = async () => {
     if (!deleteNewsId) return;
+    const isAchievement = deleteItemType === 'achievement';
     try {
-      await deleteNews(deleteNewsId);
-      setNewsList(prev => prev.filter(n => n.id !== deleteNewsId));
+      if (isAchievement) {
+        await deleteAchievement(deleteNewsId);
+      } else {
+        await deleteNews(deleteNewsId);
+      }
+      setNewsList(prev => prev.filter(n => !(n.id === deleteNewsId && (n.content_type || 'news') === deleteItemType)));
       if (activeReaderItem?.id === deleteNewsId) setActiveReaderItem(null);
-      showToast('خبر با موفقیت حذف شد.', 'success');
+      showToast(isAchievement ? 'افتخار با موفقیت حذف شد.' : 'خبر با موفقیت حذف شد.', 'success');
     } catch (err: any) {
-      showToast(err.message || 'خطا در حذف خبر', 'error');
+      showToast(err.message || (isAchievement ? 'خطا در حذف افتخار' : 'خطا در حذف خبر'), 'error');
     } finally {
       setDeleteNewsId(null);
+      setDeleteItemType('news');
     }
+  };
+
+  const resetAchievementOnlyFields = () => {
+    setFormCategoryId(null);
+    setFormCategoryIds([]);
+    setFormIsPinned(false);
+    setFormCommentsMode('approval');
+    setFormIsPhotoReport(false);
+    setFormPhotoReportImages([]);
+    setFormTags([]);
   };
 
   const handleStartEdit = async (item: NewsItem, e?: React.MouseEvent) => {
@@ -256,6 +313,37 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
     setFormMessage(null);
     setActiveTab('editor');
     setFormLoading(true);
+
+    if ((item.content_type || 'news') === 'achievement') {
+      setEditingContentType('achievement');
+      setFormIsAchievement(true);
+      resetAchievementOnlyFields();
+      try {
+        const detail = await fetchAchievementById(item.id);
+        setEditingNewsId(detail.id);
+        setFormTitle(detail.title);
+        setFormSummary(detail.subtitle || '');
+        setFormContent(decodeHtmlEntities(detail.description || detail.desc || ''));
+        setFormIcon(detail.icon || 'award');
+        setFormImageUrl(detail.image_url || detail.image || '');
+        setFormStatus(detail.status);
+      } catch (err: any) {
+        setEditingNewsId(item.id);
+        setFormTitle(item.title);
+        setFormSummary(item.summary || '');
+        setFormContent(decodeHtmlEntities(item.content || ''));
+        setFormIcon(item.icon || 'award');
+        setFormImageUrl(item.image_url || '');
+        setFormStatus(item.status);
+        showToast(err.message || 'خطا در بارگذاری جزئیات افتخار', 'error');
+      } finally {
+        setFormLoading(false);
+      }
+      return;
+    }
+
+    setEditingContentType('news');
+    setFormIsAchievement(false);
     try {
       const { data } = await fetchNewsById(item.id);
       setEditingNewsId(data.id);
@@ -294,6 +382,9 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   const handleResetForm = () => {
     setEditingNewsId(null);
+    setEditingContentType('news');
+    setFormIsAchievement(false);
+    setFormIcon('award');
     setFormTitle('');
     setFormSummary('');
     setFormContent('');
@@ -311,6 +402,53 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
 
   const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formIsAchievement) {
+      if (!formTitle.trim()) {
+        setFormMessage({ text: 'لطفاً عنوان افتخار را وارد نمایید.', type: 'error' });
+        return;
+      }
+
+      setFormLoading(true);
+      try {
+        const finalStatus: 'published' | 'draft' = canApproveAchievement && formStatus !== 'archived' ? formStatus : 'draft';
+        const payload = {
+          title: formTitle,
+          subtitle: formSummary || undefined,
+          description: formContent || undefined,
+          image_url: formImageUrl || undefined,
+          icon: formIcon,
+          status: finalStatus,
+          lang: currentLang,
+        };
+
+        if (editingNewsId && editingContentType === 'achievement') {
+          await updateAchievement(editingNewsId, payload);
+          setFormMessage({ text: 'تغییرات افتخار با موفقیت ذخیره گردید.', type: 'success' });
+        } else {
+          await createAchievement(payload);
+          setFormMessage({ text: 'افتخار جدید با موفقیت ثبت شد.', type: 'success' });
+        }
+
+        setTimeout(() => {
+          onDirtyChange?.(false);
+          setActiveTab('list');
+          handleResetForm();
+          loadNews();
+        }, 1200);
+      } catch (err: any) {
+        if (err.errors) {
+          const firstErr = Object.values(err.errors).flat()[0];
+          setFormMessage({ text: firstErr as string, type: 'error' });
+        } else {
+          setFormMessage({ text: err.message || 'خطا در ذخیره افتخار', type: 'error' });
+        }
+      } finally {
+        setFormLoading(false);
+      }
+      return;
+    }
+
     if (!formTitle.trim() || !formContent.trim()) {
       setFormMessage({ text: 'لطفاً عنوان خبر و متن اصلی را وارد نمایید.', type: 'error' });
       return;
@@ -342,7 +480,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
         lang: currentLang,
       };
 
-      if (editingNewsId) {
+      if (editingNewsId && editingContentType === 'news') {
         await updateNews(editingNewsId, payload);
         setFormMessage({ text: 'تغییرات خبر با موفقیت ذخیره گردید.', type: 'success' });
       } else {
@@ -823,12 +961,27 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                       </div>
                     )}
 
-                    {item.is_photo_report && (
-                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-indigo-500 text-white font-black text-[10px] shadow-md flex items-center gap-1">
-                        <Image className="w-3 h-3" />
-                        <span>گزارش تصویری</span>
-                      </div>
-                    )}
+                    <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
+                      {item.content_type === 'achievement' && (
+                        <div className="px-3 py-1 rounded-full bg-amber-500 text-amber-950 font-black text-[10px] shadow-md flex items-center gap-1">
+                          {getAchievementIconNode(item.icon, 12)}
+                          <span>افتخار</span>
+                        </div>
+                      )}
+
+                      {item.is_photo_report && (
+                        <div className="px-3 py-1 rounded-full bg-indigo-500 text-white font-black text-[10px] shadow-md flex items-center gap-1">
+                          <Image className="w-3 h-3" />
+                          <span>گزارش تصویری</span>
+                        </div>
+                      )}
+
+                      {item.status !== 'published' && (
+                        <div className="px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold text-[10px]">
+                          {item.status === 'draft' ? 'پیش‌نویس' : 'آرشیو شده'}
+                        </div>
+                      )}
+                    </div>
 
                     <div className="absolute bottom-3 right-3 flex flex-wrap gap-1 max-w-[70%]">
                       {(item.category_names && item.category_names.length ? item.category_names : (item.category_name ? [item.category_name] : [])).slice(0, 2).map((cn, ci) => (
@@ -840,12 +993,6 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                         <span className="px-2 py-1 rounded-xl bg-gray-900/70 text-white font-bold text-[11px] backdrop-blur-md">+{item.category_names!.length - 2}</span>
                       )}
                     </div>
-
-                    {item.status !== 'published' && (
-                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold text-[10px]">
-                        {item.status === 'draft' ? 'پیش‌نویس' : 'آرشیو شده'}
-                      </div>
-                    )}
                   </div>
 
                   {/* Body */}
@@ -881,27 +1028,38 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                   {/* Footer */}
                   <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1 text-[11px]" title="بازدید">
-                        <Eye className="w-3.5 h-3.5 text-teal-500" />
-                        <span className="font-mono">{item.views_count}</span>
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px]" title="پسندها">
-                        <Heart className="w-3.5 h-3.5 text-rose-500" />
-                        <span className="font-mono">{item.likes_count}</span>
-                      </span>
+                      {item.content_type === 'achievement' ? (
+                        <span className="flex items-center gap-1 text-[11px]" title="افتخار">
+                          {getAchievementIconNode(item.icon, 14)}
+                          <span>افتخار دانشگاه</span>
+                        </span>
+                      ) : (
+                        <>
+                          <span className="flex items-center gap-1 text-[11px]" title="بازدید">
+                            <Eye className="w-3.5 h-3.5 text-teal-500" />
+                            <span className="font-mono">{item.views_count}</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-[11px]" title="پسندها">
+                            <Heart className="w-3.5 h-3.5 text-rose-500" />
+                            <span className="font-mono">{item.likes_count}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {canEdit && (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={e => handleTogglePin(item.id, e)}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            item.is_pinned ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400'
-                          }`}
-                          title={item.is_pinned ? 'برداشتن از ویژه' : 'سنجاق به ویژه'}
-                        >
-                          <Pin className="w-3.5 h-3.5" />
-                        </button>
+                        {item.content_type !== 'achievement' && (
+                          <button
+                            onClick={e => handleTogglePin(item.id, e)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              item.is_pinned ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400'
+                            }`}
+                            title={item.is_pinned ? 'برداشتن از ویژه' : 'سنجاق به ویژه'}
+                          >
+                            <Pin className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={e => handleStartEdit(item, e)}
                           className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-teal-600 dark:text-teal-400 transition-colors cursor-pointer"
@@ -911,7 +1069,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                         </button>
                         {canDelete && (
                           <button
-                            onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }}
+                            onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); setDeleteItemType(item.content_type === 'achievement' ? 'achievement' : 'news'); }}
                             className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
                             title="حذف"
                           >
@@ -947,29 +1105,34 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                     <tr key={item.id} onClick={() => handleOpenReader(item)} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
                       <td className="py-3.5 px-4 font-extrabold text-gray-900 dark:text-white max-w-xs truncate">
                         <div className="flex items-center gap-2">
+                          {item.content_type === 'achievement' && <span className="text-amber-500 shrink-0">{getAchievementIconNode(item.icon, 14)}</span>}
                           {item.is_pinned && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                           {item.is_photo_report && <Image className="w-3.5 h-3.5 text-indigo-500 shrink-0" aria-label="گزارش تصویری" />}
                           <span>{item.title}</span>
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {(item.category_names && item.category_names.length ? item.category_names : (item.category_name ? [item.category_name] : [])).slice(0, 2).map((cn, ci) => (
-                            <span key={ci} className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px]">
-                              {cn || 'عمومی'}
-                            </span>
-                          ))}
-                          {(item.category_names?.length ?? 0) > 2 && (
-                            <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 dark:text-gray-400 font-bold text-[10px]">+{item.category_names!.length - 2}</span>
-                          )}
-                        </div>
+                        {item.content_type === 'achievement' ? (
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-[10px]">افتخار</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {(item.category_names && item.category_names.length ? item.category_names : (item.category_name ? [item.category_name] : [])).slice(0, 2).map((cn, ci) => (
+                              <span key={ci} className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-[10px]">
+                                {cn || 'عمومی'}
+                              </span>
+                            ))}
+                            {(item.category_names?.length ?? 0) > 2 && (
+                              <span className="px-2 py-1 rounded-lg bg-gray-500/10 text-gray-500 dark:text-gray-400 font-bold text-[10px]">+{item.category_names!.length - 2}</span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-gray-500 dark:text-gray-400">
                         {item.published_at ? new Date(item.published_at).toLocaleDateString('fa-IR') : '-'}
                       </td>
                       <td className="py-3.5 px-4 text-gray-600 dark:text-gray-300">{item.author_name || item.author_username}</td>
-                      <td className="py-3.5 px-4 font-mono text-center text-teal-600 dark:text-teal-400">{item.views_count}</td>
-                      <td className="py-3.5 px-4 font-mono text-center text-rose-500">{item.likes_count}</td>
+                      <td className="py-3.5 px-4 font-mono text-center text-teal-600 dark:text-teal-400">{item.content_type === 'achievement' ? '—' : item.views_count}</td>
+                      <td className="py-3.5 px-4 font-mono text-center text-rose-500">{item.content_type === 'achievement' ? '—' : item.likes_count}</td>
                       <td className="py-3.5 px-4 text-center">
                         <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                           item.status === 'published' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
@@ -979,13 +1142,15 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                       </td>
                       <td className="py-3.5 px-4 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={e => handleTogglePin(item.id, e)} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            item.is_pinned ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'
-                          }`} title={item.is_pinned ? 'برداشتن از ویژه' : 'سنجاق به ویژه'}>
-                            <Pin className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleOpenReader(item)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300" title="مطالعه">
-                            <Eye className="w-4 h-4" />
+                          {item.content_type !== 'achievement' && (
+                            <button onClick={e => handleTogglePin(item.id, e)} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              item.is_pinned ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'
+                            }`} title={item.is_pinned ? 'برداشتن از ویژه' : 'سنجاق به ویژه'}>
+                              <Pin className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button onClick={() => handleOpenReader(item)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300" title={item.content_type === 'achievement' ? 'ویرایش' : 'مطالعه'}>
+                            {item.content_type === 'achievement' ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                           {canEdit && (
                             <>
@@ -993,7 +1158,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                                 <Edit3 className="w-4 h-4" />
                               </button>
                               {canDelete && (
-                                <button onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
+                                <button onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); setDeleteItemType(item.content_type === 'achievement' ? 'achievement' : 'news'); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               )}
@@ -1070,14 +1235,18 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
             <div>
               <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                <span>{editingNewsId ? 'ویرایش خبر موجود' : 'ارسال و انتشار خبر جدید'}</span>
+                {formIsAchievement ? <Trophy className="w-5 h-5 text-amber-500" /> : <Edit3 className="w-5 h-5 text-teal-600 dark:text-teal-400" />}
+                <span>
+                  {formIsAchievement
+                    ? (editingNewsId && editingContentType === 'achievement' ? 'ویرایش افتخار موجود' : 'ثبت و انتشار افتخار جدید')
+                    : (editingNewsId && editingContentType === 'news' ? 'ویرایش خبر موجود' : 'ارسال و انتشار خبر جدید')}
+                </span>
               </h2>
               <p className="text-xs text-gray-400 mt-1">اطلاعات، متن اصلی، عکس و پیوست‌ها را تنظیم نمایید.</p>
             </div>
             {editingNewsId && (
               <button onClick={handleResetForm} className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">
-                انصراف و خبر جدید
+                {formIsAchievement ? 'انصراف و افتخار جدید' : 'انصراف و خبر جدید'}
               </button>
             )}
           </div>
@@ -1097,29 +1266,30 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
               <div className="lg:col-span-8 space-y-4">
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">
-                    عنوان خبر / اطلاعیه <span className="text-red-500">*</span>
+                    {formIsAchievement ? 'عنوان افتخار' : 'عنوان خبر / اطلاعیه'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text" required value={formTitle} onChange={e => setFormTitle(e.target.value)}
-                    placeholder="مثال: آغاز ثبت‌نام دوره تابستانه"
+                    placeholder={formIsAchievement ? 'مثلاً: کسب رتبه اول المپیاد علمی کشوری' : 'مثال: آغاز ثبت‌نام دوره تابستانه'}
                     className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">خلاصه خبر</label>
+                  <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">{formIsAchievement ? 'زیرعنوان' : 'خلاصه خبر'}</label>
                   <textarea
                     rows={2} value={formSummary} onChange={e => setFormSummary(e.target.value)}
-                    placeholder="توضیح کوتاه در کارت خبر..."
+                    placeholder={formIsAchievement ? 'توضیح کوتاه زیر عنوان...' : 'توضیح کوتاه در کارت خبر...'}
                     className="w-full px-4 py-2.5 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">
-                    متن کامل خبر {!formIsPhotoReport && <span className="text-red-500">*</span>}
+                    {formIsAchievement ? 'توضیحات کامل (داستان موفقیت)' : 'متن کامل خبر'}
+                    {!formIsPhotoReport && !formIsAchievement && <span className="text-red-500"> *</span>}
                   </label>
-                  {formIsPhotoReport && (
+                  {formIsPhotoReport && !formIsAchievement && (
                     <p className="text-[10px] text-indigo-500 font-semibold mb-2 flex items-center gap-1">
                       <Image className="w-3 h-3" />
                       در گزارش تصویری، متن اختیاری است. گالری تصاویر در اولویت نمایش قرار می‌گیرد.
@@ -1128,87 +1298,150 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                   <WysiwygEditor
                     content={formContent}
                     onChange={setFormContent}
-                    placeholder="متن کامل خبر را بنویسید..."
+                    placeholder={formIsAchievement ? 'شرح کامل افتخار — در صفحه جزئیات نمایش داده می‌شود' : 'متن کامل خبر را بنویسید...'}
                     minHeight="320px"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                    <Tag className="w-3.5 h-3.5 text-teal-500" />
-                    <span>برچسب‌ها</span>
-                  </label>
-                  <TagInput
-                    tags={formTags}
-                    onChange={setFormTags}
-                    placeholder="برچسب را تایپ کنید و Enter بزنید..."
-                    maxTags={15}
-                  />
-                </div>
+                {!formIsAchievement && (
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                      <Tag className="w-3.5 h-3.5 text-teal-500" />
+                      <span>برچسب‌ها</span>
+                    </label>
+                    <TagInput
+                      tags={formTags}
+                      onChange={setFormTags}
+                      placeholder="برچسب را تایپ کنید و Enter بزنید..."
+                      maxTags={15}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Sidebar Settings */}
               <div className="lg:col-span-4 space-y-5 bg-gray-50/50 dark:bg-gray-800/40 p-5 rounded-3xl border border-gray-100 dark:border-gray-800">
                 <h3 className="text-xs font-black text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-2">تنظیمات انتشار</h3>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">دسته‌بندی اصلی</label>
-                  <select
-                    value={formCategoryId || ''} onChange={e => {
-                      const val = e.target.value ? Number(e.target.value) : null;
-                      setFormCategoryId(val);
-                      setFormCategoryIds(prev => {
-                        if (val === null) return [];
-                        return prev.includes(val) ? prev : [...prev, val];
-                      });
-                    }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="">بدون دسته‌بندی</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {canEditAchievement && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">نوع محتوا</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormIsAchievement(false)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                          !formIsAchievement
+                            ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/40'
+                            : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <Newspaper className="w-3.5 h-3.5" />
+                        خبر
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormIsAchievement(true)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                          formIsAchievement
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                            : 'bg-white dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <Trophy className="w-3.5 h-3.5" />
+                        افتخار
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">با انتخاب «افتخار»، این ثبت در بخش افتخارات دانشگاه نمایش داده می‌شود، نه آرشیو اخبار.</p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">
-                    دسته‌بندی‌های بیشتر <span className="text-[9px] text-gray-400 font-normal">(یک خبر می‌تواند در چند دسته ثبت شود)</span>
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {categories.map(cat => {
-                      const active = formCategoryIds.includes(cat.id);
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => {
-                            setFormCategoryIds(prev => {
-                              const next = active ? prev.filter(c => c !== cat.id) : [...prev, cat.id];
-                              setFormCategoryId(prevId => {
-                                if (next.length === 0) return null;
-                                if (!prevId || !next.includes(prevId)) return next[0];
-                                return prevId;
+                {!formIsAchievement && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">دسته‌بندی اصلی</label>
+                    <select
+                      value={formCategoryId || ''} onChange={e => {
+                        const val = e.target.value ? Number(e.target.value) : null;
+                        setFormCategoryId(val);
+                        setFormCategoryIds(prev => {
+                          if (val === null) return [];
+                          return prev.includes(val) ? prev : [...prev, val];
+                        });
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="">بدون دسته‌بندی</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {!formIsAchievement && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1.5">
+                      دسته‌بندی‌های بیشتر <span className="text-[9px] text-gray-400 font-normal">(یک خبر می‌تواند در چند دسته ثبت شود)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {categories.map(cat => {
+                        const active = formCategoryIds.includes(cat.id);
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setFormCategoryIds(prev => {
+                                const next = active ? prev.filter(c => c !== cat.id) : [...prev, cat.id];
+                                setFormCategoryId(prevId => {
+                                  if (next.length === 0) return null;
+                                  if (!prevId || !next.includes(prevId)) return next[0];
+                                  return prevId;
+                                });
+                                return next;
                               });
-                              return next;
-                            });
-                          }}
-                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
-                            active
-                              ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/40'
-                              : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-teal-400'
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              active
+                                ? 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/40'
+                                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-teal-400'
+                            }`}
+                          >
+                            {cat.name}
+                          </button>
+                        );
+                      })}
+                      {categories.length === 0 && (
+                        <p className="text-[10px] text-gray-400">دسته‌بندی‌ای برای انتخاب وجود ندارد.</p>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5">برای ثبت خبر بدون دسته‌بندی، هیچ گزینه‌ای را انتخاب نکنید.</p>
+                  </div>
+                )}
+
+                {formIsAchievement && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-2">آیکون افتخار</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {ICON_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setFormIcon(opt.key)}
+                          title={opt.label}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all cursor-pointer ${
+                            formIcon === opt.key
+                              ? 'bg-amber-500/10 border-amber-500/50 text-amber-500'
+                              : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-amber-500/30 hover:text-amber-500'
                           }`}
                         >
-                          {cat.name}
+                          {opt.icon}
+                          <span className="text-[8px] font-bold truncate w-full text-center">{opt.label}</span>
                         </button>
-                      );
-                    })}
-                    {categories.length === 0 && (
-                      <p className="text-[10px] text-gray-400">دسته‌بندی‌ای برای انتخاب وجود ندارد.</p>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1.5">برای ثبت خبر بدون دسته‌بندی، هیچ گزینه‌ای را انتخاب نکنید.</p>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">وضعیت</label>
@@ -1216,60 +1449,66 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                     value={formStatus} onChange={e => setFormStatus(e.target.value as any)}
                     className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
-                    {canApprove && <option value="published">منتشر شده</option>}
+                    {(formIsAchievement ? canApproveAchievement : canApprove) && <option value="published">منتشر شده</option>}
                     <option value="draft">پیش‌نویس</option>
-                    <option value="archived">آرشیو شده</option>
+                    {!formIsAchievement && <option value="archived">آرشیو شده</option>}
                   </select>
-                  {!canApprove && (
+                  {!(formIsAchievement ? canApproveAchievement : canApprove) && (
                     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
                       <span>⏳</span>
-                      <span>خبر پس از ذخیره به صورت پیش‌نویس ثبت شده و پس از تایید مدیر منتشر خواهد شد.</span>
+                      <span>{formIsAchievement ? 'افتخار پس از ذخیره به صورت پیش‌نویس ثبت شده و پس از تایید مدیر منتشر خواهد شد.' : 'خبر پس از ذخیره به صورت پیش‌نویس ثبت شده و پس از تایید مدیر منتشر خواهد شد.'}</span>
                     </p>
                   )}
                 </div>
 
-                <div className="pt-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={formIsPinned} onChange={e => setFormIsPinned(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                      <Pin className="w-3.5 h-3.5 text-amber-500" />
-                      خبر ویژه / سنجاق
-                    </span>
-                  </label>
-                </div>
+                {!formIsAchievement && (
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" checked={formIsPinned} onChange={e => setFormIsPinned(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                        <Pin className="w-3.5 h-3.5 text-amber-500" />
+                        خبر ویژه / سنجاق
+                      </span>
+                    </label>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
-                    <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
-                    بخش نظرات
-                  </label>
-                  <select
-                    value={formCommentsMode} onChange={e => setFormCommentsMode(e.target.value as any)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="auto">نمایش خودکار نظرات</option>
-                    <option value="approval">نیاز به تایید مدیر</option>
-                    <option value="disabled">غیرفعال (نمایش داده نشود)</option>
-                  </select>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    {formCommentsMode === 'auto' && 'نظرات کاربران بلافاصله پس از ثبت نمایش داده می‌شوند.'}
-                    {formCommentsMode === 'approval' && 'نظرات ابتدا توسط مدیر تایید شده و سپس نمایش داده می‌شوند.'}
-                    {formCommentsMode === 'disabled' && 'بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.'}
-                  </p>
-                </div>
+                {!formIsAchievement && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
+                      بخش نظرات
+                    </label>
+                    <select
+                      value={formCommentsMode} onChange={e => setFormCommentsMode(e.target.value as any)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                    >
+                      <option value="auto">نمایش خودکار نظرات</option>
+                      <option value="approval">نیاز به تایید مدیر</option>
+                      <option value="disabled">غیرفعال (نمایش داده نشود)</option>
+                    </select>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {formCommentsMode === 'auto' && 'نظرات کاربران بلافاصله پس از ثبت نمایش داده می‌شوند.'}
+                      {formCommentsMode === 'approval' && 'نظرات ابتدا توسط مدیر تایید شده و سپس نمایش داده می‌شوند.'}
+                      {formCommentsMode === 'disabled' && 'بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.'}
+                    </p>
+                  </div>
+                )}
 
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={formIsPhotoReport} onChange={e => setFormIsPhotoReport(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                      <Image className="w-3.5 h-3.5 text-indigo-500" />
-                      گزارش تصویری
-                    </span>
-                  </label>
-                  <p className="text-[10px] text-gray-400 mt-1 mr-6">در گزارش تصویری، گالری تصاویر جایگزین متن اصلی می‌شود.</p>
-                </div>
+                {!formIsAchievement && (
+                  <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" checked={formIsPhotoReport} onChange={e => setFormIsPhotoReport(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                        <Image className="w-3.5 h-3.5 text-indigo-500" />
+                        گزارش تصویری
+                      </span>
+                    </label>
+                    <p className="text-[10px] text-gray-400 mt-1 mr-6">در گزارش تصویری، گالری تصاویر جایگزین متن اصلی می‌شود.</p>
+                  </div>
+                )}
 
-                {formIsPhotoReport && (
+                {!formIsAchievement && formIsPhotoReport && (
                   <div className="pt-2 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">تصاویر گزارش</span>
@@ -1372,10 +1611,16 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                   <button
                     type="submit" disabled={formLoading}
-                    className="w-full py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    className={`w-full py-3 px-4 rounded-xl text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 ${
+                      formIsAchievement ? 'bg-amber-500 hover:bg-amber-600' : 'bg-teal-600 hover:bg-teal-700'
+                    }`}
                   >
                     {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    <span>{editingNewsId ? 'ذخیره تغییرات' : 'انتشار خبر'}</span>
+                    <span>
+                      {editingNewsId && editingContentType === (formIsAchievement ? 'achievement' : 'news')
+                        ? 'ذخیره تغییرات'
+                        : (formIsAchievement ? 'ثبت افتخار' : 'انتشار خبر')}
+                    </span>
                   </button>
                   <button type="button" onClick={requestListView} className="w-full py-2.5 px-4 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-300 cursor-pointer">
                     انصراف
@@ -1841,9 +2086,9 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                 <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-4">
                   <Trash2 className="w-6 h-6 text-rose-500" />
                 </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">حذف خبر</h3>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">{deleteItemType === 'achievement' ? 'حذف افتخار' : 'حذف خبر'}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                  آیا از حذف این خبر اطمینان دارید؟
+                  {deleteItemType === 'achievement' ? 'آیا از حذف این افتخار اطمینان دارید؟' : 'آیا از حذف این خبر اطمینان دارید؟'}
                   <br />
                   <span className="text-rose-500 text-xs">این عمل قابل بازگشت نیست.</span>
                 </p>
@@ -1858,7 +2103,7 @@ export default function NewsManagement({ user, activeTabId, moduleId, onDirtyCha
                     onClick={confirmDeleteNews}
                     className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
                   >
-                    حذف خبر
+                    {deleteItemType === 'achievement' ? 'حذف افتخار' : 'حذف خبر'}
                   </button>
                 </div>
               </div>

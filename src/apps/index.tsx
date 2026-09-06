@@ -18,7 +18,6 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   'slider-studio': lazy(() => import('./slider-studio')),
   'home-intro': lazy(() => import('./home-intro')),
   'home-portals': lazy(() => import('./home-portals')),
-  achievements: lazy(() => import('./achievements')),
   people: lazy(() => import('./people')),
   departments: lazy(() => import('./departments')),
   'page-builder': lazy(() => import('./page-builder')),
@@ -69,10 +68,8 @@ export const moduleToAppMap: Record<string, string> = {
   // Home Portals App (سامانه‌های دانشگاه در صفحه اصلی)
   'home-portals': 'home-portals',
 
-  // Achievements App
-  'achievements': 'achievements',
-  'achievements-create': 'achievements',
-  'achievements-visitor-analytics': 'achievements',
+  // Achievements — folded into the News App (see the content-type toggle in
+  // the News editor); no standalone module or moduleId anymore.
 
   // People App (اعضای دانشگاه)
   'people': 'people',

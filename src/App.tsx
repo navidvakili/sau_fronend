@@ -212,8 +212,6 @@ export default function App() {
     { targetId: 'news-visitor-analytics', title: 'آمار بازدیدکنندگان اخبار', iconName: 'BarChart2', category: 'اخبار' },
     { targetId: 'announcements-create', title: 'ایجاد اطلاعیه', iconName: 'Plus', category: 'اطلاعیه‌ها' },
     { targetId: 'announcements-visitor-analytics', title: 'آمار بازدیدکنندگان اطلاعیه‌ها', iconName: 'BarChart2', category: 'اطلاعیه‌ها' },
-    { targetId: 'achievements-create', title: 'ایجاد افتخار', iconName: 'Plus', category: 'افتخارات' },
-    { targetId: 'achievements-visitor-analytics', title: 'آمار بازدیدکنندگان افتخارات', iconName: 'BarChart2', category: 'افتخارات' },
     { targetId: 'smart-page-builder', title: 'صفحه‌ساز هوشمند', iconName: 'LayoutDashboard', category: 'صفحه‌ساز' },
     { targetId: 'smart-page-visitor-analytics', title: 'آمار بازدیدکنندگان صفحات هوشمند', iconName: 'BarChart2', category: 'صفحه‌ساز' },
     { targetId: 'dam-studio', title: 'استودیو دارایی‌های دیجیتال', iconName: 'Image', category: 'مدیریت دارایی‌ها' },

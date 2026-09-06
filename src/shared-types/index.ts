@@ -84,6 +84,10 @@ export interface NewsComment {
 
 export interface NewsItem {
   id: number;
+  /** 'achievement' rows are Achievement records merged into the News admin list/archive (see NewsController::index). Absent/'news' means a real news article. */
+  content_type?: 'news' | 'achievement';
+  /** Only set when content_type === 'achievement' (icon key, see ICON_OPTIONS in the news app). */
+  icon?: string;
   title: string;
   summary: string | null;
   content: string;
