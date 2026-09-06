@@ -110,7 +110,8 @@ import {
   ChevronRight,
   Search,
   Copy,
-  Printer
+  Printer,
+  Tag
 } from 'lucide-react';
 import {
   EitaaIcon,
@@ -2797,6 +2798,7 @@ const DedicatedPageContactInfoWidget: React.FC<{
 }> = ({ containerStyle, dedicatedPageId }) => {
   const [info, setInfo] = useState<DedicatedPageContactInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => {
     if (!dedicatedPageId) return;
@@ -2834,11 +2836,11 @@ const DedicatedPageContactInfoWidget: React.FC<{
   }
 
   const rows = [
-    { icon: Mail, label: 'ایمیل', value: info.email, copyable: true },
-    { icon: Phone, label: 'تلفن', value: info.phone, copyable: true },
-    { icon: Phone, label: 'داخلی', value: info.extension, copyable: false },
-    { icon: MapPin, label: 'آدرس دفتر', value: info.location, copyable: false },
-    { icon: Clock, label: 'ساعات مشاوره', value: info.officeHours, copyable: false }
+    { key: 'email', icon: Mail, label: 'ایمیل', value: info.email, copyable: true },
+    { key: 'phone', icon: Phone, label: 'تلفن', value: info.phone, copyable: true },
+    { key: 'extension', icon: Hash, label: 'داخلی', value: info.extension, copyable: true },
+    { key: 'location', icon: MapPin, label: 'آدرس دفتر', value: info.location, copyable: true },
+    { key: 'officeHours', icon: Clock, label: 'ساعات مشاوره', value: info.officeHours, copyable: false }
   ].filter((r) => r.value);
 
   if (rows.length === 0) {
@@ -2849,11 +2851,17 @@ const DedicatedPageContactInfoWidget: React.FC<{
     );
   }
 
+  const handleCopy = (key: string, value: string) => {
+    navigator.clipboard?.writeText(value);
+    setCopiedField(key);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
   return (
     <div style={containerStyle} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 space-y-3">
-      {rows.map((r, i) => (
-        <div key={i} className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+      {rows.map((r) => (
+        <div key={r.key} className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0">
             <r.icon className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
@@ -2862,11 +2870,11 @@ const DedicatedPageContactInfoWidget: React.FC<{
           </div>
           {r.copyable && (
             <button
-              onClick={() => navigator.clipboard?.writeText(r.value || '')}
+              onClick={() => handleCopy(r.key, r.value || '')}
               className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-500/10 shrink-0"
               title="کپی"
             >
-              <Copy className="w-3.5 h-3.5" />
+              {copiedField === r.key ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           )}
         </div>
@@ -2913,10 +2921,10 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
 
   const profile = hero.professorProfile;
   const stats = [
-    { icon: FileText, label: 'مقاله', value: profile?.publications?.length || 0 },
-    { icon: BookOpen, label: 'کتاب', value: profile?.books?.length || 0 },
-    { icon: FlaskConical, label: 'پروژهٔ پژوهشی', value: hero.projectsCount },
-    { icon: Calendar, label: 'درس', value: hero.coursesCount }
+    { label: 'مقاله علمی معتبر', value: profile?.publications?.length || 0 },
+    { label: 'کتاب تألیف‌شده', value: profile?.books?.length || 0 },
+    { label: 'طرح پژوهشی', value: hero.projectsCount },
+    { label: 'درس ارائه‌شده', value: hero.coursesCount }
   ];
 
   const handleCopyLink = () => {
@@ -2928,72 +2936,85 @@ const DedicatedPageFacultyHeroWidget: React.FC<{
   };
 
   return (
-    <div style={containerStyle} className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-950 to-emerald-900 text-white">
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-        <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden border-4 border-emerald-700/50 bg-emerald-800 shrink-0 flex items-center justify-center">
-          {profile?.avatarUrl ? (
-            <img src={profile.avatarUrl} alt={hero.owner.name} className="w-full h-full object-cover" />
-          ) : (
-            <User className="w-12 h-12 text-emerald-300" />
-          )}
+    <div style={containerStyle} className="w-full bg-emerald-900 text-white">
+      <div className="bg-emerald-950/70 py-6">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-6">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div className="relative shrink-0">
+              <div className="w-28 h-28 md:w-36 md:h-36 rounded-2xl overflow-hidden border-4 border-emerald-800 shadow-xl bg-slate-200 flex items-center justify-center">
+                {profile?.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt={hero.owner.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-slate-400" />
+                )}
+              </div>
+              <div className="absolute -bottom-2 -left-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg border border-emerald-400 shadow flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                <span>عضو رسمی هیئت علمی</span>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0 text-center md:text-right space-y-2.5">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                {profile?.rank && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-800/80 text-emerald-200 text-xs font-bold border border-emerald-700">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>{profile.rank}</span>
+                  </span>
+                )}
+                {profile?.department && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white/10 text-emerald-100 text-xs font-medium border border-white/10">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>{profile.department}</span>
+                  </span>
+                )}
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight">{hero.owner.name}</h2>
+              <p className="text-emerald-200 text-xs md:text-sm font-semibold">{hero.owner.roleTitle}</p>
+
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-2">
+                <button
+                  onClick={handleCopyLink}
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/15 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copied ? 'لینک کپی شد' : 'کپی لینک صفحه'}</span>
+                </button>
+                <button
+                  onClick={() => window.print?.()}
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/15 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>نسخه چاپی رزومه</span>
+                </button>
+                {profile?.scholarUrl && (
+                  <a
+                    href={profile.scholarUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-white/10 hover:bg-white/20 text-emerald-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/15 transition flex items-center gap-1.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>پروفایل Google Scholar</span>
+                  </a>
+                )}
+                <button className="bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>ارتباط با استاد</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {stats.map((s, i) => (
+              <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                <span className="block text-lg font-black font-mono">{s.value}</span>
+                <span className="text-[11px] text-emerald-200">{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
-
-        <div className="flex-1 min-w-0 text-center md:text-right">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-            {profile?.rank && (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-700/50 text-emerald-100 text-[11px] font-bold">{profile.rank}</span>
-            )}
-            {profile?.department && (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-700/50 text-emerald-100 text-[11px] font-bold">{profile.department}</span>
-            )}
-          </div>
-          <h2 className="text-xl md:text-2xl font-black">{hero.owner.name}</h2>
-          <p className="text-emerald-200 text-xs md:text-sm mt-1">{hero.owner.roleTitle}</p>
-
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-4">
-            <button
-              onClick={handleCopyLink}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>{copied ? 'کپی شد' : 'کپی لینک'}</span>
-            </button>
-            <button
-              onClick={() => window.print?.()}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>چاپ</span>
-            </button>
-            {profile?.scholarUrl && (
-              <a
-                href={profile.scholarUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Google Scholar</span>
-              </a>
-            )}
-            <button
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              <span>ارتباط با استاد</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-        {stats.map((s, i) => (
-          <div key={i} className="rounded-xl bg-white/10 p-3 text-center">
-            <s.icon className="w-4 h-4 mx-auto mb-1 text-emerald-300" />
-            <div className="text-lg font-black">{s.value}</div>
-            <div className="text-[10px] text-emerald-200">{s.label}</div>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -3031,15 +3052,18 @@ const DedicatedPageEducationWidget: React.FC<{
         <SmartEmpty error="هنوز سابقهٔ تحصیلی برای این استاد ثبت نشده است" />
       ) : (
         data.map((edu, i) => (
-          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+          <div key={i} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 hover:border-purple-200 hover:bg-purple-50/20 dark:hover:bg-slate-800/60 transition group">
+            <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <GraduationCap className="w-4 h-4" />
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black text-slate-900 dark:text-white">{edu.degree}{edu.field ? ` — ${edu.field}` : ''}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                {[edu.institution, edu.year].filter(Boolean).join(' · ')}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">{edu.degree}{edu.field ? ` — ${edu.field}` : ''}</div>
+                {edu.year && (
+                  <span className="text-[11px] font-mono font-bold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-500/10 px-2 py-0.5 rounded-md shrink-0">{edu.year}</span>
+                )}
               </div>
+              {edu.institution && <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{edu.institution}</div>}
             </div>
           </div>
         ))
@@ -3090,6 +3114,7 @@ const DedicatedPageResearchInterestsWidget: React.FC<{
   dedicatedPageId?: number | null;
 }> = ({ containerStyle, dedicatedPageId }) => {
   const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.researchInterests);
+  const [selected, setSelected] = useState<string | null>(null);
 
   if (!dedicatedPageId) {
     return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
@@ -3106,13 +3131,18 @@ const DedicatedPageResearchInterestsWidget: React.FC<{
       ) : (
         <div className="flex flex-wrap gap-2">
           {data.map((interest, i) => (
-            <span
+            <button
               key={i}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 text-[11px] font-bold border border-purple-500/20"
+              onClick={() => setSelected(selected === interest ? null : interest)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                selected === interest
+                  ? 'bg-purple-700 text-white border-purple-700 shadow-sm'
+                  : 'bg-purple-50 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/20 hover:bg-purple-100 dark:hover:bg-purple-500/20'
+              }`}
             >
-              <Sparkles className="w-3 h-3" />
-              {interest}
-            </span>
+              <Tag className={`w-3 h-3 ${selected === interest ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+              <span>{interest}</span>
+            </button>
           ))}
         </div>
       )}
@@ -3125,48 +3155,79 @@ const DedicatedPagePublicationsWidget: React.FC<{
   containerStyle: React.CSSProperties;
   dedicatedPageId?: number | null;
 }> = ({ containerStyle, dedicatedPageId }) => {
-  const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.publications);
+  const { data: profiles, error, retry } = useSmartData<DedicatedPageProfessorProfile>(
+    () => (dedicatedPageId ? fetchDedicatedPageProfessorProfileForWidget(dedicatedPageId).then((p) => (p ? [p] : [])) : Promise.resolve([])),
+    [dedicatedPageId]
+  );
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   if (!dedicatedPageId) {
     return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
   }
 
+  const profile = profiles?.[0];
+  const data = profile?.publications;
+
+  const handleCopyDoi = (doi: string, idx: number) => {
+    navigator.clipboard?.writeText(`https://doi.org/${doi}`);
+    setCopiedId(idx);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
-    <div style={containerStyle} className="space-y-2.5">
+    <div style={containerStyle} className="space-y-3.5">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
-      ) : !data ? (
+      ) : !profiles ? (
         <SmartSkeleton variant="list" count={3} />
-      ) : data.length === 0 ? (
+      ) : !data || data.length === 0 ? (
         <SmartEmpty error="هنوز مقاله‌ای برای این استاد ثبت نشده است" />
       ) : (
-        data.map((pub, i) => (
-          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 group">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-black text-slate-900 dark:text-white">{pub.title}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2">
-                {pub.journal && <span>{pub.journal}</span>}
-                {pub.year && <span>· {pub.year}</span>}
-                {typeof pub.citations === 'number' && <span>· {pub.citations} استناد</span>}
-                {pub.doi && <span dir="ltr">· DOI: {pub.doi}</span>}
+        <>
+          {data.map((pub, i) => (
+            <div key={i} className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 hover:border-purple-200 transition group flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug group-hover:text-purple-800 dark:group-hover:text-purple-300 transition">{pub.title}</h4>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {pub.journal && <span className="font-semibold text-slate-700 dark:text-slate-300">{pub.journal}</span>}
+                  {pub.year && <span className="font-mono bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px]">{pub.year}</span>}
+                  {typeof pub.citations === 'number' && (
+                    <span className="text-purple-700 dark:text-purple-300 font-bold bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-100 dark:border-purple-500/20">{pub.citations} استناد</span>
+                  )}
+                </div>
+                {pub.doi && (
+                  <div className="pt-1 flex items-center justify-between text-[11px]">
+                    <span className="font-mono text-slate-400 truncate max-w-[200px]" dir="ltr">DOI: {pub.doi}</span>
+                    <button
+                      onClick={() => handleCopyDoi(pub.doi!, i)}
+                      className="text-purple-700 dark:text-purple-300 hover:text-purple-900 font-semibold flex items-center gap-1 transition cursor-pointer"
+                    >
+                      {copiedId === i ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedId === i ? 'کپی شد' : 'کپی پیوند'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-            {pub.link && (
+          ))}
+          {profile?.scholarUrl && (
+            <div className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-slate-500 dark:text-slate-400">فهرست کامل مقالات در گوگل اسکولار:</span>
               <a
-                href={pub.link}
+                href={profile.scholarUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-500/10 shrink-0"
-                title="مشاهدهٔ مقاله"
+                className="text-purple-700 dark:text-purple-300 hover:text-purple-900 font-bold flex items-center gap-1 transition"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Google Scholar</span>
+                <ExternalLink className="w-3 h-3" />
               </a>
-            )}
-          </div>
-        ))
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -3178,13 +3239,20 @@ const DedicatedPageBooksWidget: React.FC<{
   dedicatedPageId?: number | null;
 }> = ({ containerStyle, dedicatedPageId }) => {
   const { data, error, retry } = useDedicatedPageProfileField(dedicatedPageId, (p) => p.books);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   if (!dedicatedPageId) {
     return <div style={containerStyle}><DedicatedPageNotConfigured /></div>;
   }
 
+  const handleCopyIsbn = (isbn: string, idx: number) => {
+    navigator.clipboard?.writeText(isbn);
+    setCopiedId(idx);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
-    <div style={containerStyle} className="space-y-2.5">
+    <div style={containerStyle} className="space-y-3.5">
       {error ? (
         <SmartEmpty error={error} onRetry={retry} />
       ) : !data ? (
@@ -3193,28 +3261,30 @@ const DedicatedPageBooksWidget: React.FC<{
         <SmartEmpty error="هنوز کتابی برای این استاد ثبت نشده است" />
       ) : (
         data.map((book, i) => (
-          <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 group">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+          <div key={i} className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/60 hover:border-amber-200 transition group flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
               <BookOpen className="w-4 h-4" />
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-black text-slate-900 dark:text-white">{book.title}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2">
-                {book.publisher && <span>{book.publisher}</span>}
-                {book.year && <span>· {book.year}</span>}
-                {book.pages && <span>· {book.pages} صفحه</span>}
-                {book.isbn && <span dir="ltr">· ISBN {book.isbn}</span>}
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug group-hover:text-amber-800 dark:group-hover:text-amber-300 transition">{book.title}</h4>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {book.publisher && <span className="font-semibold text-slate-700 dark:text-slate-300">{book.publisher}</span>}
+                {book.year && <span className="font-mono bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px]">سال انتشار: {book.year}</span>}
+                {book.pages && <span>{book.pages} صفحه</span>}
               </div>
+              {book.isbn && (
+                <div className="pt-1 flex items-center justify-between text-[11px]">
+                  <span className="font-mono text-slate-500 dark:text-slate-400 text-[10px]" dir="ltr">{book.isbn}</span>
+                  <button
+                    onClick={() => handleCopyIsbn(book.isbn!, i)}
+                    className="text-amber-700 dark:text-amber-300 hover:text-amber-900 font-semibold flex items-center gap-1 transition cursor-pointer"
+                  >
+                    {copiedId === i ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedId === i ? 'شابک کپی شد' : 'کپی شابک'}</span>
+                  </button>
+                </div>
+              )}
             </div>
-            {book.isbn && (
-              <button
-                onClick={() => navigator.clipboard?.writeText(book.isbn || '')}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-500/10 shrink-0"
-                title="کپی شابک"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         ))
       )}
@@ -3316,11 +3386,14 @@ const DedicatedPageProjectsWidget: React.FC<{
               <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
                 {item.metadata?.funder && <span>حامی مالی: {item.metadata.funder}</span>}
                 {item.metadata?.status && (
-                  <span className={`px-2 py-0.5 rounded-full font-bold ${
-                    ['completed', 'پایان‌یافته', 'خاتمه‌یافته'].includes(item.metadata.status)
+                  <span className={`px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                    ['ongoing', 'در حال اجرا', 'جاری'].includes(item.metadata.status)
                       ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                       : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                  }`}>{item.metadata.status}</span>
+                  }`}>
+                    {['ongoing', 'در حال اجرا', 'جاری'].includes(item.metadata.status) ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                    <span>{item.metadata.status}</span>
+                  </span>
                 )}
                 {(item.metadata?.startYear || item.metadata?.endYear) && (
                   <span>{[item.metadata?.startYear, item.metadata?.endYear].filter(Boolean).join(' تا ')}</span>
