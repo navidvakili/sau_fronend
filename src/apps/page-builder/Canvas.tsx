@@ -785,6 +785,80 @@ export const Canvas: React.FC<CanvasProps> = ({
     );
   };
 
+  /**
+   * دکمهٔ شناور «افزودن بلوک جدید» بین دو سکشن (یا قبل از اولین سکشن، وقتی after نامشخص است).
+   * سه محل رندر (ابتدای بوم، بعد از سکشن مخفی، بعد از سکشن عادی) دقیقاً همین منطق را
+   * تکرار می‌کردند — فقط dividerKey/insertIndex/برچسب متفاوت بود.
+   */
+  const renderAddDivider = (after?: { sec: SectionInstance; secIdx: number }) => {
+    const dividerKey = after ? `after:${after.sec.id}` : 'before';
+    const insertIndex = after ? after.secIdx + 1 : 0;
+    const resolveTargetColumnId = (): string | undefined => {
+      if (!after) {
+        const first = pageSchema.sections[0];
+        return first ? first.columns[0]?.id : undefined;
+      }
+      const next = pageSchema.sections[after.secIdx + 1];
+      return next ? next.columns[0]?.id : after.sec.columns[after.sec.columns.length - 1]?.id;
+    };
+    return (
+      <div
+        className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
+          dragOverDividerId === dividerKey ? 'bg-teal-500/20 ring-2 ring-teal-500' : ''
+        }`}
+        onDragOver={(e) => {
+          if (dragWidgetId || dragSectionId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setDragOverDividerId(dividerKey);
+            setDragOverColumnId(null);
+          }
+        }}
+        onDragLeave={(e) => {
+          const related = e.relatedTarget as Node | null;
+          if (dragOverDividerId === dividerKey && (!related || !e.currentTarget.contains(related))) {
+            setDragOverDividerId(null);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverColumnId(null);
+          setDragOverDividerId(null);
+          if (dragSectionId) {
+            onMoveSectionToTop?.(dragSectionId, insertIndex);
+          } else if (dragWidgetId) {
+            const targetColId = resolveTargetColumnId();
+            if (targetColId) {
+              onMoveWidgetToColumn?.(dragWidgetId, targetColId);
+            }
+          }
+          setDragWidgetId(null);
+          setDragSectionId(null);
+        }}
+      >
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onOpenComponentPicker) {
+              onOpenComponentPicker(insertIndex);
+            } else {
+              onAddSection('1col');
+            }
+          }}
+          className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{after ? 'افزودن بلوک جدید در این مکان' : 'افزودن بلوک جدید به ابتدا'}</span>
+        </button>
+      </div>
+    );
+  };
+
   // Breakpoint container width calculator
   const getCanvasWidthClass = () => {
     switch (activeBreakpoint) {
@@ -908,66 +982,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         ) : (
           <div className="space-y-0">
             {/* Divider button before the first section — در حالت محدود مخفی است (چیدمان قفل است) */}
-            {!restrictedMode && (
-            <div
-              className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
-                dragOverDividerId === 'before'
-                  ? 'bg-teal-500/20 ring-2 ring-teal-500'
-                  : ''
-              }`}
-              onDragOver={(e) => {
-                if (dragWidgetId || dragSectionId) {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  setDragOverDividerId('before');
-                  setDragOverColumnId(null);
-                }
-              }}
-              onDragLeave={(e) => {
-                const related = e.relatedTarget as Node | null;
-                if (dragOverDividerId === 'before' && (!related || !e.currentTarget.contains(related))) {
-                  setDragOverDividerId(null);
-                }
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setDragOverColumnId(null);
-                setDragOverDividerId(null);
-                if (dragSectionId) {
-                  // رها کردن بلوک روی خط‌جداکننده ابتدا → انتقال به ابتدای صفحه
-                  onMoveSectionToTop?.(dragSectionId, 0);
-                } else if (dragWidgetId) {
-                  const first = pageSchema.sections[0];
-                  const targetColId = first ? first.columns[0]?.id : undefined;
-                  if (targetColId) {
-                    onMoveWidgetToColumn?.(dragWidgetId, targetColId);
-                  }
-                }
-                setDragWidgetId(null);
-                setDragSectionId(null);
-              }}
-            >
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onOpenComponentPicker) {
-                    onOpenComponentPicker(0);
-                  } else {
-                    onAddSection('1col');
-                  }
-                }}
-                className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>افزودن بلوک جدید به ابتدا</span>
-              </button>
-            </div>
-            )}
+            {!restrictedMode && renderAddDivider()}
             {pageSchema.sections.map((sec, secIdx) => {
               // Check section visibility for active breakpoint
               if (!sec.visibility[activeBreakpoint]) {
@@ -985,71 +1000,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                     </div>
 
                     {/* Divider line after hidden section — در حالت محدود مخفی است */}
-                    {!restrictedMode && (
-                    <div
-                      className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
-                        dragOverDividerId === 'after:' + sec.id
-                          ? 'bg-teal-500/20 ring-2 ring-teal-500'
-                          : ''
-                      }`}
-                      onDragOver={(e) => {
-                        if (dragWidgetId || dragSectionId) {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                          setDragOverDividerId('after:' + sec.id);
-                          setDragOverColumnId(null);
-                        }
-                      }}
-                      onDragLeave={(e) => {
-                        const related = e.relatedTarget as Node | null;
-                        if (
-                          dragOverDividerId === 'after:' + sec.id &&
-                          (!related || !e.currentTarget.contains(related))
-                        ) {
-                          setDragOverDividerId(null);
-                        }
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setDragOverColumnId(null);
-                        setDragOverDividerId(null);
-                        if (dragSectionId) {
-                          // رها کردن بلوک روی خط‌جداکننده → انتقال به سطح اصلی در این مکان
-                          onMoveSectionToTop?.(dragSectionId, secIdx + 1);
-                        } else if (dragWidgetId) {
-                          const next = pageSchema.sections[secIdx + 1];
-                          const targetColId = next
-                            ? next.columns[0]?.id
-                            : sec.columns[sec.columns.length - 1]?.id;
-                          if (targetColId) {
-                            onMoveWidgetToColumn?.(dragWidgetId, targetColId);
-                          }
-                        }
-                        setDragWidgetId(null);
-                        setDragSectionId(null);
-                      }}
-                    >
-                      <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                        <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenComponentPicker) {
-                            onOpenComponentPicker(secIdx + 1);
-                          } else {
-                            onAddSection('1col');
-                          }
-                        }}
-                        className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>افزودن بلوک جدید در این مکان</span>
-                      </button>
-                    </div>
-                    )}
+                    {!restrictedMode && renderAddDivider({ sec, secIdx })}
                   </div>
                 );
               }
@@ -1059,71 +1010,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                   {renderSectionBlock(sec, 0, secIdx, true, pageSchema.sections.length)}
 
                   {/* Interactive Add Section Divider between blocks — در حالت محدود مخفی است */}
-                  {!restrictedMode && (
-                  <div
-                    className={`relative my-2 group/divider py-2 flex items-center justify-center transition-colors rounded-xl ${
-                      dragOverDividerId === 'after:' + sec.id
-                        ? 'bg-teal-500/20 ring-2 ring-teal-500'
-                        : ''
-                    }`}
-                    onDragOver={(e) => {
-                      if (dragWidgetId || dragSectionId) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDragOverDividerId('after:' + sec.id);
-                        setDragOverColumnId(null);
-                      }
-                    }}
-                    onDragLeave={(e) => {
-                      const related = e.relatedTarget as Node | null;
-                      if (
-                        dragOverDividerId === 'after:' + sec.id &&
-                        (!related || !e.currentTarget.contains(related))
-                      ) {
-                        setDragOverDividerId(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDragOverColumnId(null);
-                      setDragOverDividerId(null);
-                      if (dragSectionId) {
-                        // رها کردن بلوک روی خط‌جداکننده → انتقال به سطح اصلی در این مکان
-                        onMoveSectionToTop?.(dragSectionId, secIdx + 1);
-                      } else if (dragWidgetId) {
-                        const next = pageSchema.sections[secIdx + 1];
-                        const targetColId = next
-                          ? next.columns[0]?.id
-                          : sec.columns[sec.columns.length - 1]?.id;
-                        if (targetColId) {
-                          onMoveWidgetToColumn?.(dragWidgetId, targetColId);
-                        }
-                      }
-                      setDragWidgetId(null);
-                      setDragSectionId(null);
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                      <div className="w-full border-t border-dashed border-teal-500/30 group-hover/divider:border-teal-500 transition-colors" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onOpenComponentPicker) {
-                          onOpenComponentPicker(secIdx + 1);
-                        } else {
-                          onAddSection('1col');
-                        }
-                      }}
-                      className="relative z-10 px-3 py-1 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-black text-[11px] flex items-center gap-1.5 shadow-md transition-transform transform hover:scale-105 cursor-pointer opacity-80 hover:opacity-100"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>افزودن بلوک جدید در این مکان</span>
-                    </button>
-                  </div>
-                  )}
+                  {!restrictedMode && renderAddDivider({ sec, secIdx })}
                 </React.Fragment>
               );
             })}
