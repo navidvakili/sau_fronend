@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, Save, LayoutTemplate, ArrowRight, AlertCircle, Sparkles, Plus, Trash2, Check, X,
-  Settings2, Link2, Newspaper, CheckCircle2, FolderOpen, FileText, Pencil,
+  Settings2, Link2, Newspaper, CheckCircle2, FolderOpen, FileText, Pencil, Search,
 } from 'lucide-react';
 import type { AcademicDepartmentItem, AcademicFieldItem, PersonItem, InfoFileItem, NewsCategory } from '@/src/shared-types';
 import {
@@ -29,6 +29,7 @@ import {
   getColumnBlocks, getColumnWidth, resolveBoxShadow, DEFAULT_GLOBAL_STYLES,
   type SmartPageSchema, type SectionInstance, type WidgetInstance,
 } from '../page-builder/builderTypes';
+import { normalizePersian } from '@/src/shared-utils/formatters';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import MediaManager from '@/src/shared-components/MediaManager';
 import LinkLayoutDialog from '../dedicated_pages/LinkLayoutDialog';
@@ -134,6 +135,17 @@ const isWidgetEditable = (widget: WidgetInstance): boolean =>
   isDeptImageWidget(widget) ||
   knownTokensInWidget(widget).length > 0;
 
+/** برای ویجت متنیِ متصل به توکن (name/description/headName/...)، بررسی می‌کند که آیا محتوای
+ *  نهایی (بعد از جایگزینی توکن‌ها با مقدار واقعی) کاملاً خالی می‌شود — یعنی مقدار فیلد هنوز
+ *  ثبت نشده و چیزی برای هاورکردن/دیدنِ دکمهٔ مداد باقی نمی‌ماند (دقیقاً همان مشکلی که برای
+ *  «اخبار گروه» خالی هم پیش می‌آید). خروجی: توکن‌های شناخته‌شدهٔ خالی (برای برچسبِ جای‌گیر). */
+const emptyEditableTextTokens = (widget: WidgetInstance, variables: Record<string, string>): string[] => {
+  const tokens = knownTokensInWidget(widget);
+  if (tokens.length === 0) return [];
+  const resolved = (widget.content || '').replace(DEPT_TOKEN_RE, (match, key) => (key in variables ? variables[key] : match));
+  return resolved.trim() === '' ? tokens : [];
+};
+
 /** همان قرارداد imageTokenOf ولی برای backgroundImage یک سکشن (مثل تصویر پس‌زمینهٔ بخش معرفی گروه) */
 const sectionImageTokenOf = (section: SectionInstance): string | null => {
   const m = IMAGE_TOKEN_RE.exec(section.backgroundImage || '');
@@ -200,6 +212,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
   const [instructorPool, setInstructorPool] = useState<PersonItem[]>([]);
   const [instructorPoolLoaded, setInstructorPoolLoaded] = useState(false);
   const [instructorPoolLoading, setInstructorPoolLoading] = useState(false);
+  const [instructorSearch, setInstructorSearch] = useState('');
   const [fieldsList, setFieldsList] = useState<AcademicFieldItem[]>([]);
   const [filesList, setFilesList] = useState<InfoFileItem[]>([]);
   const [newsCategoryId, setNewsCategoryId] = useState<number | null>(null);
@@ -340,7 +353,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
 
   // ===== باز/بسته‌کردن پاپ‌آور (فقط برای فیلدهای متنی) =====
   const closePopover = () => { setPopoverPos(null); setSelectedWidgetId(null); };
-  const closeDialog = () => { setActiveDialog(null); setSelectedWidgetId(null); };
+  const closeDialog = () => { setActiveDialog(null); setSelectedWidgetId(null); setInstructorSearch(''); };
 
   const handleSelectWidget = (widgetId: string) => {
     const widget = layoutSchema ? findWidgetById(layoutSchema.sections, widgetId) : null;
@@ -361,6 +374,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
       setSelectedWidgetId(widgetId);
       setPopoverPos(null);
       setActiveDialog('instructors');
+      setInstructorSearch('');
       ensureInstructorPoolLoaded();
       return;
     }
@@ -615,6 +629,19 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
 
   const resolvedInstructors = instructorPool.filter((p) => instructorIds.includes(p.id));
 
+  /** فهرست فیلترشدهٔ دیالوگ «اساتید مدعو» بر اساس جست‌وجو — روی نام/عنوان/تخصص/گروه/سمت.
+   *  با normalizePersian یکسان‌سازی می‌شود تا تفاوت رسم‌الخط عربی/فارسی (ي/ی، ك/ک)، نیم‌فاصله
+   *  و ارقام فارسی/عربی جلوی تطبیق را نگیرد (مثلاً جست‌وجوی «كامپيوتر» با «کامپیوتر» ثبت‌شده مطابقت یابد) */
+  const instructorSearchQuery = normalizePersian(instructorSearch);
+  const filteredInstructorPool = instructorSearchQuery === ''
+    ? instructorPool
+    : instructorPool.filter((p) => {
+        const haystack = normalizePersian(
+          [p.title, p.firstName, p.lastName, p.specialization, p.department, p.position].filter(Boolean).join(' ')
+        );
+        return haystack.includes(instructorSearchQuery);
+      });
+
   /** رندر یک ویجت — دقیقاً همان WidgetRenderer با isEditorPreview=false (خروجی واقعیِ سایت)،
    *  فقط اگر واقعاً به فیلد/رابطهٔ واقعی گروه متصل باشد (isWidgetEditable) یک دکمهٔ آیکونی
    *  کوچکِ ویرایش کنارش نشان داده می‌شود */
@@ -626,6 +653,11 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     // بین می‌رود. برای همین در همین حالت، به‌جای خروجی واقعی (خالی)، یک جای‌گیرِ همیشه‌دیده و
     // مستقیماً قابل‌کلیک نمایش داده می‌شود.
     const isEmptyDeptNews = isDeptNewsWidget(widget) && !newsCategoryId;
+    // فیلد متنیِ متصل به توکن که هنوز مقدار ندارد — همان مشکل «اخبار گروه» خالی، تعمیم‌یافته
+    // به هر فیلد اسکالر (name/description/headName/expertName/...): بدون این جای‌گیر، ویجت
+    // کاملاً خالی رندر می‌شود و هیچ ناحیه‌ای برای هاور و پیداکردنِ دکمهٔ ویرایش باقی نمی‌ماند.
+    const emptyTokens = emptyEditableTextTokens(widget, variables);
+    const isEmptyEditableText = emptyTokens.length > 0;
     const openDialog = (e: React.MouseEvent) => {
       e.stopPropagation();
       lastClickPosRef.current = { x: e.clientX, y: e.clientY };
@@ -633,7 +665,7 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
     };
     return (
       <div key={widget.id} className="relative group/dept-widget">
-        {editable && !isEmptyDeptNews && (
+        {editable && !isEmptyDeptNews && !isEmptyEditableText && (
           <button
             type="button"
             onClick={openDialog}
@@ -651,6 +683,15 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
           >
             <Newspaper className="w-4 h-4" />
             بدون دستهٔ خبری متصل — برای اتصال کلیک کنید
+          </button>
+        ) : isEmptyEditableText ? (
+          <button
+            type="button"
+            onClick={openDialog}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-emerald-400/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500/5 transition-colors cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {`«${emptyTokens.map((t) => TOKEN_FIELD_MAP[t].label).join('، ')}» هنوز ثبت نشده — برای وارد کردن کلیک کنید`}
           </button>
         ) : (
           <WidgetRenderer
@@ -971,6 +1012,20 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
                 <X className="w-4 h-4" />
               </button>
             </div>
+            {!instructorPoolLoading && instructorPool.length > 0 && (
+              <div className="px-5 pt-4 shrink-0">
+                <div className="relative">
+                  <Search className="absolute top-1/2 -translate-y-1/2 right-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={instructorSearch}
+                    onChange={(e) => setInstructorSearch(e.target.value)}
+                    placeholder="جست‌وجوی نام، تخصص یا گروه..."
+                    className="w-full pr-9 pl-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+            )}
             <div className="p-5 space-y-3 overflow-y-auto">
               <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{instructorIds.length} نفر انتخاب شده</label>
               {instructorPoolLoading ? (
@@ -979,9 +1034,11 @@ export default function VisualDataEditor({ departmentId, onBack, onSaved, onUseF
                 </div>
               ) : instructorPool.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-6">هیچ عضوی از نوع هیات علمی یا استاد مدعو یافت نشد.</p>
+              ) : filteredInstructorPool.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-6">با این جست‌وجو استادی یافت نشد.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {instructorPool.map((p) => {
+                  {filteredInstructorPool.map((p) => {
                     const selected = instructorIds.includes(p.id);
                     const label = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ') || `#${p.id}`;
                     return (
