@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { SmartPageSchema, SectionInstance, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
-import { applyBackgroundOpacity } from './WidgetRenderer';
+import { applyBackgroundOpacity } from './utils/styleResolvers';
 import { X, Code, Copy, Check, Download } from 'lucide-react';
 
 interface ExportModalProps {

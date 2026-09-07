@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { SectionInstance, WidgetInstance } from '../../page-builder/builderTypes';
-import { applyBackgroundOpacity } from '../../page-builder/WidgetRenderer';
+import { applyBackgroundOpacity } from '../../page-builder/utils/styleResolvers';
 import { DEPT_TOKEN_RE, DEPT_WIDGET_TYPES, IMAGE_TOKEN_MAP, IMAGE_TOKEN_RE, TOKEN_FIELD_MAP } from '../constants/tokenMap';
 
 /** توکن‌های شناخته‌شدهٔ داخل محتوای یک ویجت متنی (heading/text/accordion) */

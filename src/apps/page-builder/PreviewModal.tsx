@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SmartPageSchema, Breakpoint, SectionInstance, DEFAULT_GLOBAL_STYLES, getColumnWidth, getColumnBlocks, resolveBoxShadow } from './builderTypes';
-import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
+import { WidgetRenderer } from './WidgetRenderer';
+import { applyBackgroundOpacity } from './utils/styleResolvers';
 import {
   X,
   Monitor,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pencil } from 'lucide-react';
 import type { AcademicFieldItem, InfoFileItem, PersonItem } from '@/src/shared-types';
-import { applyBackgroundOpacity } from '../../page-builder/WidgetRenderer';
+import { applyBackgroundOpacity } from '../../page-builder/utils/styleResolvers';
 import { getColumnBlocks, getColumnWidth, resolveBoxShadow, type SectionInstance } from '../../page-builder/builderTypes';
 import { buildSectionBackgroundImage, isSectionEditable } from '../utils/deptTokens';
 import DeptWidgetRenderer from './DeptWidgetRenderer';

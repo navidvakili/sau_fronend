@@ -12,7 +12,8 @@ import {
   getColumnBlocks,
   resolveBoxShadow
 } from './builderTypes';
-import { WidgetRenderer, applyBackgroundOpacity } from './WidgetRenderer';
+import { WidgetRenderer } from './WidgetRenderer';
+import { applyBackgroundOpacity } from './utils/styleResolvers';
 import type { AcademicFieldItem, PersonItem, InfoFileItem } from '@/src/shared-types';
 import {
   Plus,
