@@ -130,9 +130,9 @@
     "semantic_hash": "7927e5a6454d74cd7c6e18ae3966ba64"
   },
   "src/apps/departments/VisualDataEditor.tsx": {
-    "mtime": 1788551259.1018152,
-    "ast_hash": "20ed507540d74b9accbcba2973b4798d",
-    "semantic_hash": "20ed507540d74b9accbcba2973b4798d"
+    "mtime": 1788760783.3973532,
+    "ast_hash": "ebb053ef2b042309c98950c877b07dc8",
+    "semantic_hash": ""
   },
   "src/apps/departments/api.ts": {
     "mtime": 1788518745.4872992,
