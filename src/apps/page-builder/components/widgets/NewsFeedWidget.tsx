@@ -49,12 +49,15 @@ export const NewsFeedWidget: React.FC<{
   const newsList = data || [];
   const displayMode = binding.displayMode || 'grid';
   const cols = binding.columnsCount || 2;
-  const gridClass =
-    cols === 3
-      ? 'grid grid-cols-1 md:grid-cols-3 gap-4'
-      : cols === 1
-        ? 'grid grid-cols-1 gap-4'
-        : 'grid grid-cols-1 md:grid-cols-2 gap-4';
+  const GRID_COLS_CLASS: Record<number, string> = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-1 md:grid-cols-2',
+    3: 'grid-cols-1 md:grid-cols-3',
+    4: 'grid-cols-2 md:grid-cols-4',
+    5: 'grid-cols-2 md:grid-cols-5',
+    6: 'grid-cols-2 md:grid-cols-6'
+  };
+  const gridClass = `grid ${GRID_COLS_CLASS[cols] || GRID_COLS_CLASS[2]} gap-4`;
 
   const fallbackImg =
     '/placeholder-news.svg';
