@@ -1200,8 +1200,8 @@
     "semantic_hash": ""
   },
   "src/apps/page-builder/components/widgets/NewsFeedWidget.tsx": {
-    "mtime": 1788766365.8632674,
-    "ast_hash": "a51805360e2cfd6dfd00adeb86557642",
+    "mtime": 1788872377.0818553,
+    "ast_hash": "65fd450b6980d72a02fada86fd06affb",
     "semantic_hash": ""
   },
   "src/apps/page-builder/components/widgets/SearchFilterBarBlock.tsx": {
