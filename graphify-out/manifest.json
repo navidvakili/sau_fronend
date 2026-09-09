@@ -400,9 +400,9 @@
     "semantic_hash": "f42da7f67966173ebed09f51f64db774"
   },
   "src/apps/navigation/NavigationBuilderStudio.tsx": {
-    "mtime": 1787946573.257785,
-    "ast_hash": "e9c7cac57cc90b595fea0652bba3418b",
-    "semantic_hash": "e9c7cac57cc90b595fea0652bba3418b"
+    "mtime": 1788977166.9768124,
+    "ast_hash": "c57a8e1b447882543a9d865d1e091b6f",
+    "semantic_hash": ""
   },
   "src/apps/navigation/NavigationTreeItem.tsx": {
     "mtime": 1787945612.0104778,
@@ -410,9 +410,9 @@
     "semantic_hash": "b1e3ae4c5a489cffc7c1277c62d85c8a"
   },
   "src/apps/navigation/api.ts": {
-    "mtime": 1787381912.3216665,
-    "ast_hash": "0270d27f8d927f2a3c85d766bce806d8",
-    "semantic_hash": "0270d27f8d927f2a3c85d766bce806d8"
+    "mtime": 1788976880.9203029,
+    "ast_hash": "dd7114ef2c5fd20da19f77504d4b3c71",
+    "semantic_hash": ""
   },
   "src/apps/navigation/footerAddressUtils.ts": {
     "mtime": 1787381912.3226647,
@@ -475,8 +475,8 @@
     "semantic_hash": ""
   },
   "src/apps/page-builder/PageBuilderStudio.tsx": {
-    "mtime": 1788763313.0206237,
-    "ast_hash": "213027ccf0d6fe8fcb20e72ca90f1abc",
+    "mtime": 1788976643.1445785,
+    "ast_hash": "83972fb86e16f8c31443bd7451acf45c",
     "semantic_hash": ""
   },
   "src/apps/page-builder/PageSettingsModal.tsx": {
