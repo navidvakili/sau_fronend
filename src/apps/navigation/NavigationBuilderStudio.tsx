@@ -81,9 +81,13 @@ export const NavigationBuilderStudio: React.FC = () => {
   const [locationLabelDraft, setLocationLabelDraft] = useState('');
   const [versionHistory, setVersionHistory] = useState<MenuVersionHistory[]>(sampleVersionHistory);
 
-  // CMS Source Palette (داده‌های واقعی از وب‌سرویس)
+  // CMS Source Palette (داده‌های واقعی از وب‌سرویس) — این داده فقط وقتی لازم می‌شود
+  // (پالت سمت چپ یا دیالوگ ویرایش آیتم) واکشی می‌شود، نه در همان لحظهٔ باز شدن ماژول
   const [cmsSources, setCmsSources] = useState<CmsSourceItem[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
+  // زبانی که منابع CMS برایش قبلاً بارگذاری شده (برای جلوگیری از واکشی تکراری)
+  const cmsSourcesLoadedLangRef = useRef<string | null>(null);
+  const cmsSourcesLoadingRef = useRef(false);
 
   // نقشه‌ی شناسه‌ی سرور برای هر موقعیت منو (برای جلوگیری از رکورد تکراری)
   const serverIdsRef = useRef<Record<string, number>>({});
@@ -113,21 +117,20 @@ export const NavigationBuilderStudio: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
-  // بارگذاری منوها و منابع CMS از وب‌سرویس با تغییر زبان
+  // بارگذاری منوها از وب‌سرویس با تغییر زبان — منابع CMS جدا و فقط در صورت نیاز
+  // واکشی می‌شوند (نگاه کنید به ensureCmsSourcesLoaded) تا درخت منو معطل آن نماند
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setSourcesLoading(true);
     setMenus([]);
-    setCmsSources([]);
     serverIdsRef.current = {};
+    // منابع CMS به زبان وابسته‌اند — با تغییر زبان کش قبلی باطل و دوباره (در صورت نیاز) واکشی شود
+    cmsSourcesLoadedLangRef.current = null;
+    setCmsSources([]);
 
     (async () => {
       try {
-        const [menuData, sourcesData] = await Promise.all([
-          fetchSiteMenus(currentLang),
-          fetchCmsSources(currentLang)
-        ]);
+        const menuData = await fetchSiteMenus(currentLang);
         if (cancelled) return;
         setMenus(menuData);
         menuData.forEach(m => {
@@ -149,22 +152,39 @@ export const NavigationBuilderStudio: React.FC = () => {
               sortOrder: Number(menu.sortOrder ?? menu.sort_order ?? 0),
             }))
         );
-
-        setCmsSources(sourcesData);
       } catch (e) {
         console.error(e);
         if (!cancelled) showToast('خطا در دریافت داده‌ها از وب‌سرویس');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setSourcesLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
+  }, [currentLang, showToast]);
+
+  // واکشی تنبل (lazy) منابع CMS — فقط زمانی فراخوانی می‌شود که واقعاً لازم شوند
+  // (نمایش پالت منابع در ستون چپ، یا باز شدن دیالوگ ویرایش آیتم منو) و نتیجه به‌ازای
+  // هر زبان یک‌بار کش می‌شود تا واکشی‌های تکراری رخ ندهد.
+  const ensureCmsSourcesLoaded = useCallback(() => {
+    if (cmsSourcesLoadedLangRef.current === currentLang || cmsSourcesLoadingRef.current) return;
+    cmsSourcesLoadingRef.current = true;
+    setSourcesLoading(true);
+    fetchCmsSources(currentLang)
+      .then(sourcesData => {
+        cmsSourcesLoadedLangRef.current = currentLang;
+        setCmsSources(sourcesData);
+      })
+      .catch(e => {
+        console.error(e);
+        showToast('خطا در دریافت منابع محتوایی از وب‌سرویس');
+      })
+      .finally(() => {
+        cmsSourcesLoadingRef.current = false;
+        setSourcesLoading(false);
+      });
   }, [currentLang, showToast]);
 
   // اگر برای موقعیت فعال هنوز منویی وجود نداشته باشد، از وب‌سرویس گرفته می‌شود (ایجاد خودکار)
@@ -464,6 +484,18 @@ export const NavigationBuilderStudio: React.FC = () => {
   };
 
   const isFooterAddressMenu = activeLocation.includes('Footer');
+
+  // پالت منابع CMS برای منوی فوتر (آدرس) اصلاً نمایش داده نمی‌شود — پس فقط وقتی
+  // موقعیت فعال، منوی فوتر نیست، منابع واکشی شوند
+  useEffect(() => {
+    if (!isFooterAddressMenu) ensureCmsSourcesLoaded();
+  }, [isFooterAddressMenu, ensureCmsSourcesLoaded]);
+
+  // دیالوگ ویرایش آیتم منو هم به همین منابع نیاز دارد — در صورتی که با ورود مستقیم
+  // به منوی فوتر هنوز واکشی نشده باشند، با باز شدن این دیالوگ بارگذاری می‌شوند
+  useEffect(() => {
+    if (editingItem) ensureCmsSourcesLoaded();
+  }, [editingItem, ensureCmsSourcesLoaded]);
 
   // Save Item from MenuItemEditorModal
   const handleSaveItemModal = (updatedItem: NavigationItem) => {

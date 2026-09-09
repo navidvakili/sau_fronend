@@ -41,7 +41,7 @@ import type { SmartPageLockField } from './PagesList';
 import { fetchDedicatedPages } from '../dedicated_pages/api';
 import { getPageVariableValues } from '../dedicated_pages/PageContentVariables';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Loader2 } from 'lucide-react';
 
 interface PageBuilderStudioProps {
   onBackToPortal?: () => void;
@@ -70,6 +70,9 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
   /** شناسهٔ نمونهٔ صفحهٔ اختصاصیِ استفاده‌شده برای پیش‌نمایش بلوک‌های dp-* — وقتی این لایوت به یک نوع صفحهٔ اختصاصی متصل است */
   const [previewDedicatedPageId, setPreviewDedicatedPageId] = useState<number | undefined>(undefined);
   const [isLoadingPages, setIsLoadingPages] = useState(true);
+  // در حال بارگذاری شمای صفحهٔ انتخاب‌شده در ویرایشگر — تا پایان این بارگذاری بومِ صفحهٔ
+  // قبلی/پیش‌فرض (INITIAL_SMART_PAGE) نمایش داده نمی‌شود تا فلاش «ظاهر صفحهٔ دیگر» رخ ندهد
+  const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
 
@@ -116,11 +119,13 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
     };
   }, [currentLang]);
 
-  // Open the editor for a saved page
+  // Open the editor for a saved page — بوم را با شمای واقعی همان صفحه نمایش می‌دهد، نه با
+  // شمای پیش‌فرض/صفحهٔ قبلی که تا پیش از پایان fetch در editor.pageSchema باقی مانده است
   const openEditor = (id: number) => {
-    loadPage(id);
+    setIsEditorLoading(true);
     setViewMode('editor');
     setShowVersionHistory(false);
+    void loadPage(id).finally(() => setIsEditorLoading(false));
   };
 
   // اگر با initialPageId باز شده باشیم (مثلاً از «ویرایش لایوت» یک صفحهٔ اختصاصی)،
@@ -606,6 +611,12 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
       {/* MAIN WORKSPACE BODY (Sidebars + Center Canvas) */}
       {/* ============================================================== */}
       <div className="flex-1 flex overflow-hidden relative">
+        {isEditorLoading ? (
+          <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+          </div>
+        ) : (
+        <>
         {/* Center Panel: Interactive Drag & Drop Canvas */}
         <Canvas
           pageSchema={pageSchema}
@@ -655,6 +666,8 @@ export const PageBuilderStudio: React.FC<PageBuilderStudioProps> = ({ onBackToPo
             setEditingTabIndex(tabIndex);
           }}
         />
+        </>
+        )}
       </div>
       </div>
       )}

@@ -98,12 +98,26 @@ interface Paginated<T> {
  */
 export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
   const per_page = 30;
+
+  // هر منبع مستقل از بقیه است — به‌صورت موازی (نه پشت‌سرهم) واکشی می‌شوند تا زمان کل
+  // برابر کندترین درخواست باشد، نه مجموع همهٔ آن‌ها. خطای هر منبع مستقل مدیریت می‌شود
+  // تا کندی/شکست یک وب‌سرویس بقیهٔ منابع را از نتیجه حذف نکند.
+  const [pagesResult, newsResult, newsCatsResult, annsResult, annCatsResult, deptsResult, fieldsResult] =
+    await Promise.allSettled([
+      fetchSmartPages({ per_page, lang }),
+      fetchNews({ per_page, lang }),
+      fetchCategories(lang),
+      fetchAnnouncements({ per_page, lang }),
+      fetchAnnouncementCategories(lang),
+      fetchDepartments({ per_page, lang }),
+      fetchFields({ per_page, lang }),
+    ]);
+
   const sources: CmsSourceItem[] = [];
 
   // صفحات هوشمند (صفحه‌ساز / صفحات اصلی)
-  try {
-    const res = await fetchSmartPages({ per_page, lang });
-    const pages = (res as Paginated<{ id: number; title: string; slug: string }>).data || [];
+  if (pagesResult.status === 'fulfilled') {
+    const pages = (pagesResult.value as Paginated<{ id: number; title: string; slug: string }>).data || [];
     pages.forEach(p => {
       sources.push({
         id: `page_${p.id}`,
@@ -115,14 +129,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'page_builder',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت صفحات هوشمند:', e);
+  } else {
+    console.warn('خطا در دریافت صفحات هوشمند:', pagesResult.reason);
   }
 
   // اخبار منفرد
-  try {
-    const res = await fetchNews({ per_page, lang });
-    const news = (res as Paginated<{ id: number; title: string; category_name: string | null }>).data || [];
+  if (newsResult.status === 'fulfilled') {
+    const news = (newsResult.value as Paginated<{ id: number; title: string; category_name: string | null }>).data || [];
     news.forEach(n => {
       sources.push({
         id: `news_${n.id}`,
@@ -134,14 +147,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'single_item',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت اخبار:', e);
+  } else {
+    console.warn('خطا در دریافت اخبار:', newsResult.reason);
   }
 
   // دسته‌بندی اخبار
-  try {
-    const res = await fetchCategories(lang);
-    const cats = (res as { data: { id: number; name: string; slug: string; news_count?: number }[] }).data || [];
+  if (newsCatsResult.status === 'fulfilled') {
+    const cats = (newsCatsResult.value as { data: { id: number; name: string; slug: string; news_count?: number }[] }).data || [];
     cats.forEach(c => {
       sources.push({
         id: `news_cat_${c.id}`,
@@ -154,14 +166,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         itemCount: c.news_count,
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت دسته‌بندی اخبار:', e);
+  } else {
+    console.warn('خطا در دریافت دسته‌بندی اخبار:', newsCatsResult.reason);
   }
 
   // اطلاعیه‌های منفرد
-  try {
-    const res = await fetchAnnouncements({ per_page, lang });
-    const anns = (res as Paginated<{ id: number; title: string }>).data || [];
+  if (annsResult.status === 'fulfilled') {
+    const anns = (annsResult.value as Paginated<{ id: number; title: string }>).data || [];
     anns.forEach(a => {
       sources.push({
         id: `ann_${a.id}`,
@@ -173,14 +184,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'single_item',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت اطلاعیه‌ها:', e);
+  } else {
+    console.warn('خطا در دریافت اطلاعیه‌ها:', annsResult.reason);
   }
 
   // دسته‌بندی اطلاعیه‌ها
-  try {
-    const cats = await fetchAnnouncementCategories(lang);
-    (cats as { id: number; name: string; slug?: string }[]).forEach(c => {
+  if (annCatsResult.status === 'fulfilled') {
+    (annCatsResult.value as { id: number; name: string; slug?: string }[]).forEach(c => {
       sources.push({
         id: `ann_cat_${c.id}`,
         title: `دسته‌بندی اطلاعیه: ${c.name}`,
@@ -191,14 +201,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'category_group',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت دسته‌بندی اطلاعیه‌ها:', e);
+  } else {
+    console.warn('خطا در دریافت دسته‌بندی اطلاعیه‌ها:', annCatsResult.reason);
   }
 
   // دانشکده‌ها / گروه‌های آموزشی
-  try {
-    const res = await fetchDepartments({ per_page, lang });
-    const deps = (res as Paginated<{ id: number; name: string; slug: string }>).data || [];
+  if (deptsResult.status === 'fulfilled') {
+    const deps = (deptsResult.value as Paginated<{ id: number; name: string; slug: string }>).data || [];
     deps.forEach(d => {
       sources.push({
         id: `dept_${d.id}`,
@@ -210,14 +219,13 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'category_group',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت گروه‌های آموزشی:', e);
+  } else {
+    console.warn('خطا در دریافت گروه‌های آموزشی:', deptsResult.reason);
   }
 
   // رشته‌های تحصیلی
-  try {
-    const res = await fetchFields({ per_page, lang });
-    const fields = (res as Paginated<{ id: number; name: string; slug: string }>).data || [];
+  if (fieldsResult.status === 'fulfilled') {
+    const fields = (fieldsResult.value as Paginated<{ id: number; name: string; slug: string }>).data || [];
     fields.forEach(f => {
       sources.push({
         id: `field_${f.id}`,
@@ -229,8 +237,8 @@ export async function fetchCmsSources(lang: string): Promise<CmsSourceItem[]> {
         scope: 'single_item',
       });
     });
-  } catch (e) {
-    console.warn('خطا در دریافت رشته‌ها:', e);
+  } else {
+    console.warn('خطا در دریافت رشته‌ها:', fieldsResult.reason);
   }
 
   return sources;
