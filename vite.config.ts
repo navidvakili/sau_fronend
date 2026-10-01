@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
   // آدرس بک‌اند — دقیقاً منطبق با src/lib/constants.ts
   const backendUrl = mode === 'development'
     ? 'http://127.0.0.1:8000'
-    : 'http://172.16.10.10:8080';
+    : 'https://api.sau.ac.ir';
 
   return {
     plugins: [react(), tailwindcss()],
