@@ -11,17 +11,16 @@ import {
   CheckSquare,
   CircleDot,
   CheckCircle2,
-  Table,
   Upload,
   SlidersHorizontal,
   PenTool,
   Plus,
   Trash2,
   Copy,
-  Layers,
   Search,
   GripVertical,
   Star,
+  Heart,
   ChevronDown,
   Award,
   MoveUp,
@@ -70,13 +69,12 @@ const FIELD_PALETTE: {
     ]
   },
   {
-    category: 'انتخابی، چندگزینه‌ای و آبشاری',
+    category: 'انتخابی و چندگزینه‌ای',
     items: [
       { type: 'select', label: 'منوی کشویی (Dropdown)', icon: ListFilter, color: 'text-indigo-600 dark:text-indigo-400', desc: 'انتخاب یک گزینه با قابلیت جستجو' },
       { type: 'radio', label: 'تک انتخابی (Radio)', icon: CircleDot, color: 'text-purple-600 dark:text-purple-400', desc: 'دکمه‌های رادیویی با چیدمان افقی/عمودی' },
       { type: 'checkbox', label: 'چند انتخابی (Checkbox)', icon: CheckSquare, color: 'text-violet-600 dark:text-violet-400', desc: 'انتخاب همزمان چند مورد با محدودیت' },
-      { type: 'yesno', label: 'کلید دوحالته (بله / خیر)', icon: CheckCircle2, color: 'text-rose-600 dark:text-rose-400', desc: 'پاسخ‌های دوتایی قطعی و تاییدیه' },
-      { type: 'cascading', label: 'انتخاب وابسته (آبشاری)', icon: Layers, color: 'text-sky-600 dark:text-sky-400', desc: 'استان/شهر یا دانشکده/گروه' }
+      { type: 'yesno', label: 'کلید دوحالته (بله / خیر)', icon: CheckCircle2, color: 'text-rose-600 dark:text-rose-400', desc: 'پاسخ‌های دوتایی قطعی و تاییدیه' }
     ]
   },
   {
@@ -92,7 +90,6 @@ const FIELD_PALETTE: {
     category: 'ارزشیابی، فایل و پیشرفته',
     items: [
       { type: 'rating', label: 'نمره‌دهی ستاره‌ای (Rating)', icon: Star, color: 'text-amber-500', desc: 'رضایت‌سنجی ۱ تا ۵ ستاره یا قلب' },
-      { type: 'matrix', label: 'ماتریس لیکرت (Likert Table)', icon: Table, color: 'text-teal-500', desc: 'ارزیابی چند معیار همزمان' },
       { type: 'slider', label: 'اسلایدر پیوسته عددی', icon: SlidersHorizontal, color: 'text-indigo-500', desc: 'انتخاب بازه‌ای از مقادیر' },
       { type: 'file', label: 'بارگذاری مدارک و فایل', icon: Upload, color: 'text-orange-500', desc: 'PDF، تصویر، زیپ با محدودیت حجم' },
       { type: 'signature', label: 'امضای دیجیتال کاربر', icon: PenTool, color: 'text-emerald-500', desc: 'تاییدیه با قلم لمسی یا ماوس' },
@@ -224,7 +221,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
       options: ['گزینه ۱', 'گزینه ۲', 'گزینه ۳'].map((lbl, idx) => ({
         id: `opt_${Date.now()}_${idx}`,
         label: lbl,
-        value: `val_${idx + 1}`
+        value: lbl
       }))
     };
 
@@ -715,9 +712,6 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             >
               <GripVertical className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-black text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/20 px-2.5 py-0.5 rounded-lg border border-teal-200 dark:border-teal-500/30">
-              Q{displayIndex + 1}
-            </span>
             <h4 className="text-xs font-black text-slate-900 dark:text-white">
               {field.label}
             </h4>
@@ -812,6 +806,24 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             </div>
           )}
 
+          {(field.type === 'date' || field.type === 'datetime' || field.type === 'time') && (() => {
+            const isTime = field.type === 'time';
+            const calendarLabel = !isTime && (field.calendarType || 'jalali') === 'gregorian' ? ' (میلادی)' : !isTime ? ' (شمسی)' : '';
+            let previewText = field.placeholder || (isTime ? 'انتخاب ساعت...' : 'انتخاب تاریخ...');
+            if (field.defaultDateOption === 'today') previewText = isTime ? 'اکنون' : 'امروز';
+            else if (field.defaultDateOption === 'custom' && field.defaultValue) previewText = field.defaultValue;
+            return (
+              <div className="px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400 flex items-center gap-2">
+                {isTime ? (
+                  <Clock className="w-4 h-4 shrink-0" style={{ color: field.iconColor || '#94a3b8' }} />
+                ) : (
+                  <Calendar className="w-4 h-4 shrink-0" style={{ color: field.iconColor || '#94a3b8' }} />
+                )}
+                <span>{previewText}{calendarLabel}</span>
+              </div>
+            );
+          })()}
+
           {field.type === 'textarea' && (
             <div className="px-3 py-3 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400 h-16">
               {field.placeholder || 'کادر متن چندخطی و توضیحات تفصیلی...'}
@@ -820,76 +832,102 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
 
           {field.type === 'select' && (
             <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400">
-              <span>{field.placeholder || 'انتخاب کنید...'}</span>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <span>
+                {(field.options || []).find(o => o.value === field.defaultValue)?.label || field.placeholder || 'انتخاب کنید...'}
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {field.allowSearchOptions && <Search className="w-3.5 h-3.5 text-slate-300" />}
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </div>
             </div>
           )}
 
-          {field.type === 'radio' && (
-            <div className="space-y-2">
-              {(field.options || ['گزینه الف', 'گزینه ب']).map((opt, oIdx) => (
-                <div key={oIdx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center">
-                    {oIdx === 0 && <div className="w-2 h-2 rounded-full bg-teal-600"></div>}
+          {(field.type === 'radio' || field.type === 'checkbox') && (
+            <div className={
+              field.choiceLayout === 'horizontal' ? 'flex flex-wrap gap-4'
+                : field.choiceLayout === 'grid_2_col' ? 'grid grid-cols-2 gap-2'
+                : 'space-y-2'
+            }>
+              {(field.options || [{ id: '0', label: 'گزینه الف', value: 'a' }, { id: '1', label: 'گزینه ب', value: 'b' }]).map((opt, oIdx) => {
+                const isDefault = field.type === 'radio'
+                  ? field.defaultValue === opt.value
+                  : Array.isArray(field.defaultValue) && field.defaultValue.includes(opt.value);
+                return (
+                  <div key={opt.id ?? oIdx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                    {field.type === 'radio' ? (
+                      <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center shrink-0">
+                        {isDefault && <div className="w-2 h-2 rounded-full bg-teal-600"></div>}
+                      </div>
+                    ) : (
+                      <div className="w-4 h-4 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center shrink-0">
+                        {isDefault && <CheckCircle2 className="w-3 h-3 text-teal-600" />}
+                      </div>
+                    )}
+                    <span>{opt.label}</span>
                   </div>
-                  <span>{opt.label}</span>
+                );
+              })}
+            </div>
+          )}
+
+          {(field.type === 'yesno' || field.type === 'switch') && (() => {
+            const isOn = field.type === 'yesno' ? field.defaultValue === 'yes' : !!field.defaultValue;
+            const onLabel = field.type === 'yesno' ? (field.yesLabel || 'بله') : (field.placeholder || 'فعال');
+            const offLabel = field.type === 'yesno' ? (field.noLabel || 'خیر') : 'غیرفعال';
+            return (
+              <div className="flex items-center gap-3">
+                <div className={`relative w-12 h-6 rounded-full shrink-0 ${isOn ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                  <span
+                    className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow"
+                    style={{ right: isOn ? '2px' : '26px' }}
+                  />
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="text-slate-500 dark:text-slate-400">{isOn ? onLabel : offLabel}</span>
+              </div>
+            );
+          })()}
 
-          {field.type === 'checkbox' && (
-            <div className="space-y-2">
-              {(field.options || ['گزینه ۱', 'گزینه ۲']).map((opt, oIdx) => (
-                <div key={oIdx} className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <div className="w-4 h-4 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center">
-                    {oIdx === 0 && <CheckCircle2 className="w-3 h-3 text-teal-600" />}
-                  </div>
-                  <span>{opt.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {field.type === 'rating' && (() => {
+            const min = field.validation?.min ?? 1;
+            const max = field.validation?.max ?? 5;
+            const range = Array.from({ length: Math.max(1, max - min + 1) }, (_, i) => min + i);
+            const filledCount = Math.max(1, range.length - 1);
+            const color = field.iconColor || '#fbbf24';
+            const iconType = field.ratingIconType || 'star';
 
-          {field.type === 'rating' && (
-            <div className="flex items-center gap-2 py-1">
-              {[1, 2, 3, 4, 5].map(st => (
-                <Star
-                  key={st}
-                  className={`w-5 h-5 ${st <= 4 ? '' : 'text-slate-300 dark:text-slate-700'}`}
-                  style={st <= 4 ? { color: field.iconColor || '#fbbf24', fill: field.iconColor || '#fbbf24' } : undefined}
-                />
-              ))}
-              <span className="text-xs text-slate-400 mr-2">(۴ از ۵)</span>
-            </div>
-          )}
-
-          {field.type === 'matrix' && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11px] text-right">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-slate-800 text-slate-500">
-                    <th className="py-1">معیار</th>
-                    <th className="py-1 text-center">عالی</th>
-                    <th className="py-1 text-center">خوب</th>
-                    <th className="py-1 text-center">متوسط</th>
-                    <th className="py-1 text-center">ضعیف</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(field.matrixRows || [{ id: '1', label: 'کیفیت تدریس' }]).map(r => (
-                    <tr key={r.id} className="border-b border-gray-100 dark:border-slate-800/50">
-                      <td className="py-1.5 font-bold text-slate-700 dark:text-slate-300">{r.label}</td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                    </tr>
+            if (iconType === 'emoji') {
+              return <div className="text-xl py-1">🙁 &nbsp; 😐 &nbsp; 🙂</div>;
+            }
+            if (iconType === 'number') {
+              return (
+                <div className="flex items-center gap-1.5 py-1">
+                  {range.map(n => (
+                    <div
+                      key={n}
+                      className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center border"
+                      style={n === range[range.length - 1] ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: '#cbd5e1', color: '#94a3b8' }}
+                    >
+                      {n}
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              );
+            }
+            const Icon = iconType === 'heart' ? Heart : Star;
+            return (
+              <div className="flex items-center gap-2 py-1">
+                {range.map((n, idx) => (
+                  <Icon
+                    key={n}
+                    className={`w-5 h-5 ${idx < filledCount ? '' : 'text-slate-300 dark:text-slate-700'}`}
+                    style={idx < filledCount ? { color, fill: color } : undefined}
+                  />
+                ))}
+                <span className="text-xs text-slate-400 mr-2">({filledCount} از {range.length})</span>
+              </div>
+            );
+          })()}
+
 
           {['file', 'image'].includes(field.type) && (
             <div className="border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-4 text-center text-slate-400">

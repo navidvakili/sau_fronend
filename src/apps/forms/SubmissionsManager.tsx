@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ExcelJS from 'exceljs';
+import type { Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Inbox,
   Search,
@@ -7,6 +9,7 @@ import {
   Clock,
   Download,
   Eye,
+  FileText,
   FileSpreadsheet,
   Printer,
   UserCheck,
@@ -14,7 +17,7 @@ import {
   ShieldCheck,
   Tag
 } from 'lucide-react';
-import { FormDefinition, FormSubmission } from './types';
+import { FormDefinition, FormField, FormSubmission } from './types';
 
 interface SubmissionsManagerProps {
   form: FormDefinition;
@@ -51,12 +54,196 @@ const parseUserAgent = (ua?: string): { browser: string; os: string } => {
   return { browser, os };
 };
 
-/** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش برای خروجی اکسل */
-const formatAnswerForExcel = (value: any): string => {
+/**
+ * برچسب گزینه بر اساس مقدار ذخیره‌شده — فیلدهای select/radio/multiselect
+ * مقدار (value) گزینه را در پاسخ ذخیره می‌کنند نه برچسب (label) قابل‌نمایش آن را؛
+ * yesno هم گزینه‌هایش را در field.options ندارد و اینجا جداگانه مپ می‌شود.
+ */
+const resolveOptionLabel = (field: FormField | undefined, rawValue: any): string => {
+  if (!field) return String(rawValue);
+  const options = field.type === 'yesno'
+    ? [{ value: 'yes', label: 'بله' }, { value: 'no', label: 'خیر' }]
+    : field.options;
+  if (!options || options.length === 0) return String(rawValue);
+  const match = options.find(o => o.value === rawValue);
+  return match ? match.label : String(rawValue);
+};
+
+/** پاسخ فیلدهای address/location یک آبجکت است: { full, province, city, postalCode, lat, lng } */
+const isAddressAnswer = (field: FormField | undefined, value: any): boolean =>
+  (field?.type === 'address' || field?.type === 'location') && value && typeof value === 'object';
+
+/** نسخهٔ متنیِ خوانا از پاسخ آدرس — برای خروجی اکسل که نمی‌تواند نقشه نمایش دهد */
+const formatAddressAsText = (value: any): string => {
+  const parts: string[] = [];
+  if (value.full) parts.push(String(value.full));
+  if (value.province) parts.push(`استان: ${value.province}`);
+  if (value.city) parts.push(`شهر: ${value.city}`);
+  if (value.postalCode) parts.push(`کدپستی: ${value.postalCode}`);
+  if (value.lat && value.lng) parts.push(`مختصات: ${value.lat}, ${value.lng}`);
+  return parts.length > 0 ? parts.join(' — ') : '-';
+};
+
+/** پسوند واحد فیلدهای عددی/اسلایدر/ارزی/درصدی — همان چیزی که در خروجی فرم کنار مقدار نشان داده می‌شود */
+const unitSuffixFor = (field: FormField | undefined): string | null => {
+  if (!field) return null;
+  if (field.type === 'percentage') return '٪';
+  if (field.type === 'currency') return field.currencyUnit || 'تومان';
+  if (field.type === 'number' || field.type === 'slider') return field.numberUnit || null;
+  return null;
+};
+
+/** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش — برای فیلدهای چند‌انتخابی، برچسب گزینه نمایش داده می‌شود نه مقدار خام آن */
+const formatAnswerValue = (field: FormField | undefined, value: any): string => {
   if (value === undefined || value === null || value === '') return '-';
-  if (Array.isArray(value)) return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join('، ');
+  if (isAddressAnswer(field, value)) return formatAddressAsText(value);
+  if (isFileAnswer(field, value)) {
+    // data: URLهای امضای ترسیمی می‌توانند چندهزار کاراکتر باشند — در خروجی اکسل به‌جای
+    // آن متن حجیم، فقط یک برچسب کوتاه نوشته می‌شود؛ برای فایل/تصویر آپلودشده همان لینک
+    // واقعی نوشته می‌شود که اکسل آن را خودکار قابل‌کلیک می‌کند
+    return value.startsWith('data:') ? 'فایل پیوست (امضای ترسیمی)' : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : resolveOptionLabel(field, v))).join('، ');
+  }
   if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (typeof value === 'number') {
+    const unit = unitSuffixFor(field);
+    return unit ? `${value} ${unit}` : String(value);
+  }
+  return resolveOptionLabel(field, value);
+};
+
+/**
+ * نمایش فقط‌خواندنیِ یک نقطه روی نقشهٔ ماهواره‌ای (Esri World Imagery) — بدون امکان
+ * کلیک/جابه‌جایی، صرفاً برای دیدن مکان ثبت‌شده در یک پاسخ. leaflet با import پویا
+ * بارگذاری می‌شود تا فقط وقتی واقعاً یک پاسخ دارای مختصات باز می‌شود، دانلود شود.
+ */
+const ReadOnlyMapView: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import('leaflet').then(L => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      const map = L.map(containerRef.current, {
+        center: [lat, lng],
+        zoom: 15,
+        dragging: true,
+        scrollWheelZoom: false,
+      });
+      mapRef.current = map;
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 19,
+      }).addTo(map);
+      const pinIcon = L.divIcon({
+        html: `<i class="fa-solid fa-location-dot" style="font-size:26px;color:#0d9488;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"></i>`,
+        className: '',
+        iconSize: [26, 26],
+        iconAnchor: [13, 26],
+      });
+      L.marker([lat, lng], { icon: pinIcon, interactive: false }).addTo(map);
+    });
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng]);
+
+  return <div ref={containerRef} className="w-full h-48 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800" />;
+};
+
+/** نمایش ساختاریافتهٔ پاسخ فیلد آدرس/لوکیشن در مودال جزئیات — به‌جای dump خام JSON */
+const AddressAnswerCard: React.FC<{ value: any }> = ({ value }) => {
+  const rows: { label: string; text: string }[] = [];
+  if (value.full) rows.push({ label: 'آدرس کامل', text: value.full });
+  if (value.province) rows.push({ label: 'استان', text: value.province });
+  if (value.city) rows.push({ label: 'شهر', text: value.city });
+  if (value.postalCode) rows.push({ label: 'کد پستی', text: value.postalCode });
+
+  return (
+    <div className="space-y-2">
+      {rows.length > 0 ? (
+        <div className="grid grid-cols-2 gap-2">
+          {rows.map(r => (
+            <div key={r.label} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span className="block text-[10px] text-slate-400">{r.label}</span>
+              <span className="text-teal-700 dark:text-teal-300 font-semibold">{r.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="text-slate-400">-</span>
+      )}
+      {value.lat && value.lng && (
+        <>
+          <ReadOnlyMapView lat={value.lat} lng={value.lng} />
+          <span className="block text-[10px] text-slate-400 font-mono" dir="ltr">
+            {value.lat}, {value.lng}
+          </span>
+        </>
+      )}
+    </div>
+  );
+};
+
+/**
+ * پاسخ فیلدهای file/image و امضای ترسیمی/آپلودی یک URL (یا data: URL برای امضای ترسیمی) است —
+ * نه یک آبجکت مثل آدرس. امضای تایپی («type») فقط متن ساده است، نه فایل.
+ */
+const isFileAnswer = (field: FormField | undefined, value: any): boolean => {
+  if (!field || typeof value !== 'string' || !value) return false;
+  if (field.type === 'file' || field.type === 'image') return true;
+  if (field.type === 'signature') return field.signaturePadType !== 'type';
+  return false;
+};
+
+const IMAGE_EXT_PATTERN = /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i;
+const isImageLikeUrl = (value: string): boolean => value.startsWith('data:image') || IMAGE_EXT_PATTERN.test(value);
+
+const fileNameFromUrl = (value: string): string => {
+  if (value.startsWith('data:')) return 'امضا.png';
+  try {
+    const path = new URL(value).pathname;
+    return decodeURIComponent(path.split('/').pop() || value);
+  } catch {
+    return value.split('/').pop() || value;
+  }
+};
+
+/** نمایش پاسخ فایل/تصویر/امضا در مودال جزئیات — پیش‌نمایش تصویر (در صورت وجود) + دکمهٔ دانلود، به‌جای چاپ خام URL */
+const FileAnswerCard: React.FC<{ value: string }> = ({ value }) => {
+  const isImage = isImageLikeUrl(value);
+  const name = fileNameFromUrl(value);
+  return (
+    <div className="flex items-center gap-3">
+      {isImage ? (
+        <a href={value} target="_blank" rel="noreferrer">
+          <img src={value} alt={name} className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-800" />
+        </a>
+      ) : (
+        <div className="w-12 h-12 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shrink-0">
+          <FileText className="w-5 h-5 text-slate-400" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate" title={name}>{name}</p>
+        <a
+          href={value}
+          download={name}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 mt-0.5"
+        >
+          <Download className="w-3 h-3" /> دانلود فایل
+        </a>
+      </div>
+    </div>
+  );
 };
 
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
@@ -79,14 +266,14 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
     const includeScore = form.quizConfig.isQuiz;
     const columns: { header: string; key: string; width: number }[] = [
       { header: 'کد پیگیری', key: 'trackingCode', width: 24 },
-      { header: 'نام پاسخ‌دهنده', key: 'respondentName', width: 24 },
-      { header: 'نقش', key: 'respondentRole', width: 18 },
       { header: 'تاریخ ثبت', key: 'submittedAt', width: 22 },
       ...(includeScore ? [{ header: 'نمره آزمون', key: 'scoreTotal', width: 14 }] : []),
-      ...form.fields.map(field => ({
-        header: field.label,
+      ...form.fields.map((field, idx) => ({
+        // برخی فیلدها (مثلاً hidden یا فیلدهای سیستمی) ممکن است label خالی داشته باشند —
+        // بدون این fallback، عنوان ستون در اکسل کاملاً خالی می‌ماند
+        header: field.label?.trim() || field.placeholder?.trim() || `فیلد ${idx + 1}`,
         key: `field_${field.id}`,
-        width: field.type === 'textarea' || field.type === 'matrix' ? 34 : 22
+        width: field.type === 'textarea' ? 34 : 22
       }))
     ];
     const colCount = columns.length;
@@ -136,12 +323,10 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
     filteredSubmissions.forEach((s, idx) => {
       const fieldValues: Record<string, string> = {};
       form.fields.forEach(field => {
-        fieldValues[`field_${field.id}`] = formatAnswerForExcel(s.answers[field.id]);
+        fieldValues[`field_${field.id}`] = formatAnswerValue(field, s.answers[field.id]);
       });
       const row = sheet.addRow({
         trackingCode: s.trackingCode,
-        respondentName: s.respondentName || 'ناشناس',
-        respondentRole: s.respondentRole || 'کاربر',
         submittedAt: formatJalaliDateTime(s.submittedAt),
         scoreTotal: includeScore ? s.scoreTotal ?? '-' : undefined,
         ...fieldValues
@@ -347,7 +532,9 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                 {Object.entries(selectedSubmission.answers).map(([fId, val], idx) => {
                   const field = form.fields.find(f => f.id === fId);
                   const isMultiline = field?.type === 'textarea';
-                  const displayValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                  const isAddress = isAddressAnswer(field, val);
+                  const isFile = isFileAnswer(field, val);
+                  const displayValue = formatAnswerValue(field, val);
                   return (
                     <div
                       key={idx}
@@ -356,7 +543,11 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">
                         {field ? field.label : fId}:
                       </span>
-                      {isMultiline ? (
+                      {isAddress ? (
+                        <AddressAnswerCard value={val} />
+                      ) : isFile ? (
+                        <FileAnswerCard value={val} />
+                      ) : isMultiline ? (
                         <p className="text-teal-700 dark:text-teal-300 font-semibold whitespace-pre-wrap">
                           {displayValue}
                         </p>

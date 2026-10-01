@@ -169,10 +169,11 @@ export default function FormInspectorPanel({
   const handleAddOption = () => {
     const currentOptions = selectedField.options || [];
     const newIdx = currentOptions.length + 1;
+    const newLabel = `گزینه ${newIdx}`;
     const newOpt = {
       id: `opt_${Date.now()}`,
-      label: `گزینه ${newIdx}`,
-      value: `val_${newIdx}`
+      label: newLabel,
+      value: newLabel
     };
     updateProp('options', [...currentOptions, newOpt]);
   };
@@ -224,45 +225,7 @@ export default function FormInspectorPanel({
     setDragOverOptionIndex(null);
   };
 
-  // Matrix Row & Col Handlers
-  const handleAddMatrixRow = () => {
-    const rows = selectedField.matrixRows || [];
-    const newRow = { id: `r_${Date.now()}`, label: `معیار ${rows.length + 1}` };
-    updateProp('matrixRows', [...rows, newRow]);
-  };
-
-  const handleUpdateMatrixRow = (index: number, label: string) => {
-    const rows = [...(selectedField.matrixRows || [])];
-    rows[index] = { ...rows[index], label };
-    updateProp('matrixRows', rows);
-  };
-
-  const handleDeleteMatrixRow = (index: number) => {
-    const rows = [...(selectedField.matrixRows || [])];
-    rows.splice(index, 1);
-    updateProp('matrixRows', rows);
-  };
-
-  const handleAddMatrixCol = () => {
-    const cols = selectedField.matrixCols || [];
-    const newCol = { id: `c_${Date.now()}`, label: `سطح ${cols.length + 1}`, score: cols.length + 1 };
-    updateProp('matrixCols', [...cols, newCol]);
-  };
-
-  const handleUpdateMatrixCol = (index: number, label: string, score?: number) => {
-    const cols = [...(selectedField.matrixCols || [])];
-    cols[index] = { ...cols[index], label, score: score !== undefined ? score : cols[index].score };
-    updateProp('matrixCols', cols);
-  };
-
-  const handleDeleteMatrixCol = (index: number) => {
-    const cols = [...(selectedField.matrixCols || [])];
-    cols.splice(index, 1);
-    updateProp('matrixCols', cols);
-  };
-
   const isChoiceField = ['select', 'radio', 'checkbox'].includes(selectedField.type);
-  const isMatrixField = selectedField.type === 'matrix';
 
   const typeNameFa: Record<string, string> = {
     text: 'متن کوتاه',
@@ -333,7 +296,7 @@ export default function FormInspectorPanel({
       <div className="flex border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs overflow-x-auto scrollbar-none">
         {[
           { id: 'general', label: 'عمومی', icon: Type },
-          ...(isChoiceField || isMatrixField ? [{ id: 'options', label: 'گزینه‌ها', icon: Layers }] : []),
+          ...(isChoiceField ? [{ id: 'options', label: 'گزینه‌ها', icon: Layers }] : []),
           { id: 'validation', label: 'اعتبار', icon: CheckSquare },
           { id: 'layout', label: 'ظاهر', icon: Layout },
           { id: 'advanced', label: 'پیشرفته', icon: Sparkles }
@@ -418,13 +381,63 @@ export default function FormInspectorPanel({
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 مقدار پیش‌فرض (Default Value):
               </label>
-              <input
-                type="text"
-                value={selectedField.defaultValue || ''}
-                onChange={e => updateProp('defaultValue', e.target.value)}
-                placeholder="مقداری که به طور خودکار در فیلد قرار می‌گیرد..."
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-              />
+              {selectedField.type === 'select' || selectedField.type === 'radio' || selectedField.type === 'yesno' ? (
+                <select
+                  value={selectedField.defaultValue || ''}
+                  onChange={e => updateProp('defaultValue', e.target.value || undefined)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                >
+                  <option value="">— بدون مقدار پیش‌فرض —</option>
+                  {(selectedField.type === 'yesno'
+                    ? [{ id: 'yes', value: 'yes', label: selectedField.yesLabel || 'بله' }, { id: 'no', value: 'no', label: selectedField.noLabel || 'خیر' }]
+                    : selectedField.options || []
+                  ).map(opt => (
+                    <option key={opt.id} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : selectedField.type === 'multiselect' || selectedField.type === 'checkbox' ? (
+                <div className="space-y-1">
+                  {(selectedField.options || []).length === 0 && (
+                    <p className="text-[10px] text-slate-400">ابتدا از تب «گزینه‌ها» چند گزینه اضافه کنید.</p>
+                  )}
+                  {(selectedField.options || []).map(opt => {
+                    const current: string[] = Array.isArray(selectedField.defaultValue) ? selectedField.defaultValue : [];
+                    const checked = current.includes(opt.value);
+                    return (
+                      <label key={opt.id} className="p-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg flex items-center justify-between cursor-pointer">
+                        <span className="text-xs text-slate-700 dark:text-slate-300">{opt.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const next = e.target.checked ? [...current, opt.value] : current.filter(v => v !== opt.value);
+                            updateProp('defaultValue', next.length > 0 ? next : undefined);
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : selectedField.type === 'switch' ? (
+                <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">به‌صورت پیش‌فرض فعال باشد</span>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedField.defaultValue}
+                    onChange={e => updateProp('defaultValue', e.target.checked)}
+                    className="w-4 h-4 text-teal-600 rounded"
+                  />
+                </label>
+              ) : (
+                <input
+                  type="text"
+                  value={selectedField.defaultValue || ''}
+                  onChange={e => updateProp('defaultValue', e.target.value)}
+                  placeholder="مقداری که به طور خودکار در فیلد قرار می‌گیرد..."
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              )}
             </div>
 
             {/* Field States toggles */}
@@ -503,22 +516,6 @@ export default function FormInspectorPanel({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  سطح دسترسی نمایش (Access Roles):
-                </label>
-                <select
-                  value={(selectedField.accessRoles && selectedField.accessRoles[0]) || 'all'}
-                  onChange={e => updateProp('accessRoles', [e.target.value])}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                >
-                  <option value="all">عمومی (همه تکمیل‌کنندگان)</option>
-                  <option value="authenticated">فقط کاربران لاگین‌شده</option>
-                  <option value="faculty">فقط اعضای هیئت علمی و اساتید</option>
-                  <option value="student">فقط دانشجویان</option>
-                  <option value="admin">فقط مدیران سیستم</option>
-                </select>
-              </div>
             </div>
           </div>
         )}
@@ -578,6 +575,34 @@ export default function FormInspectorPanel({
             {/* Number, Slider, Currency, Percentage */}
             {['number', 'slider', 'currency', 'percentage'].includes(selectedField.type) && (
               <div className="space-y-3">
+                {selectedField.type === 'slider' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        حداقل مقدار اسلایدر:
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.min !== undefined ? selectedField.validation?.min : 0}
+                        onChange={e => updateValidation('min', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        حداکثر مقدار اسلایدر:
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.max !== undefined ? selectedField.validation?.max : 100}
+                        onChange={e => updateValidation('max', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                        placeholder="100"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -691,6 +716,75 @@ export default function FormInspectorPanel({
               </div>
             )}
 
+            {/* Yes/No (Two-state) Field Settings */}
+            {selectedField.type === 'yesno' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      عنوان حالت «بله»:
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedField.yesLabel || ''}
+                      onChange={e => updateProp('yesLabel', e.target.value || undefined)}
+                      placeholder="بله"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      عنوان حالت «خیر»:
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedField.noLabel || ''}
+                      onChange={e => updateProp('noLabel', e.target.value || undefined)}
+                      placeholder="خیر"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* URL Field Settings */}
+            {selectedField.type === 'url' && (
+              <div className="space-y-2">
+                <span className="font-bold text-xs text-slate-700 dark:text-slate-300 block">پروتکل‌های مجاز پیوند:</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'https', label: 'https://' },
+                    { id: 'http', label: 'http://' },
+                    { id: 'ftp', label: 'ftp://' },
+                    { id: 'ftps', label: 'ftps://' },
+                    { id: 'mailto', label: 'mailto:' },
+                    { id: 'tel', label: 'tel:' }
+                  ].map(proto => {
+                    const current = selectedField.validation?.allowedUrlProtocols || ['https', 'http'];
+                    const checked = current.includes(proto.id);
+                    return (
+                      <label key={proto.id} className="p-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg flex items-center justify-between cursor-pointer text-[11px]" dir="ltr">
+                        <span className="font-mono text-slate-600 dark:text-slate-300">{proto.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const next = e.target.checked
+                              ? [...current, proto.id]
+                              : current.filter(p => p !== proto.id);
+                            updateValidation('allowedUrlProtocols', next.length > 0 ? next : ['https', 'http']);
+                          }}
+                          className="w-3.5 h-3.5 text-teal-600 rounded"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400">پیوندهایی که با پروتکل انتخاب‌نشده شروع شوند، یا اصلاً قالب یک پیوند معتبر را نداشته باشند، رد می‌شوند.</p>
+              </div>
+            )}
+
             {/* Password Field Settings */}
             {selectedField.type === 'password' && (
               <div className="space-y-3">
@@ -757,22 +851,24 @@ export default function FormInspectorPanel({
             {/* Date & Time Field Settings */}
             {['date', 'time', 'datetime'].includes(selectedField.type) && (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    نوع تقویم:
-                  </label>
-                  <select
-                    value={selectedField.calendarType || 'jalali'}
-                    onChange={e => updateProp('calendarType', e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
-                  >
-                    <option value="jalali">تقویم شمسی (خورشیدی هجری)</option>
-                    <option value="gregorian">تقویم میلادی (Gregorian)</option>
-                  </select>
-                </div>
+                {selectedField.type !== 'time' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      نوع تقویم:
+                    </label>
+                    <select
+                      value={selectedField.calendarType || 'jalali'}
+                      onChange={e => updateProp('calendarType', e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    >
+                      <option value="jalali">تقویم شمسی (خورشیدی هجری)</option>
+                      <option value="gregorian">تقویم میلادی (Gregorian)</option>
+                    </select>
+                  </div>
+                )}
 
                 <IconColorPicker
-                  label="رنگ آیکون تقویم"
+                  label={selectedField.type === 'time' ? 'رنگ آیکون ساعت' : 'رنگ آیکون تقویم'}
                   value={selectedField.iconColor}
                   defaultColor="#94a3b8"
                   onChange={c => updateProp('iconColor', c)}
@@ -780,7 +876,7 @@ export default function FormInspectorPanel({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    مقدار تاریخ پیش‌فرض:
+                    {selectedField.type === 'time' ? 'مقدار ساعت پیش‌فرض:' : 'مقدار تاریخ پیش‌فرض:'}
                   </label>
                   <select
                     value={selectedField.defaultDateOption || 'none'}
@@ -788,52 +884,80 @@ export default function FormInspectorPanel({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   >
                     <option value="none">خالی</option>
-                    <option value="today">تاریخ روز جاری (امروز)</option>
-                    <option value="custom">تاریخ ثابت سفارشی</option>
+                    <option value="today">{selectedField.type === 'time' ? 'ساعت لحظه‌ای (اکنون)' : 'تاریخ روز جاری (امروز)'}</option>
+                    <option value="custom">{selectedField.type === 'time' ? 'ساعت ثابت سفارشی' : 'تاریخ ثابت سفارشی'}</option>
                   </select>
                 </div>
 
-                <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-slate-800">
-                  <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های گذشته</span>
+                {selectedField.defaultDateOption === 'custom' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {selectedField.type === 'time' ? 'ساعت ثابت:' : 'تاریخ ثابت:'}
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={selectedField.validation?.disallowPastDates || false}
-                      onChange={e => updateValidation('disallowPastDates', e.target.checked)}
-                      className="w-4 h-4 text-teal-600 rounded"
+                      type={selectedField.type === 'time' ? 'time' : 'date'}
+                      value={selectedField.defaultValue || ''}
+                      onChange={e => updateProp('defaultValue', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                     />
-                  </label>
+                    {selectedField.type !== 'time' && (
+                      <p className="text-[10px] text-slate-400 mt-1">مقدار به میلادی ثبت می‌شود؛ در خروجی طبق نوع تقویم انتخابی نمایش داده خواهد شد.</p>
+                    )}
+                  </div>
+                )}
 
-                  <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های آینده</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedField.validation?.disallowFutureDates || false}
-                      onChange={e => updateValidation('disallowFutureDates', e.target.checked)}
-                      className="w-4 h-4 text-teal-600 rounded"
-                    />
-                  </label>
-                </div>
+                {selectedField.type !== 'time' && (
+                  <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-slate-800">
+                    <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های گذشته</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedField.validation?.disallowPastDates || false}
+                        onChange={e => {
+                          updateValidation('disallowPastDates', e.target.checked);
+                          if (e.target.checked) updateValidation('disallowFutureDates', false);
+                        }}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                    </label>
+
+                    <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های آینده</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedField.validation?.disallowFutureDates || false}
+                        onChange={e => {
+                          updateValidation('disallowFutureDates', e.target.checked);
+                          if (e.target.checked) updateValidation('disallowPastDates', false);
+                        }}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">این دو گزینه هم‌زمان قابل‌فعال‌شدن نیستند — با انتخاب یکی، دیگری خاموش می‌شود.</p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Dropdown / Radio / Checkbox specific settings */}
             {isChoiceField && (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    نحوه چیدمان گزینه‌ها:
-                  </label>
-                  <select
-                    value={selectedField.choiceLayout || 'vertical'}
-                    onChange={e => updateProp('choiceLayout', e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
-                  >
-                    <option value="vertical">عمودی (زیر هم)</option>
-                    <option value="horizontal">افقی (کنار هم)</option>
-                    <option value="grid_2_col">شبکه‌ای ۲ ستونه</option>
-                  </select>
-                </div>
+                {selectedField.type !== 'select' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      نحوه چیدمان گزینه‌ها:
+                    </label>
+                    <select
+                      value={selectedField.choiceLayout || 'vertical'}
+                      onChange={e => updateProp('choiceLayout', e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    >
+                      <option value="vertical">عمودی (زیر هم)</option>
+                      <option value="horizontal">افقی (کنار هم)</option>
+                      <option value="grid_2_col">شبکه‌ای ۲ ستونه</option>
+                    </select>
+                  </div>
+                )}
 
                 {selectedField.type === 'select' && (
                   <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
@@ -1264,64 +1388,6 @@ export default function FormInspectorPanel({
               </div>
             )}
 
-            {/* Matrix rows & cols */}
-            {isMatrixField && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs">سطرهای ماتریس (معیارها):</span>
-                    <button
-                      onClick={handleAddMatrixRow}
-                      className="px-2 py-1 bg-teal-50 text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-teal-100"
-                    >
-                      + سطر جدید
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {(selectedField.matrixRows || []).map((r, i) => (
-                      <div key={r.id || i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-gray-200 dark:border-slate-800">
-                        <input
-                          type="text"
-                          value={r.label}
-                          onChange={e => handleUpdateMatrixRow(i, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded"
-                        />
-                        <button onClick={() => handleDeleteMatrixRow(i)} className="text-slate-400 hover:text-rose-500 p-1">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs">ستون‌های ماتریس (طیف پاسخ):</span>
-                    <button
-                      onClick={handleAddMatrixCol}
-                      className="px-2 py-1 bg-teal-50 text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-teal-100"
-                    >
-                      + ستون جدید
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {(selectedField.matrixCols || []).map((c, i) => (
-                      <div key={c.id || i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-gray-200 dark:border-slate-800">
-                        <input
-                          type="text"
-                          value={c.label}
-                          onChange={e => handleUpdateMatrixCol(i, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded"
-                        />
-                        <button onClick={() => handleDeleteMatrixCol(i)} className="text-slate-400 hover:text-rose-500 p-1">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1376,28 +1442,30 @@ export default function FormInspectorPanel({
               </div>
             )}
 
-            {/* Min / Max for numbers / currency */}
-            {['number', 'slider', 'currency', 'percentage'].includes(selectedField.type) && (
+            {/* Min / Max for numbers / currency / rating */}
+            {['number', 'slider', 'currency', 'percentage', 'rating'].includes(selectedField.type) && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    حداقل مقدار عددی:
+                    {selectedField.type === 'rating' ? 'حداقل نمره:' : 'حداقل مقدار عددی:'}
                   </label>
                   <input
                     type="number"
                     value={selectedField.validation?.min !== undefined ? selectedField.validation?.min : ''}
                     onChange={e => updateValidation('min', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                    placeholder={selectedField.type === 'rating' ? '۱' : undefined}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    حداکثر مقدار عددی:
+                    {selectedField.type === 'rating' ? 'حداکثر نمره:' : 'حداکثر مقدار عددی:'}
                   </label>
                   <input
                     type="number"
                     value={selectedField.validation?.max !== undefined ? selectedField.validation?.max : ''}
                     onChange={e => updateValidation('max', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                    placeholder={selectedField.type === 'rating' ? '۵' : undefined}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   />
                 </div>

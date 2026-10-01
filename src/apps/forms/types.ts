@@ -25,7 +25,6 @@ export type FieldType =
   | 'richtext'
   | 'slider'
   | 'rating'
-  | 'matrix'
   | 'likert'
   | 'ranking'
   | 'yesno'
@@ -34,7 +33,6 @@ export type FieldType =
   | 'address'
   | 'currency'
   | 'percentage'
-  | 'cascading'
   | 'signature'
   | 'captcha'
   | 'security'
@@ -47,17 +45,6 @@ export interface FieldOption {
   label: string;
   value: string;
   score?: number; // Score points for quiz
-}
-
-export interface MatrixRow {
-  id: string;
-  label: string;
-}
-
-export interface MatrixColumn {
-  id: string;
-  label: string;
-  score?: number;
 }
 
 export interface FieldValidation {
@@ -76,6 +63,7 @@ export interface FieldValidation {
   allowedDomains?: string[]; // e.g. ['ut.ac.ir', 'university.ac.ir']
   blockFreeEmailProviders?: boolean;
   phoneFormat?: 'iran_mobile' | 'iran_landline' | 'international' | 'custom';
+  allowedUrlProtocols?: string[]; // e.g. ['https', 'http', 'ftp']
   passwordRules?: {
     minLength: number;
     requireUppercase?: boolean;
@@ -139,8 +127,6 @@ export interface FormField {
   helpText?: string;
   defaultValue?: any;
   options?: FieldOption[];
-  matrixRows?: MatrixRow[];
-  matrixCols?: MatrixColumn[];
   validation?: FieldValidation;
   columnWidth?: '100%' | '50%' | '33%' | '25%'; // Responsive width
   stepId?: string; // Step page assignment
@@ -153,7 +139,6 @@ export interface FormField {
   disabled?: boolean;
   readOnly?: boolean;
   hidden?: boolean;
-  accessRoles?: string[]; // e.g. ['admin', 'manager', 'student', 'all']
 
   // Specific Type Configurations
   // Text & Textarea
@@ -182,6 +167,10 @@ export interface FormField {
   allowCreateCustomOption?: boolean;
   choiceLayout?: 'vertical' | 'horizontal' | 'grid_2_col';
   defaultSelectedOptionId?: string;
+
+  // Yes/No (two-state) field
+  yesLabel?: string;
+  noLabel?: string;
 
   // File & Image & Signature
   allowMultipleUploads?: boolean;
@@ -240,9 +229,6 @@ export interface FormField {
   securityCodeLength?: number;
   securityCaseSensitive?: boolean;
 
-  // Dependencies & Cascading
-  cascadingParentId?: string;
-  cascadingData?: Record<string, string[]>; // e.g. {"تهران": ["تهران", "ری"], "اصفهان": ["اصفهان", "کاشان"]}
   className?: string;
 }
 
