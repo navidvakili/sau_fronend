@@ -6,7 +6,7 @@ import { BACKEND_API_URL } from '@/src/shared-constants';
  *
  * Handles:
  *   - `http://127.0.0.1:8000/storage/media/...`  → unchanged (already correct)
- *   - `https://api.sau.ac.ir'/storage/media/...`   → rebased to current backend
+ *   - `https://db.yazdrud.ir/storage/media/...`   → rebased to current backend
  *   - `/storage/media/...`                        → prepend backend base
  *   - `/media/...`                                → prepend backend base + `/storage`
  *   - `storage/media/...` or `media/...`          → prepend backend base + `/storage`
@@ -25,7 +25,7 @@ export function resolveStorageUrl(url: string | null | undefined): string {
       const parsed = new URL(trimmed);
       // Rebase only URLs that belong to a storage host / storage path.
       // External URLs (presets, stock videos, ...) must be kept as-is.
-      if (parsed.hostname === 'api.sau.ac.ir' || trimmed.includes('/storage/')) {
+      if (parsed.hostname === 'db.yazdrud.ir' || trimmed.includes('/storage/')) {
         return `${BACKEND_API_URL}${parsed.pathname}${parsed.search}`;
       }
     } catch {
