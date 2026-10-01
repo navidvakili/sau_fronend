@@ -1,16 +1,16 @@
-# Graph Report - frontend  (2026-09-09)
+# Graph Report - frontend  (2026-10-01)
 
 ## Corpus Check
-- 251 files · ~375,208 words
+- 251 files · ~377,353 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5047 nodes · 10595 edges · 429 communities (124 shown, 305 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 151 edges (avg confidence: 0.69)
+- 5072 nodes · 10581 edges · 445 communities (130 shown, 315 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 138 edges (avg confidence: 0.68)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `96d54d81`
+- Built from commit: `92b4e357`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -290,6 +290,7 @@
 - config_Validate
 - Format
 - CFFHeader
+- FormFieldFilling
 - GroupParent
 - Contour
 - IncrementalMerge
@@ -431,11 +432,27 @@
 - Sub
 - Uri
 - Version
+- Pdf
 - WebClient
+- PolygonAnnotation
+- ps
+- RenderPolicy
+- ResponseException
 - XRefEntryException
+- RootElement
 - Zpl
+- Sub
 - Cache
+- SubmitFormat
+- TypeFace
 - CompressLogicalStructure
+- UnderlineAnnotation
+- Uri
+- Whitespace
+- WsdlAddress
+- Xdc
+- Xdp
+- Xsl
 - SHAPE_SVG_TYPES
 - config_Picture
 - DatePatterns
@@ -456,32 +473,32 @@
 ## Surprising Connections (you probably didn't know these)
 - `zipBlobs()` --references--> `jszip`  [EXTRACTED]
   src/apps/gallery/pdf/pdfEngine.ts → package.json
-- `PageSettingsModal()` --references--> `react`  [EXTRACTED]
-  src/apps/page-builder/PageSettingsModal.tsx → package.json
-- `TabSectionEditorModal()` --references--> `react`  [EXTRACTED]
-  src/apps/page-builder/TabSectionEditorModal.tsx → package.json
 - `buildXlsxPreview()` --references--> `xlsx`  [EXTRACTED]
   src/apps/gallery/xlsxPreview.ts → package.json
-- `FormInspectorPanel()` --indirect_call--> `Layout`  [INFERRED]
-  src/apps/forms/FormInspectorPanel.tsx → public/pdf.worker.min.mjs
+- `connectPreviewChain()` --references--> `ac`  [EXTRACTED]
+  src/apps/gallery/audio/audioEngine.ts → public/pdf.worker.min.mjs
+- `buildXlsxPreview()` --references--> `jszip`  [EXTRACTED]
+  src/apps/gallery/xlsxPreview.ts → package.json
+- `mapMedia()` --references--> `jszip`  [EXTRACTED]
+  src/apps/gallery/xlsxPreview.ts → package.json
 
 ## Import Cycles
 - 3-file cycle: `src/apps/page-builder/WidgetRenderer.tsx -> src/apps/page-builder/components/widgets/InteractiveMapBlock.tsx -> src/apps/page-builder/components/widgets/StaticBlocks.tsx -> src/apps/page-builder/WidgetRenderer.tsx`
 - 3-file cycle: `src/apps/page-builder/RenderSectionReadOnly.tsx -> src/apps/page-builder/WidgetRenderer.tsx -> src/apps/page-builder/components/widgets/TabsBlock.tsx -> src/apps/page-builder/RenderSectionReadOnly.tsx`
 
-## Communities (429 total, 305 thin omitted)
+## Communities (445 total, 315 thin omitted)
 
 ### Community 0 - "pdf.worker.min.mjs"
 Cohesion: 0.01
-Nodes (202): aa, Acrobat, Acrobat7, ADBE_JSDebugger, adjustWidths(), ae, ai, Amd (+194 more)
+Nodes (193): aa, Acrobat7, AddViewerPreferences, ae, ai, Amd, an, Ao (+185 more)
 
 ### Community 2 - "getStringOption"
 Cohesion: 0.02
-Nodes (53): AppearanceFilter, BatchOutput, Bind, Button, Calculate, Certificates, Compress, Connect (+45 more)
+Nodes (47): AppearanceFilter, BatchOutput, Bind, Calculate, Certificates, Compress, Connect, CurrencySymbol (+39 more)
 
 ### Community 4 - ".get"
-Cohesion: 0.09
-Nodes (11): codePointIter(), ErrorFont, escapeString(), FakeUnicodeFont, getPdfColor(), InkAnnotation, numberToString(), $o (+3 more)
+Cohesion: 0.07
+Nodes (15): codePointIter(), ErrorFont, escapeString(), FakeUnicodeFont, FreeTextAnnotation, getPdfColor(), HighlightAnnotation, InkAnnotation (+7 more)
 
 ### Community 5 - "WorkerTask"
 Cohesion: 0.47
@@ -493,31 +510,31 @@ Nodes (83): Canvas(), CanvasProps, AcademicFieldCard(), AcademicFieldsFeedWidget
 
 ### Community 7 - "NavigationBuilderStudio.tsx"
 Cohesion: 0.05
-Nodes (48): PostScriptEvaluator, PostScriptStack, ApiHeadlessPreviewModal(), ApiHeadlessPreviewModalProps, FooterAddressEditorModal(), FooterAddressEditorModalProps, FooterAddressTreeItem(), FooterAddressTreeItemProps (+40 more)
+Nodes (47): PostScriptEvaluator, PostScriptStack, ApiHeadlessPreviewModal(), ApiHeadlessPreviewModalProps, FooterAddressEditorModalProps, FooterAddressTreeItem(), FooterAddressTreeItemProps, FooterAddressDetailRow (+39 more)
 
 ### Community 8 - ".push"
-Cohesion: 0.10
-Nodes (36): createDepartment(), createDepartmentFile(), deleteDepartment(), deleteDepartmentFile(), DepartmentFileItem, DepartmentQuery, fetchDepartmentById(), fetchDepartments() (+28 more)
+Cohesion: 0.16
+Nodes (21): createDepartment(), createDepartmentFile(), deleteDepartment(), deleteDepartmentFile(), DepartmentFileItem, DepartmentQuery, fetchDepartmentById(), fetchDepartments() (+13 more)
 
 ### Community 9 - "PartialEvaluator"
-Cohesion: 0.07
-Nodes (9): addCachedImageOps(), getEncoding(), getTilingPatternIR(), getTransformMatrix(), isPDFFunction(), lookupMatrix(), OperatorList, PartialEvaluator (+1 more)
+Cohesion: 0.06
+Nodes (14): addCachedImageOps(), fetchBinaryData(), getTilingPatternIR(), getTransformMatrix(), isKnownFontName(), isNumberArray(), isPDFFunction(), lookupMatrix() (+6 more)
 
 ### Community 10 - "gallery/index.tsx"
 Cohesion: 0.07
-Nodes (51): buildFolderTree(), createFolder(), deleteFolder(), deleteMediaFile(), fetchAllMedia(), fetchFolders(), fetchMediaPage(), folderToTreeItem() (+43 more)
+Nodes (53): buildFolderTree(), createFolder(), deleteFolder(), deleteMediaFile(), fetchAllMedia(), fetchFolders(), fetchMediaPage(), folderToTreeItem() (+45 more)
 
 ### Community 12 - "App.tsx"
-Cohesion: 0.06
-Nodes (40): AuthModuleProps, AppModules, LoadingFallback(), moduleToAppMap, resolveApp(), ModuleRenderer(), ModuleRendererProps, DashboardModuleProps (+32 more)
+Cohesion: 0.09
+Nodes (28): ModuleRendererProps, layoutsApi, AuxiliaryToolsProps, FloatingPanelsProps, Header(), HeaderProps, normalizePersian(), NOTE: hasRole() is NOT used here because admin/support bypass all role (+20 more)
 
 ### Community 13 - "audioEngine.ts"
 Cohesion: 0.09
 Nodes (48): ac, AudioEditorModal(), dbToFactor(), EditorTab, ExportFormat, faDigits(), formatTime(), SliderRow() (+40 more)
 
 ### Community 14 - "CFFCompiler"
-Cohesion: 0.36
-Nodes (8): LinkLayoutDialog(), LinkLayoutDialogProps, createSmartPage(), fetchSmartPages(), getSmartPageForDedicatedPageType(), linkDedicatedPageType(), unlinkDedicatedPageType(), INITIAL_SMART_PAGE
+Cohesion: 0.39
+Nodes (8): LinkLayoutDialog(), LinkLayoutDialogProps, DEDICATED_PAGE_TYPES, createSmartPage(), fetchSmartPages(), getSmartPageForDedicatedPageType(), linkDedicatedPageType(), unlinkDedicatedPageType()
 
 ### Community 15 - "PDFDocument"
 Cohesion: 0.12
@@ -525,63 +542,55 @@ Nodes (36): xlsx, PDFDocument, CompressMode, ConvertTarget, EditorTab, faDigits(
 
 ### Community 16 - ".success"
 Cohesion: 0.09
-Nodes (4): addChildren(), Ref, RefSet, RefSetCache
+Nodes (4): Ref, RefSet, RefSetCache, StructElementNode
 
 ### Community 17 - "unreachable"
-Cohesion: 0.05
-Nodes (10): AstNode, BaseLocalCache, BasePdfManager, BaseShading, BaseStream, ColorSpace, Pattern, PatternCS (+2 more)
+Cohesion: 0.06
+Nodes (9): AstNode, BasePdfManager, BaseShading, BaseStream, ColorSpace, Pattern, PatternCS, RadialAxialShading (+1 more)
 
 ### Community 19 - "XMLParserBase"
 Cohesion: 0.06
 Nodes (7): DatasetReader, DatasetXMLParser, MetadataParser, SimpleDOMNode, SimpleXMLParser, XFAParser, XMLParserBase
 
 ### Community 20 - "getInteger"
-Cohesion: 0.03
-Nodes (31): Arc, Barcode, Break, BreakAfter, BreakBefore, ChoiceList, Comb, config_Area (+23 more)
+Cohesion: 0.04
+Nodes (24): Barcode, Break, BreakAfter, BreakBefore, Comb, config_Area, DayNames, Equate (+16 more)
 
 ### Community 21 - "API"
 Cohesion: 0.04
 Nodes (70): AchievementsQuery, createAchievement(), deleteAchievement(), fetchAchievements(), PaginatedResponse, updateAchievement(), AnnouncementsQuery, createAnnouncement() (+62 more)
 
 ### Community 22 - "login/index.ts"
-Cohesion: 0.13
-Nodes (21): loginApi, mapBackendUser(), LoginForm(), LoginFormProps, ActiveSession, AdminSession, AdminSessionsResponse, AuthResponse (+13 more)
-
-### Community 23 - "FontInfo"
-Cohesion: 0.07
-Nodes (4): CssFontInfo, FontInfo, SystemFontInfo, InspectorPanel()
-
-### Community 24 - "Dict"
-Cohesion: 0.28
-Nodes (3): parseDefaultAppearance(), PDFFunction, toNumberArray()
+Cohesion: 0.11
+Nodes (27): AuthModuleProps, HomeIntroManagementProps, DashboardModuleProps, FooterProps, loginApi, ChangePasswordModule(), LoginForm(), LoginFormProps (+19 more)
 
 ### Community 25 - "calculateSHA512"
-Cohesion: 0.17
-Nodes (13): calculateSHA384(), calculateSHA512(), ch(), F, littleSigma(), littleSigmaPrime(), maj(), _n (+5 more)
+Cohesion: 0.06
+Nodes (22): AESBaseCipher, ARCFourCipher, calculateMD5(), calculateSHA384(), calculateSHA512(), ch(), CipherTransform, CipherTransformFactory (+14 more)
 
 ### Community 26 - "PageBuilderStudio.tsx"
 Cohesion: 0.09
-Nodes (29): AcademicDepartmentWidgetType, Breakpoint, cloneSectionWithNewIds(), ColumnBlock, ColumnInstance, ColumnResponsiveWidths, ConditionalDisplayRule, DedicatedPageWidgetType (+21 more)
+Nodes (18): AcademicDepartmentWidgetType, ColumnBlock, ColumnResponsiveWidths, ConditionalDisplayRule, DedicatedPageWidgetType, GlobalStyles, PageVersion, ResponsiveValue (+10 more)
 
 ### Community 27 - ".createDocumentHandler"
-Cohesion: 0.07
-Nodes (9): ButtonWidgetAnnotation, Dict, FreeTextAnnotation, getModificationDate(), HighlightAnnotation, PopupAnnotation, StampAnnotation, stringToAsciiOrUTF16BE() (+1 more)
+Cohesion: 0.09
+Nodes (5): ButtonWidgetAnnotation, ChoiceWidgetAnnotation, Dict, getModificationDate(), stringToAsciiOrUTF16BE()
 
 ### Community 29 - "VisualDataEditor.tsx"
 Cohesion: 0.06
 Nodes (41): ContentPopover(), ContentPopoverProps, DeptSectionRenderer(), DeptSectionRendererProps, DeptWidgetRenderer(), DeptWidgetRendererProps, FieldsDialogProps, FilesDialogProps (+33 more)
 
 ### Community 30 - "forms/types.ts"
-Cohesion: 0.08
-Nodes (31): FormBuilderCanvasProps, FormInspectorPanelProps, TabType, FormLogicEditor(), FormLogicEditorProps, FormRespondentViewProps, AuditLogItem, FieldApiConfig (+23 more)
+Cohesion: 0.09
+Nodes (26): FIELD_PALETTE, FormBuilderCanvas(), FormBuilderCanvasProps, FormInspectorPanelProps, TabType, FormLogicEditorProps, AuditLogItem, FieldApiConfig (+18 more)
 
 ### Community 31 - "valueToHtml"
-Cohesion: 0.08
-Nodes (7): BooleanElement, DateElement, DateTime, Float, Integer, Time, valueToHtml()
+Cohesion: 0.07
+Nodes (8): BooleanElement, DateElement, DateTime, Decimal, Float, Integer, Time, valueToHtml()
 
 ### Community 32 - ".getObj"
-Cohesion: 0.12
-Nodes (19): CMapFactory, createBuiltInCMap(), expectInt(), expectString(), extendCMap(), fetchSync(), getUint8ArrayMemory0(), parseBfChar() (+11 more)
+Cohesion: 0.10
+Nodes (25): CMapFactory, Cmd, createBuiltInCMap(), expectInt(), expectString(), extendCMap(), fetchSync(), getUint8ArrayMemory0() (+17 more)
 
 ### Community 33 - "xlsxPreview.ts"
 Cohesion: 0.12
@@ -599,61 +608,61 @@ Nodes (38): `ModuleRenderer.tsx`, shared-components/, shared-constants/, shared-
 Cohesion: 0.06
 Nodes (30): 1. Backend (Laravel) Setup, 1. System-Level Permissions (Backend/Laravel), 2. Assign to Roles, 2. Page-Level Permissions (Database), 3. Frontend Permission Checks, Access Levels — سطح‌های دسترسی, Access Scenarios — سناریوهای دسترسی, Best Practices — بهترین روش‌ها (+22 more)
 
-### Community 38 - "Util"
-Cohesion: 0.07
-Nodes (5): Color, Commands, StateManager, Stipple, Util
-
 ### Community 39 - "getRelevant"
-Cohesion: 0.10
-Nodes (4): AnnotationFactory, createDataNode(), NetworkPdfManager, WorkerMessageHandler
+Cohesion: 0.09
+Nodes (5): AnnotationFactory, createDataNode(), isRefsEqual(), NetworkPdfManager, StructTreeRoot
 
 ### Community 40 - ".compile"
 Cohesion: 0.08
 Nodes (7): AstArgument, AstBinaryOperation, AstLiteral, AstMin, AstVariable, AstVariableDefinition, ExpressionBuilderVisitor
 
 ### Community 41 - ".parse"
-Cohesion: 0.11
-Nodes (19): buildComponentData(), decodeScan(), findNextFileMarker(), FontRendererFactory, getBlockBufferOffset(), Jbig2Image, parseCff(), prepareComponents() (+11 more)
+Cohesion: 0.12
+Nodes (18): buildComponentData(), decodeScan(), findNextFileMarker(), FontRendererFactory, getBlockBufferOffset(), Jbig2Image, parseCff(), prepareComponents() (+10 more)
+
+### Community 42 - ".onSymbolDictionary"
+Cohesion: 0.08
+Nodes (22): emptyForm, PaginatedResponse, ROLE_COLORS, ROLE_LABELS, RoleOption, UserDetail, UserForm, UserItem (+14 more)
 
 ### Community 43 - "Catalog"
-Cohesion: 0.07
-Nodes (12): adjustMapping(), buildHuffmanTable(), fetchDest(), fetchRemoteDest(), isDict(), isName(), isRefsEqual(), NameOrNumberTree (+4 more)
+Cohesion: 0.19
+Nodes (3): getPdfColorArray(), getQuadPoints(), getRgbColor()
 
 ### Community 44 - "XRef"
-Cohesion: 0.18
-Nodes (17): uploadMediaFile(), buildFilter(), detectContainerAudio(), EditorTab, EFFECT_PRESETS, EffectPreset, faDigits(), filterToPresetId() (+9 more)
+Cohesion: 0.22
+Nodes (14): buildFilter(), detectContainerAudio(), EditorTab, EFFECT_PRESETS, EffectPreset, faDigits(), filterToPresetId(), FilterValues (+6 more)
 
 ### Community 45 - ".nextChar"
-Cohesion: 0.21
-Nodes (5): decrypt(), isHexDigit(), isSpecial(), PostScriptLexer, Type1Parser
+Cohesion: 0.15
+Nodes (6): decrypt(), isHexDigit(), isSpecial(), Lexer, PostScriptLexer, Type1Parser
 
 ### Community 46 - "page-builder/api.ts"
-Cohesion: 0.20
-Nodes (15): InspectorPanelProps, TimelineBarProps, MOTION_PATH_PRESETS, MotionPathPresetMode, AnimationEasing, AnimationPreset, BreakpointWidth, InteractionActionType (+7 more)
+Cohesion: 0.22
+Nodes (15): InspectorPanelProps, TimelineBarProps, AnimationEasing, AnimationPreset, BreakpointWidth, InteractionActionType, InteractionTrigger, Layer (+7 more)
 
 ### Community 47 - ".getByte"
-Cohesion: 0.15
-Nodes (7): FlateStream, int16(), isWhiteSpace(), isWinNameRecord(), Parser, signedInt16(), writeSignedInt16()
+Cohesion: 0.20
+Nodes (3): Ascii85Stream, isWhiteSpace(), Parser
 
 ### Community 48 - "dedicated_pages/types.ts"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (26): INITIAL_DEDICATED_PAGES, INITIAL_PAGE_CONTENTS, PAGE_TYPE_REGISTRY, UNIVERSITY_PROFESSORS, getPersonFullName(), mapPersonToProfessorProfile(), PageWizardModal(), PageWizardModalProps (+18 more)
 
 ### Community 49 - "home-intro/index.tsx"
-Cohesion: 0.23
-Nodes (14): AdobeAcrobatReaderIcon(), AdobeAfterEffectsIcon(), AdobeAuditionIcon(), AdobeIcon(), AparatIcon(), BaleIcon(), CafeBazaarIcon(), EitaaIcon() (+6 more)
+Cohesion: 0.11
+Nodes (27): fetchCurrentHomePortals(), HomePortalItem, HomePortalPayload, HomePortalSection, PORTAL_COLORS, PortalColor, updateHomePortals(), COLOR_SWATCH_CLASSES (+19 more)
 
 ### Community 50 - "getMeasurement"
 Cohesion: 0.06
 Nodes (30): Access Control, Accessing as Page Manager, Accessing the Module, Additional Features, API Endpoints — نقاط پایانی API, Component Structure — ساختار کامپوننت‌ها, Content Organization, Creating a Page (+22 more)
 
 ### Community 52 - "shared-utils/index.ts"
-Cohesion: 0.09
-Nodes (26): fetchCurrentHomeIntro(), HomeIntro, HomeIntroImage, HomeIntroPayload, HomeIntroStat, updateHomeIntro(), emptyImage(), emptyStat() (+18 more)
+Cohesion: 0.18
+Nodes (12): fetchCurrentHomeIntro(), HomeIntro, HomeIntroImage, HomeIntroPayload, HomeIntroStat, updateHomeIntro(), emptyImage(), emptyStat() (+4 more)
 
 ### Community 53 - "AssetDetailsDrawer.tsx"
-Cohesion: 0.14
-Nodes (18): MurmurHash3_64, getMediaStreamUrl(), updateMediaMetadata(), AssetDetailsDrawer(), AssetDetailsDrawerProps, AudioEditorModalProps, FullscreenModal(), FullscreenModalProps (+10 more)
+Cohesion: 0.13
+Nodes (19): MurmurHash3_64, getMediaStreamUrl(), updateMediaMetadata(), AssetDetailsDrawer(), AssetDetailsDrawerProps, AudioEditorModalProps, FullscreenModal(), FullscreenModalProps (+11 more)
 
 ### Community 55 - "User"
 Cohesion: 0.07
@@ -661,15 +670,15 @@ Nodes (27): 1. App Registry (apps/index.tsx), 2. Access via Module Type, 3. Perm
 
 ### Community 56 - "TextMeasure"
 Cohesion: 0.10
-Nodes (6): B, Br, _i, layoutText(), P, TextMeasure
+Nodes (7): B, Br, _i, layoutNode(), layoutText(), P, TextMeasure
 
 ### Community 57 - "shadow"
-Cohesion: 0.08
-Nodes (3): Catalog, FeatureTest, shadow()
+Cohesion: 0.04
+Nodes (13): AppearanceStreamEvaluator, Catalog, createValidAbsoluteUrl(), DecodingContext, FeatureTest, fetchDest(), fetchRemoteDest(), FileSpec (+5 more)
 
 ### Community 58 - "page-builder/mockData.ts"
-Cohesion: 0.13
-Nodes (17): PageTemplate, SectionTemplate, SmartPageSchema, AchievementItem, AnnouncementItem, FacultyMember, FileDocument, MediaGalleryItem (+9 more)
+Cohesion: 0.12
+Nodes (18): PageTemplate, SectionTemplate, SmartPageSchema, AchievementItem, AnnouncementItem, FacultyMember, FileDocument, INITIAL_SMART_PAGE (+10 more)
 
 ### Community 59 - "useLanguage"
 Cohesion: 0.11
@@ -684,88 +693,84 @@ Cohesion: 0.12
 Nodes (8): canEditDedicatedPage(), canManagePageAccess(), canManagePageContent(), canPublishPage(), checkPageAccessLevel(), DEDICATED_PAGE_TYPE_URL_PREFIXES, filterAccessiblePages(), getEditablePages()
 
 ### Community 62 - "SmartFormBuilderStudio.tsx"
-Cohesion: 0.21
-Nodes (19): cloneForm(), createForm(), deleteForm(), duplicateForm(), fetchForm(), fetchForms(), fetchSubmissions(), PaginatedResponse (+11 more)
+Cohesion: 0.22
+Nodes (14): cloneForm(), createForm(), deleteForm(), duplicateForm(), fetchForm(), fetchForms(), fetchSubmissions(), PaginatedResponse (+6 more)
 
 ### Community 64 - ".add"
-Cohesion: 0.15
-Nodes (13): amendFallbackToUnicode(), generateFont(), getFamilyName(), getFontSubstitution(), getStandardFontName(), getXfaFontDict(), getXfaFontName(), isKnownFontName() (+5 more)
+Cohesion: 0.18
+Nodes (9): adjustWidths(), amendFallbackToUnicode(), bytesToString(), getFontFileType(), int16(), isTrueTypeCollectionFile(), isWinNameRecord(), signedInt16() (+1 more)
 
 ### Community 65 - "compilerOptions"
 Cohesion: 0.10
 Nodes (20): DOM, DOM.Iterable, ES2022, src, compilerOptions, allowImportingTsExtensions, allowJs, experimentalDecorators (+12 more)
-
-### Community 66 - "shared-components/index.ts"
-Cohesion: 0.13
-Nodes (10): Layout, Type, FormInspectorPanel(), FormMessagesEditor(), FormMessagesEditorProps, FormRespondentView(), FormSettingsModal(), FormThemeEditor() (+2 more)
 
 ### Community 67 - "people/index.tsx"
 Cohesion: 0.24
 Nodes (10): canAddType(), HEADER_ALIASES, normalizeHeader(), PeopleManagement(), PeopleManagementProps, RANK_OPTIONS, SubTab, TYPE_LABEL (+2 more)
 
 ### Community 68 - ".constructor"
-Cohesion: 0.06
-Nodes (21): CCITTFaxDecoder, ContextCache, decodeBitmap(), decodeIAID(), decodeInteger(), decodeMMRBitmap(), decodeRefinement(), decodeTextRegion() (+13 more)
+Cohesion: 0.22
+Nodes (3): getB(), MeshShading, MeshStreamReader
 
 ### Community 69 - "find"
-Cohesion: 0.11
-Nodes (5): Border, ContentArea, getRelevant(), PageArea, Value
+Cohesion: 0.09
+Nodes (5): Border, getRelevant(), PageArea, PageSet, Value
 
 ### Community 70 - "SliderStudio.tsx"
-Cohesion: 0.13
-Nodes (16): ensureSlides(), NOTE: no reset of currentTime on play — pausing mid-playback freezes the, SliderStudio(), SplitCharText(), splitTextUnits(), TEXT_ANIM_PRESETS, WaveText(), TimelineBar() (+8 more)
+Cohesion: 0.14
+Nodes (11): ensureSlides(), NOTE: no reset of currentTime on play — pausing mid-playback freezes the, SliderStudio(), SplitCharText(), splitTextUnits(), TEXT_ANIM_PRESETS, WaveText(), TimelineBar() (+3 more)
 
 ### Community 71 - "slider-studio.ts"
-Cohesion: 0.26
-Nodes (11): DedicatedPageTaxonomyOption, fetchDataSourceAcademicDepartments(), fetchDataSourceAnnouncementGroups(), fetchDataSourceMediaFolders(), fetchDataSourceNewsCategories(), fetchDedicatedPageTaxonomiesForWidget(), getColumnWidth(), getWidgetTypeLabel() (+3 more)
+Cohesion: 0.14
+Nodes (20): DedicatedPageTaxonomyOption, fetchDataSourceAcademicDepartments(), fetchDataSourceAnnouncementGroups(), fetchDataSourceMediaFolders(), fetchDataSourceNewsCategories(), fetchDedicatedPageTaxonomiesForWidget(), Breakpoint, ColumnInstance (+12 more)
 
 ### Community 72 - "AnalyticsDashboard.tsx"
-Cohesion: 0.06
-Nodes (59): AnalyticsDashboard(), AnalyticsDashboardProps, formatChartLabel(), formatDuration(), formatFloat1(), formatInt(), formatPercent(), GRANULARITY_LABELS (+51 more)
+Cohesion: 0.05
+Nodes (63): AnalyticsDashboard(), AnalyticsDashboardProps, formatChartLabel(), formatDuration(), formatFloat1(), formatInt(), formatPercent(), GRANULARITY_LABELS (+55 more)
 
 ### Community 73 - "analytics/api.ts"
-Cohesion: 0.05
-Nodes (30): applyStandardFontGlyphMap(), buildToFontChar(), convertCidString(), createCmapTable(), createNameTable(), createOS2Table(), createPostscriptName(), createPostTable() (+22 more)
+Cohesion: 0.06
+Nodes (28): applyStandardFontGlyphMap(), buildToFontChar(), convertCidString(), createCmapTable(), createNameTable(), createOS2Table(), createPostscriptName(), createPostTable() (+20 more)
 
 ### Community 74 - "dedicated_pages/api.ts"
-Cohesion: 0.10
-Nodes (10): fetchPageMediaUsage(), MediaUsage, MediaUsageBreakdownItem, OwnerAccountInfo, setOwnerAccount(), formatBytes(), PageStorageUsageChart(), PageStorageUsageChartProps (+2 more)
+Cohesion: 0.11
+Nodes (9): fetchPageMediaUsage(), MediaUsage, MediaUsageBreakdownItem, OwnerAccountInfo, setOwnerAccount(), formatBytes(), PageStorageUsageChart(), PageStorageUsageChartProps (+1 more)
 
 ### Community 75 - "InteractivePreviewModal.tsx"
-Cohesion: 0.13
-Nodes (10): AddonParticleCanvas(), AddonParticleCanvasProps, AutoPlayVideo(), InteractivePreviewModal(), isTextAnimationPreset(), SplitCharText(), splitTextUnits(), TEXT_ANIM_PRESETS (+2 more)
+Cohesion: 0.16
+Nodes (9): AddonParticleCanvasProps, AutoPlayVideo(), InteractivePreviewModal(), isTextAnimationPreset(), SplitCharText(), splitTextUnits(), TEXT_ANIM_PRESETS, WaveText() (+1 more)
 
 ### Community 76 - "shapes.ts"
 Cohesion: 0.19
 Nodes (15): CodeExportModal(), CodeExportModalProps, shapeFlatFill(), shapeFlatFill(), ShapeLayer(), ShapeLayerProps, ShapePicker(), ShapePickerProps (+7 more)
 
 ### Community 77 - "PDFImage"
-Cohesion: 0.24
-Nodes (3): CFFParser, CFFPrivateDict, parseIndex()
+Cohesion: 0.13
+Nodes (5): CFFDict, CFFParser, CFFPrivateDict, CFFTopDict, parseIndex()
 
 ### Community 78 - "FormDefinition"
-Cohesion: 0.21
-Nodes (13): FormRowDto, ALL_PERMISSIONS, FormResultSharingStudio(), FormResultSharingStudioProps, STATUS_OPTIONS, FormSettingsModalProps, SETTINGS_TABS, SettingsTab (+5 more)
+Cohesion: 0.14
+Nodes (16): FormRowDto, FormMessagesEditor(), ALL_PERMISSIONS, FormResultSharingStudio(), FormResultSharingStudioProps, STATUS_OPTIONS, FormSettingsModal(), FormSettingsModalProps (+8 more)
 
 ### Community 79 - ".process"
-Cohesion: 0.21
-Nodes (6): addHex(), BinaryCMapReader, BinaryCMapStream, hexToInt(), hexToStr(), incHex()
+Cohesion: 0.10
+Nodes (7): addHex(), BinaryCMapReader, BinaryCMapStream, hexToInt(), hexToStr(), IdentityCMap, incHex()
 
 ### Community 81 - "CipherTransformFactory"
-Cohesion: 0.11
-Nodes (11): ariaLabel(), Corner, Edge, hasMargin(), Html, isRequired(), measureToString(), oo (+3 more)
+Cohesion: 0.08
+Nodes (11): ariaLabel(), CheckButton, ChoiceList, DateTimeEdit, Html, HTMLResult, Image, isRequired() (+3 more)
 
 ### Community 84 - ".value"
-Cohesion: 0.23
-Nodes (4): ARCFourCipher, calculateMD5(), CipherTransformFactory, utf8StringToString()
+Cohesion: 0.12
+Nodes (4): assert(), CssFontInfo, SystemFontInfo, InspectorPanel()
 
 ### Community 85 - "ImageResizer"
 Cohesion: 0.23
 Nodes (4): convertBlackAndWhiteToRGBA(), convertToRGBA(), PDFImage, resizeImageMask()
 
 ### Community 86 - "Page"
-Cohesion: 0.08
-Nodes (5): CompositeGlyph, GlyfTable, Glyph, GlyphHeader, SimpleGlyph
+Cohesion: 0.10
+Nodes (6): addState(), CompositeGlyph, GlyphHeader, MessageHandler, SimpleGlyph, wrapReason()
 
 ### Community 87 - "GradientPicker.tsx"
 Cohesion: 0.22
@@ -780,56 +785,72 @@ Cohesion: 0.29
 Nodes (6): DedicatedPagesStudio(), DedicatedPagesStudioProps, EMPTY_STATS, DedicatedPagesStats, PageType, getApiErrorMessage()
 
 ### Community 90 - "ToastNotification.tsx"
-Cohesion: 0.18
-Nodes (10): CropDragMode, CropRect, EditorCropRatio, EditorTab, ImageEditorModalProps, Watermark, WM_SHADOW_PRESETS, WmImagePosition (+2 more)
+Cohesion: 0.22
+Nodes (7): decodeBitmap(), decodeMMRBitmap(), getCustomHuffmanTable(), getStandardTable(), log2(), readUncompressedBitmap(), SimpleSegmentVisitor
+
+### Community 92 - ".#i"
+Cohesion: 0.12
+Nodes (3): CalGrayCS, DeviceCmykCS, LabCS
 
 ### Community 95 - "JpxStream"
-Cohesion: 0.17
+Cohesion: 0.16
 Nodes (8): SmartPageDto, SmartPageTreeNode, ChildPagesManagerModalProps, PageSettingsModalProps, buildPagePath(), PagesList(), PagesListProps, SmartPageLockField
 
 ### Community 96 - "dependencies"
 Cohesion: 0.11
-Nodes (19): @fontsource/vazirmatn, @google/genai, dependencies, @fontsource/vazirmatn, @google/genai, pdfjs-dist, recharts, @tiptap/extension-color (+11 more)
+Nodes (19): @fontsource/vazirmatn, @google/genai, dependencies, @fontsource/vazirmatn, @google/genai, pptx-preview, recharts, @tiptap/extension-color (+11 more)
 
 ### Community 98 - "achievements/index.tsx"
-Cohesion: 0.21
-Nodes (3): CipherTransform, isArrayEqual(), PDFBase
+Cohesion: 0.17
+Nodes (12): CHAR_TYPE_FILTERS, choiceLayoutClass(), filterByCharType(), FormRespondentView(), FormRespondentViewProps, FREE_EMAIL_PROVIDERS, gregorianIsoToJalaliString(), IRAN_PROVINCES (+4 more)
 
 ### Community 102 - "DedicatedPage"
 Cohesion: 0.33
 Nodes (10): IsolatedManagerPortalProps, PageContentModerationModalProps, getPageVariableValues(), resolvePageContentVariables(), PageLiveWebsiteView(), PageLiveWebsiteViewProps, DedicatedPage, PageContentItem (+2 more)
 
 ### Community 103 - "forms/mockData.ts"
-Cohesion: 0.21
-Nodes (9): AiFormAssistantModal(), AiFormAssistantModalProps, PRESET_PROMPTS, FormTemplateLibraryModalProps, defaultTheme, formTemplates, sampleForms, sampleSubmissions (+1 more)
+Cohesion: 0.19
+Nodes (10): AiFormAssistantModal(), PRESET_PROMPTS, FormsAppProps, defaultTheme, formTemplates, FORM_STATUS_BADGES, SmartFormBuilderStudio(), SmartFormBuilderStudioProps (+2 more)
+
+### Community 104 - "IdentityToUnicodeMap"
+Cohesion: 0.16
+Nodes (3): CFFCompiler, CFFOffsetTracker, stringToBytes()
 
 ### Community 105 - "t"
 Cohesion: 0.14
 Nodes (3): Area, getContainedChildren(), SubformSet
 
 ### Community 107 - ".parse"
-Cohesion: 0.18
-Nodes (6): buildAddOperation(), buildMinOperation(), buildMulOperation(), buildSubOperation(), CFFFont, PostScriptCompiler
+Cohesion: 0.33
+Nodes (5): buildAddOperation(), buildMinOperation(), buildMulOperation(), buildSubOperation(), PostScriptCompiler
+
+### Community 108 - "XFAFactory"
+Cohesion: 0.16
+Nodes (3): JpxImage, Ma(), XFAFactory
 
 ### Community 109 - ".getRgbBuffer"
-Cohesion: 0.13
-Nodes (3): AlternateCS, DefaultAppearanceEvaluator, DeviceRgbaCS
+Cohesion: 0.12
+Nodes (3): AlternateCS, DeviceRgbaCS, IndexedCS
 
 ### Community 110 - "CCITTFaxDecoder"
 Cohesion: 0.36
 Nodes (8): deleteSiteMenu(), fetchCmsSources(), fetchMenuByLocation(), fetchSiteMenus(), Paginated, publishSiteMenu(), saveSiteMenu(), NavigationBuilderStudio()
 
+### Community 113 - "XhtmlNamespace"
+Cohesion: 0.26
+Nodes (14): createLanguage(), deleteLanguage(), fetchLanguages(), fetchLocale(), PaginatedResponse, saveLocale(), updateLanguage(), LanguageManagerModal() (+6 more)
+
 ### Community 114 - "SubmissionsManager.tsx"
-Cohesion: 0.27
-Nodes (9): SubmissionRowDto, FormAnalyticsDashboard(), FormAnalyticsDashboardProps, formatAnswerForExcel(), formatJalaliDateTime(), parseUserAgent(), SubmissionsManager(), SubmissionsManagerProps (+1 more)
+Cohesion: 0.17
+Nodes (12): AiFormAssistantModalProps, SubmissionRowDto, FormAnalyticsDashboardProps, FormMessagesEditorProps, FormTemplateLibraryModalProps, COLOR_PRESETS, FormThemeEditorProps, SubmissionsManagerProps (+4 more)
 
 ### Community 116 - "package.json"
-Cohesion: 0.20
-Nodes (9): name, private, scripts, build, dev, lint, preview, type (+1 more)
+Cohesion: 0.11
+Nodes (18): devDependencies, tailwindcss, @types/react, @types/react-dom, typescript, name, private, scripts (+10 more)
 
 ### Community 117 - ".constructor"
 Cohesion: 0.17
-Nodes (17): applyAssist(), checkDimensions(), computeBbox(), createWrapper(), fixDimensions(), getBorderDims(), handleBreak(), handleOverflow() (+9 more)
+Nodes (19): applyAssist(), checkDimensions(), computeBbox(), createWrapper(), fixDimensions(), getBorderDims(), handleBreak(), handleOverflow() (+11 more)
 
 ### Community 118 - "calculateSHA256"
 Cohesion: 0.27
@@ -839,13 +860,17 @@ Nodes (9): calculate_sha256_ch(), calculate_sha256_littleSigma(), calculate_sha2
 Cohesion: 0.15
 Nodes (12): اقدامات, اقدامات, اقدامات, جمع‌بندی, ساختار, ساختار نهایی (پس از اتمام Refactor), طرح بازآرایی (Refactor) پروژه بر اساس معماری Feature-Based, فهرست مراحل (+4 more)
 
+### Community 121 - "devDependencies"
+Cohesion: 0.17
+Nodes (8): ContextCache, decodeIAID(), decodeInteger(), decodeRefinement(), decodeTextRegion(), HuffmanTreeNode, Reader, _s
+
 ### Community 124 - "SliderProject"
-Cohesion: 0.12
-Nodes (9): find(), FontFinder, getCurrentPara(), PageSet, selectFont(), setFontFamily(), setPara(), stripQuotes() (+1 more)
+Cohesion: 0.10
+Nodes (10): Arc, getCurrentPara(), getFloat(), hasMargin(), Line, Rectangle, selectFont(), setFontFamily() (+2 more)
 
 ### Community 128 - "PostScriptToken"
-Cohesion: 0.12
-Nodes (16): BLOCKED_EXTENSIONS, getFileExtension(), isBlockedFile(), MediaFile, MediaManager(), MediaManagerProps, normalizeMediaFile(), resolveMediaUrl() (+8 more)
+Cohesion: 0.15
+Nodes (8): COLLAB_COLORS, CollaboratorInfo, IMAGE_SIZE_PRESETS, ImageSizePalette, NOTE: draggable: true conflicts with click-to-select in ProseMirror's event pipe, ResizableImage, WysiwygEditorHandle, WysiwygEditorProps
 
 ### Community 132 - "SessionWarningModal.tsx"
 Cohesion: 0.36
@@ -854,6 +879,10 @@ Nodes (6): getBrowserName(), getOS(), parseFingerprint(), SessionWarningModal(),
 ### Community 134 - "toPersianDigits"
 Cohesion: 0.18
 Nodes (10): Cards, stats, structured content, Dedicated-page blocks (`dp-*`), Icon + short-text "badge/chip" pattern (pill-shaped label, e.g. a small tag above a heading), Layout containers, Media, Navigation & site structure, Smart / dynamic — site-wide modules (this university's real data), Text & headings (+2 more)
+
+### Community 135 - "PageStorageUsageChart.tsx"
+Cohesion: 0.25
+Nodes (12): FileAnswerCard(), fileNameFromUrl(), formatAddressAsText(), formatAnswerValue(), formatJalaliDateTime(), isAddressAnswer(), isFileAnswer(), isImageLikeUrl() (+4 more)
 
 ### Community 139 - "DeviceCmykCS"
 Cohesion: 0.18
@@ -864,20 +893,28 @@ Cohesion: 0.20
 Nodes (9): Clone a page's layout into the Page Builder, Step 0 — Read the ground truth first, every time, Step 1 — Determine the source: same-site (exact) vs external (approximate), Step 2 — Approximate path: fetch and analyze an external/unknown page, Step 3 — Build the schema, Step 4 — Validate before creating anything, Step 5 — Create the page (staff API, draft only), Step 6 — Report back (+1 more)
 
 ### Community 144 - "templateUtils.ts"
-Cohesion: 0.05
-Nodes (42): StructElementNode, emptyForm, PaginatedResponse, ROLE_COLORS, ROLE_LABELS, RoleOption, UserDetail, UserForm (+34 more)
+Cohesion: 0.11
+Nodes (22): dashboardApi, DashboardModule(), MenuAction, toPersianDigits(), mapBackendUser(), formatCostInput(), formatCurrency(), formatNumberWithCommas() (+14 more)
+
+### Community 145 - "Br"
+Cohesion: 0.11
+Nodes (7): CFFFDSelect, Commands, compileCharString(), CompiledFont, getSubroutineBias(), lookupCmap(), Type2Compiled
 
 ### Community 147 - "EvaluatorPreprocessor"
 Cohesion: 0.29
 Nodes (6): Slider Studio — فهرست اصلاحات (Changes Log), ۱) جدول خلاصهٔ دستهبندیشده (Category Summary), ۲) تایملاین کامل اصلاحات (Timeline — sau/frontend، قدیمی ← جدید), ۳) تایملاین همگامسازی سایتهای عمومی (Sync Timeline), ۴) وضعیت همگامسازی بین پروژهها (Sync Status), ۵) درسهای کلیدی (Key Takeaways — برای یادگیری)
 
 ### Community 149 - "PDFWorkerStreamRangeReader"
-Cohesion: 0.06
-Nodes (11): Ascii85Stream, AsciiHexStream, bytesToString(), CCITTFaxStream, DecodeStream, DecryptStream, getFontFileType(), isTrueTypeCollectionFile() (+3 more)
+Cohesion: 0.11
+Nodes (5): AsciiHexStream, CCITTFaxStream, FlateStream, PredictorStream, StreamsSequenceStream
 
 ### Community 150 - "Pagination.tsx"
 Cohesion: 0.33
 Nodes (6): Barrel Export, Dynamic Route Resolution, ترتیب پیشنهادی اجرا, ریسک‌ها و راهکارها, مسیردهی Import, نکات کلیدی و راهنمایی‌ها
+
+### Community 160 - "PDFFunctionFactory"
+Cohesion: 0.29
+Nodes (4): _a, Button, fixURL(), recoverJsURL()
 
 ### Community 162 - "TimeSlotManager"
 Cohesion: 0.36
@@ -886,6 +923,10 @@ Nodes (5): InteractivePreviewModalProps, SliderStudioProps, TemplateLibraryModal
 ### Community 163 - "Traverse"
 Cohesion: 0.40
 Nodes (4): Backend API contract (`backend/app/Http/Controllers/Api/SmartPageController.php`), Shape, Simplest possible valid example (one section, two columns, three widgets), SmartPageSchema — structural reference
+
+### Community 170 - "CFF"
+Cohesion: 0.25
+Nodes (5): AppModules, LoadingFallback(), moduleToAppMap, resolveApp(), ModuleRenderer()
 
 ### Community 171 - "Cmd"
 Cohesion: 0.32
@@ -904,16 +945,16 @@ Cohesion: 0.50
 Nodes (4): اقدامات, ساختار هدف, مرحله ۲: ایجاد پوشه‌های `shared-*` و انتقال کدهای اشتراکی, نکات مهم
 
 ### Community 179 - "HuffmanTable"
-Cohesion: 0.22
-Nodes (9): devDependencies, tailwindcss, @types/react, @types/react-dom, typescript, tailwindcss, @types/react, @types/react-dom (+1 more)
+Cohesion: 0.18
+Nodes (10): initialAlbums, initialAssets, initialCategories, initialFolders, initialTags, Album, Category, MediaAsset (+2 more)
 
 ### Community 185 - "PageRange"
 Cohesion: 0.09
-Nodes (11): Caption, CheckButton, Draw, Field, fixTextIndent(), getMeasurement(), mapStyle(), Margin (+3 more)
+Nodes (12): Caption, ContentArea, Corner, Draw, Edge, Field, fixTextIndent(), getMeasurement() (+4 more)
 
 ### Community 207 - "@fontsource/jetbrains-mono"
-Cohesion: 0.10
-Nodes (6): info(), isCmd(), Lexer, parseCodespaceRange(), toHexDigit(), XRef
+Cohesion: 0.17
+Nodes (3): StringStream, __wbg_init(), XRef
 
 ### Community 209 - "@google/genai"
 Cohesion: 0.67
@@ -927,49 +968,53 @@ Nodes (3): تست نهایی, فایل‌های قابل حذف, مرحله ۱۲
 Cohesion: 0.67
 Nodes (3): ساختار هدف, قوانین ساختار App, مرحله ۳: ایجاد ساختار `apps/` و App های اصلی
 
+### Community 219 - "react-pdf"
+Cohesion: 0.39
+Nodes (8): BLOCKED_EXTENSIONS, getFileExtension(), isBlockedFile(), MediaFile, MediaManager(), MediaManagerProps, normalizeMediaFile(), resolveMediaUrl()
+
 ### Community 220 - "recharts"
 Cohesion: 0.67
 Nodes (3): ساختار هر Tab, قانون توزیع کد, مرحله ۵: استخراج Tab های درون `tuts`
 
 ### Community 239 - "AddSilentPrint"
-Cohesion: 0.08
-Nodes (9): compileCharString(), compileGlyf(), fetchBinaryData(), getFloat214(), Ma(), normalizeBlendMode(), readInt16(), warn() (+1 more)
+Cohesion: 0.15
+Nodes (6): compileGlyf(), getFloat214(), readInt16(), readInt8(), StateManager, TrueTypeCompiled
 
 ### Community 243 - "Agent"
-Cohesion: 0.40
-Nodes (3): FIELD_PALETTE, FormBuilderCanvas(), PageCard()
+Cohesion: 0.43
+Nodes (6): collectExternalImageUrls(), generateId(), localizeSingleImage(), localizeSlideImages(), regenerateSlideIds(), APISendFiles()
 
-### Community 247 - "AutoSave"
-Cohesion: 0.60
-Nodes (4): Pagination(), PaginationProps, toEnglishDigits(), toPersianDigits()
+### Community 279 - "Jbig2Error"
+Cohesion: 0.29
+Nodes (7): react, react, cloneSectionWithNewIds(), getColumnBlocks(), setColumnBlocks(), PageSettingsModal(), TabSectionEditorModal()
 
 ### Community 300 - "Embed"
-Cohesion: 0.05
-Nodes (27): addState(), assert(), _collectJS(), computeIDs(), createValidAbsoluteUrl(), decodeString(), encodeToXmlString(), escapePDFName() (+19 more)
+Cohesion: 0.04
+Nodes (38): addChildren(), adjustMapping(), buildHuffmanTable(), computeIDs(), decodeString(), encodeToXmlString(), escapePDFName(), generateFont() (+30 more)
 
 ### Community 360 - "LinkAnnotation"
 Cohesion: 0.06
-Nodes (16): Annotation, ChoiceWidgetAnnotation, CircleAnnotation, collectActions(), getInheritableProperty(), getPdfColorArray(), getQuadPoints(), getRgbColor() (+8 more)
+Nodes (11): Annotation, collectActions(), _collectJS(), getInheritableProperty(), isDict(), isName(), MarkupAnnotation, NameOrNumberTree (+3 more)
 
 ## Knowledge Gaps
-- **655 isolated node(s):** `Paginated`, `PageBuilderStudioProps`, `DeptSectionRendererProps`, `CanvasProps`, `ExportModalProps` (+650 more)
+- **657 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+652 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **305 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **315 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `TemplateNamespace` connect `TemplateNamespace` to `pdf.worker.min.mjs`, `shared-components/index.ts`, `SliderStudio.tsx`, `FormDefinition`, `.a`, `Agent`, `GradientPicker.tsx`, `Dict`, `.createDocumentHandler`?**
-  _High betweenness centrality (0.101) - this node is a cross-community bridge._
-- **Why does `ConfigNamespace` connect `ConfigNamespace` to `pdf.worker.min.mjs`, `Agent`, `Encoding`, `AddSilentPrint`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
-- **Why does `DepartmentsManagement()` connect `.push` to `templateUtils.ts`, `PDFDocument`, `FormDefinition`, `getRelevant`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
-- **What connects `Paginated`, `PageBuilderStudioProps`, `DeptSectionRendererProps` to the rest of the system?**
-  _655 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `TemplateNamespace` connect `TemplateNamespace` to `pdf.worker.min.mjs`, `SliderStudio.tsx`, `getRelevant`, `gallery/index.tsx`, `FormDefinition`, `AssetDetailsDrawer.tsx`, `GradientPicker.tsx`, `AutoSave`, `Dict`?**
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
+- **Why does `ConfigNamespace` connect `ConfigNamespace` to `pdf.worker.min.mjs`, `Br`, `SliderStudio.tsx`, `calculateSHA512`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `TabSectionEditorModal()` connect `Jbig2Error` to `gallery/index.tsx`, `slider-studio.ts`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **What connects `name`, `private`, `version` to the rest of the system?**
+  _657 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `pdf.worker.min.mjs` be split into smaller, more focused modules?**
-  _Cohesion score 0.007997529720549637 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.008692489543553374 - nodes in this community are weakly interconnected._
 - **Should `ConfigNamespace` be split into smaller, more focused modules?**
   _Cohesion score 0.014492753623188406 - nodes in this community are weakly interconnected._
 - **Should `getStringOption` be split into smaller, more focused modules?**
-  _Cohesion score 0.017543859649122806 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
